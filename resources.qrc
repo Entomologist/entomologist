@@ -1,0 +1,13 @@
+<RCC>
+    <qresource prefix="/">
+        <file alias="spinner">graphics/spinner-big.gif</file>
+        <file alias="online">graphics/accept.png</file>
+        <file alias="offline">graphics/stop.png</file>
+        <file alias="refresh">graphics/arrow_refresh.png</file>
+        <file alias="upload">graphics/arrow_up.png</file>
+        <file alias="search">graphics/search.png</file>
+        <file alias="bug">graphics/bug.png</file>
+        <file alias="logo">graphics/entomologist-32.png</file>
+        <file alias="changelog">graphics/changelog.png</file>
+    </qresource>
+</RCC>

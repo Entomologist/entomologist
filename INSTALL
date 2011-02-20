@@ -1,0 +1,7 @@
+In order to install, you'll need Qt >= 4.4 and libqxt (http://dev.libqxt.org/libqxt/wiki/Home)
+
+Steps for installation:
+
+ $ qmake
+ $ make
+ % make install
