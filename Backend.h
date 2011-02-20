@@ -71,13 +71,29 @@ public:
     QString version() { return mVersion; }
 
     void setLastSync(const QString &dateTime);
+    // The top level sync call
     virtual void sync() {}
+
+    // This is used to override login methods (like in Novell Bugzilla)
     virtual void login() {}
+
+    // Version check
     virtual void checkVersion() {}
+
+    // These get the valid values
     virtual void checkValidPriorities() {}
     virtual void checkValidSeverities() {}
     virtual void checkValidStatuses() {}
+
+    // Tells the backend to upload everything
     virtual void uploadAll() {}
+
+    // Given a bug ID, create an HTTP url for viewing in a web browser
+    // (called by the bug list context menu)
+    virtual void buildBugUrl(const QString &id) {}
+
+    // This keeps track of how many bugs were updated in the last sync.
+    // It's used to pop up the system tray notification.
     int latestUpdateCount() { return mUpdateCount; }
 
 signals:

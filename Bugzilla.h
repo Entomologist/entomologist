@@ -45,6 +45,7 @@ public:
     void checkValidSeverities();
     void checkValidStatuses();
     void uploadAll();
+    void buildBugUrl(const QString &id);
 
 public slots:
     void idDetailsFinished();

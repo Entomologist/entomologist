@@ -890,6 +890,12 @@ Bugzilla::commentInsertionFinished()
     }
 }
 
+void
+Bugzilla::buildBugUrl(const QString &id)
+{
+    qDebug() << "Building " << mUrl + "/show_bug.cgi?id=" + id;
+}
+
 // TODO implement this?
 void
 Bugzilla::handleSslErrors(QNetworkReply *reply,

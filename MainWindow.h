@@ -64,6 +64,7 @@ public slots:
     void workOfflineTriggered();
     void trackerListItemChanged(QListWidgetItem  *item);
     void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
+    void tableViewContextMenu(const QPoint &p);
 
     void iconDownloaded();
     void bugsUpdated();

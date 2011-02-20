@@ -93,6 +93,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // We want context menus on right clicks in the tracker list,
     // and we want to ignore the scroll wheel in certain combo boxes
     ui->trackerList->setContextMenuPolicy(Qt::CustomContextMenu);
+    ui->bugTable->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->priorityCombo->installEventFilter(this);
     ui->severityCombo->installEventFilter(this);
     ui->statusCombo->installEventFilter(this);
@@ -145,6 +146,8 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(showActionTriggered()));
     connect(ui->action_Work_Offline, SIGNAL(triggered()),
             this, SLOT(workOfflineTriggered()));
+    connect(ui->bugTable, SIGNAL(customContextMenuRequested(QPoint)),
+            this, SLOT(tableViewContextMenu(QPoint)));
     // Set up the search button
     connect(ui->searchButton, SIGNAL(clicked()),
             this, SLOT(searchTriggered()));
@@ -1522,6 +1525,22 @@ MainWindow::trayActivated(QSystemTrayIcon::ActivationReason reason)
             close();
         else
             showNormal();
+    }
+}
+
+void
+MainWindow::tableViewContextMenu(const QPoint &p)
+{
+    QModelIndex i = ui->bugTable->indexAt(p);
+    QString tracker_id = i.sibling(i.row(), 1).data().toString();
+    QString bug = i.sibling(i.row(), 3).data().toString();
+    QMenu contextMenu(tr("Bug Menu"), this);
+    QAction *copyAction = contextMenu.addAction(tr("Copy URL"));
+    QAction *a = contextMenu.exec(QCursor::pos());
+    Backend *b = mBackendMap[tracker_id];
+    if (a == copyAction)
+    {
+        b->buildBugUrl(bug);
     }
 }
 

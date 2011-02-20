@@ -22,12 +22,12 @@
  */
 
 #include <QtGui>
+
 #include "MainWindow.h"
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
-
     QString locale = QLocale::system().name();
     qDebug() << "Loading locale " << locale;
     QTranslator translator;
