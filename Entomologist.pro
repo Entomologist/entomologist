@@ -4,7 +4,7 @@
 QT += network \
     sql \
     xml
-TARGET = Entomologist
+TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
 VERSION = 0.2

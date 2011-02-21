@@ -51,8 +51,9 @@
 #include "Autodetector.h"
 #include "ui_MainWindow.h"
 
+#define DB_VERSION "1"
+
 // TODOs:
-// - Use XMLRPC and configuration dialogs from Qxt?
 // - URL handing needs to be improved
 // - Autoscrolling in the details frame when a comment is added doesn't work right
 // - sqlite database versioning + migration
@@ -64,7 +65,6 @@
 // - 'Bug TODO list' maybe
 // - Highlight new bugs
 // - QtDBUS on linux for network insertion integration
-// - Search combo box is too small
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -233,6 +233,7 @@ MainWindow::trackerNameExists(const QString &name)
 void
 MainWindow::setupDB()
 {
+    QString createMetaSql = "CREATE TABLE entomologist(db_version TEXT)";
     QString createTrackerSql = "CREATE TABLE trackers(id INTEGER PRIMARY KEY,"
                                                       "type TEXT,"
                                                       "name TEXT,"
@@ -321,6 +322,20 @@ MainWindow::setupDB()
         {
             QMessageBox box;
             box.setText("Could not create shadow comments table");
+            box.exec();
+        }
+
+        if (!query.exec(createMetaSql))
+        {
+            QMessageBox box;
+            box.setText("Could not create the entomologist table");
+            box.exec();
+        }
+
+        if (!query.exec(QString("INSERT INTO entomologist VALUES (\'%1\')").arg(DB_VERSION)))
+        {
+            QMessageBox box;
+            box.setText("Could not set database version");
             box.exec();
         }
     }
