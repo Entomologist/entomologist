@@ -54,9 +54,10 @@
 #define DB_VERSION "1"
 
 // TODOs:
+// - Single-instance checker
 // - URL handing needs to be improved
 // - Autoscrolling in the details frame when a comment is added doesn't work right
-// - sqlite database versioning + migration
+// - sqlite database migration
 // - Retrieve resolved bugs as well?
 // - Pressing cancel during tracker detection should actually cancel
 // - Bug resolution - hardcode for bugzilla 3.4. 3.6 should be listable with the Bug.fields call
@@ -1030,6 +1031,13 @@ MainWindow::closeEvent(QCloseEvent *event)
         // Save the window geometry and position
         QSettings settings("Entomologist");
         settings.setValue("window-geometry", saveGeometry());
+        if (!settings.value("minimize-warning", false).toBool())
+        {
+            QMessageBox box;
+            box.setText("Entomologist will be minimized to your system tray.");
+            box.exec();
+            settings.setValue("minimize-warning", true);
+        }
         hide();
         event->ignore();
     }
