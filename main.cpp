@@ -29,9 +29,13 @@ int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
     QString locale = QLocale::system().name();
-    qDebug() << "Loading locale " << locale;
+    QTranslator qtTranslator;
+    if (!qtTranslator.load("qt_" + locale, QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
+        qDebug() << "Could not load system locale: " << "qt_" << locale;
+    a.installTranslator(&qtTranslator);
+
     QTranslator translator;
-    if (!translator.load(QString("entomologist_") + locale))
+    if (!translator.load(QString("entomologist_") + locale, "/usr/share/entomologist"))
         qDebug() << "Could not load locale file";
     a.installTranslator(&translator);
     a.setApplicationVersion(APP_VERSION);

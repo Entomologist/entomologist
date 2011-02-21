@@ -1,6 +1,7 @@
 # -------------------------------------------------
 # Project created by QtCreator 2011-01-20T11:51:19
 # -------------------------------------------------
+unix:isEmpty(PREFIX):PREFIX = /usr
 QT += network \
     sql \
     xml
@@ -57,3 +58,12 @@ FORMS += MainWindow.ui \
     Preferences.ui \
     About.ui
 RESOURCES += resources.qrc
+
+entomologist.path = $$PREFIX/bin
+entomologist.files = entomologist
+
+translations.path = $$PREFIX/share/entomologist
+translations.files = *.qm
+
+INSTALLS += entomologist translations
+
