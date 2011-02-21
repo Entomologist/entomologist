@@ -29,6 +29,7 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
     ui(new Ui::NewTracker)
 {
     ui->setupUi(this);
+    ui->urlEdit->setPlaceholderText(tr("For example: bugzilla.novell.com or bugs.example.com/bugtracker/"));
     if (edit)
     {
         ui->urlEdit->setEnabled(false);

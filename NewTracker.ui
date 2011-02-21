@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>623</width>
-    <height>166</height>
+    <height>176</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -64,11 +64,7 @@
       </widget>
      </item>
      <item row="1" column="1">
-      <widget class="QxtLineEdit" name="urlEdit">
-       <property name="sampleText">
-        <string>For example: bugzilla.novell.com or bugs.example.com/bugtracker/</string>
-       </property>
-      </widget>
+      <widget class="PlaceholderLineEdit" name="urlEdit"/>
      </item>
     </layout>
    </item>
@@ -86,11 +82,18 @@
  </widget>
  <customwidgets>
   <customwidget>
-   <class>QxtLineEdit</class>
+   <class>PlaceholderLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>QxtLineEdit</header>
+   <header>PlaceholderLineEdit.h</header>
   </customwidget>
  </customwidgets>
+ <tabstops>
+  <tabstop>nameEdit</tabstop>
+  <tabstop>urlEdit</tabstop>
+  <tabstop>userEdit</tabstop>
+  <tabstop>passEdit</tabstop>
+  <tabstop>buttonBox</tabstop>
+ </tabstops>
  <resources/>
  <connections>
   <connection>

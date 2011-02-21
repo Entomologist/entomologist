@@ -83,7 +83,7 @@ MainWindow::MainWindow(QWidget *parent) :
 
     ui->setupUi(this);
     setupTrayIcon();
-    ui->searchComboBox->setItemCheckState(0, Qt::Checked);
+    ui->searchEdit->setPlaceholderText(tr("Search summaries and comments"));
     // Setup the "Show" menu and "Work Offline"
     ui->actionMy_Bugs->setChecked(settings.value("show-my-bugs", true).toBool());
     ui->actionMy_Reports->setChecked(settings.value("show-my-reports", true).toBool());
@@ -105,9 +105,6 @@ MainWindow::MainWindow(QWidget *parent) :
     pStatusMessage = new QLabel("");
     ui->statusBar->addPermanentWidget(pStatusMessage);
     ui->statusBar->addPermanentWidget(pStatusIcon);
-
-    // Set the network status bar
-    isOnline();
 
     // Hide the details area until a bug is double clicked
     ui->detailsScrollArea->hide();
@@ -181,6 +178,9 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(statusChanged(QString)));
 
     restoreGeometry(settings.value("window-geometry").toByteArray());
+
+    // Set the network status bar
+    isOnline();
 
     setupDB();
     toggleButtons();
@@ -694,7 +694,6 @@ MainWindow::startAnimation()
     ui->spinnerLabel->show();
     ui->syncingLabel->show();
     ui->menuShow->setEnabled(false);
-    ui->searchComboBox->setEnabled(false);
     ui->action_Add_Tracker->setEnabled(false);
     ui->action_Preferences->setEnabled(false);
     ui->action_Work_Offline->setEnabled(false);
@@ -717,7 +716,6 @@ MainWindow::stopAnimation()
     pSpinnerMovie->stop();
     ui->refreshButton->setEnabled(true);
     ui->menuShow->setEnabled(true);
-    ui->searchComboBox->setEnabled(true);
     ui->action_Add_Tracker->setEnabled(true);
     ui->action_Preferences->setEnabled(true);
     ui->action_Work_Offline->setEnabled(true);
@@ -1193,6 +1191,7 @@ MainWindow::workOfflineTriggered()
 {
     QSettings settings("Entomologist");
     settings.setValue("work-offline", ui->action_Work_Offline->isChecked());
+    isOnline();
 }
 
 // Refresh the bug list based on the various checkboxes that have been selected
@@ -1258,9 +1257,6 @@ bool
 MainWindow::isOnline()
 {
     bool ret = false;
-    QSettings settings("Entomologist");
-    if (settings.value("work-offline", false).toBool() == true)
-        return false;
 
 #if QT_VERSION >= 0x040700
     if (pManager->networkAccessible() != QNetworkAccessManager::NotAccessible)
@@ -1285,6 +1281,9 @@ MainWindow::isOnline()
         }
     }
 #endif
+
+    if (ui->action_Work_Offline->isChecked())
+        ret = false;
 
     if (ret)
     {
@@ -1410,28 +1409,22 @@ MainWindow::searchTriggered()
     if (searchText.isEmpty()) return;
 
     QStringList query;
-    if (ui->searchComboBox->itemCheckState(0) == Qt::Checked)
+    // Summary
+    query << QString("(bugs.summary LIKE \'\%%1\%\')").arg(searchText);
+    // Comment
+    QSqlQuery q;
+    QString sql = QString("SELECT bug_id FROM comments WHERE comment LIKE \'\%%1\%\'").arg(searchText);
+    if (q.exec(sql))
     {
-        // Summary
-        query << QString("(bugs.summary LIKE \'\%%1\%\')").arg(searchText);
-    }
-
-    if (ui->searchComboBox->itemCheckState(1) == Qt::Checked)
-    {
-        // Comment
-        QSqlQuery q;
-        QString sql = QString("SELECT bug_id FROM comments WHERE comment LIKE \'\%%1\%\'").arg(searchText);
-        if (q.exec(sql))
+        QStringList idList;
+        while (q.next())
         {
-            QStringList idList;
-            while (q.next())
-            {
-                idList << q.value(0).toString();
-            }
-            query << QString("(bugs.bug_id IN (%1))").arg(idList.join(","));
+            idList << q.value(0).toString();
         }
-        q.finish();
+
+        query << QString("(bugs.bug_id IN (%1))").arg(idList.join(","));
     }
+    q.finish();
 
     if (query.size() > 0)
     {

@@ -142,40 +142,7 @@
        </spacer>
       </item>
       <item>
-       <widget class="QxtCheckComboBox" name="searchComboBox">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="Preferred" vsizetype="Fixed">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="toolTip">
-         <string>Search fields</string>
-        </property>
-        <property name="statusTip">
-         <string>Select the fields to search in</string>
-        </property>
-        <property name="sizeAdjustPolicy">
-         <enum>QComboBox::AdjustToContents</enum>
-        </property>
-        <item>
-         <property name="text">
-          <string>Summary</string>
-         </property>
-        </item>
-        <item>
-         <property name="text">
-          <string>Comment</string>
-         </property>
-        </item>
-       </widget>
-      </item>
-      <item>
-       <widget class="QxtLineEdit" name="searchEdit">
-        <property name="sampleText">
-         <string>Search</string>
-        </property>
-       </widget>
+       <widget class="PlaceholderLineEdit" name="searchEdit"/>
       </item>
       <item>
        <widget class="QToolButton" name="searchButton">
@@ -240,8 +207,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>633</width>
-          <height>200</height>
+          <width>623</width>
+          <height>207</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -325,24 +292,6 @@
             <attribute name="verticalHeaderStretchLastSection">
              <bool>false</bool>
             </attribute>
-            <attribute name="verticalHeaderVisible">
-             <bool>false</bool>
-            </attribute>
-            <attribute name="horizontalHeaderStretchLastSection">
-             <bool>true</bool>
-            </attribute>
-            <attribute name="horizontalHeaderCascadingSectionResizes">
-             <bool>true</bool>
-            </attribute>
-            <attribute name="verticalHeaderShowSortIndicator" stdset="0">
-             <bool>false</bool>
-            </attribute>
-            <attribute name="verticalHeaderHighlightSections">
-             <bool>false</bool>
-            </attribute>
-            <attribute name="verticalHeaderStretchLastSection">
-             <bool>false</bool>
-            </attribute>
            </widget>
           </widget>
          </item>
@@ -364,8 +313,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>627</width>
-          <height>133</height>
+          <width>603</width>
+          <height>165</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -469,7 +418,7 @@
      <x>0</x>
      <y>0</y>
      <width>641</width>
-     <height>20</height>
+     <height>28</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuShow">
@@ -575,14 +524,9 @@
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>QxtLineEdit</class>
+   <class>PlaceholderLineEdit</class>
    <extends>QLineEdit</extends>
-   <header>QxtLineEdit</header>
-  </customwidget>
-  <customwidget>
-   <class>QxtCheckComboBox</class>
-   <extends>QComboBox</extends>
-   <header>QxtCheckComboBox</header>
+   <header>PlaceholderLineEdit.h</header>
   </customwidget>
  </customwidgets>
  <resources>

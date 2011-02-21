@@ -4,12 +4,10 @@
 QT += network \
     sql \
     xml
-CONFIG += qxt
-QXT += gui
 TARGET = Entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
-VERSION = 0.1
+VERSION = 0.2
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 SOURCES += main.cpp \
     MainWindow.cpp \
@@ -30,7 +28,8 @@ SOURCES += main.cpp \
     Preferences.cpp \
     About.cpp \
     SqlWriterThread.cpp \
-    SqlWriter.cpp
+    SqlWriter.cpp \
+    PlaceholderLineEdit.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -49,7 +48,8 @@ HEADERS += MainWindow.h \
     Preferences.h \
     About.h \
     SqlWriterThread.h \
-    SqlWriter.h
+    SqlWriter.h \
+    PlaceholderLineEdit.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
