@@ -62,6 +62,7 @@ rm -rf $RPM_BUILD_ROOT
 
 %files
 %defattr(-,root,root)
+%dir %{_prefix}/share/entomologist
 %doc README INSTALL
 %{_bindir}/entomologist
 %{_prefix}/share/entomologist/*.qm
