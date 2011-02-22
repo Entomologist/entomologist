@@ -174,7 +174,7 @@ Bugzilla::getUserBugs()
     {
         QString url = mUrl + QString("/buglist.cgi?query_format=advanced"
                                      "&bug_status=NEW&bug_status=ASSIGNED"
-                                     "&bug_status=REOPENED&bug_status=NEEDINFO"
+                                     "&bug_status=REOPENED&bug_status=NEEDINFO&bug_status=UNCONFIRMED"
                                      "&chfieldfrom=%1"
                                      "&emailassigned_to1=1"
                                      "&emailtype1=substring&email1=%2&ctype=csv")
@@ -205,7 +205,7 @@ Bugzilla::getReportedBugs()
     {
         QString url = mUrl + QString("/buglist.cgi?query_format=advanced"
                                      "&bug_status=NEW&bug_status=ASSIGNED"
-                                     "&bug_status=REOPENED&bug_status=NEEDINFO"
+                                     "&bug_status=REOPENED&bug_status=NEEDINFO&bug_status=UNCONFIRMED"
                                      "&chfieldfrom=%1"
                                      "&emailreporter1=1"
                                      "&emailtype1=substring&email1=%2&ctype=csv")
@@ -233,10 +233,8 @@ void
 Bugzilla::getCCs()
 {
     qDebug() << "Getting CCs...";
-//buglist.cgi?emailcc1=1&emailtype1=substring&query_format=advanced&bug_status=NEW&bug_status=ASSIGNED&bug_status=NEEDINFO&bug_status=REOPENED&email1=mbarringer%40novell.com
-
     QString url = mUrl + QString("/buglist.cgi?emailcc1=1&emailtype1=substring"
-                                 "&query_format=advanced&bug_status=NEW&bug_status=ASSIGNED&bug_status=NEEDINFO&bug_status=REOPENED"
+                                 "&query_format=advanced&bug_status=NEW&bug_status=ASSIGNED&bug_status=NEEDINFO&bug_status=REOPENED&bug_status=UNCONFIRMED"
                                  "&chfieldfrom=%1"
                                  "&email1=%2&ctype=csv")
                          .arg(mLastSync.toString("yyyy-MM-dd"))

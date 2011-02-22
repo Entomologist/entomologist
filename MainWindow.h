@@ -28,7 +28,7 @@
 #include <QMap>
 #include <QThread>
 #include <QSystemTrayIcon>
-
+#include <QSslError>
 namespace Ui {
     class MainWindow;
 }
@@ -36,6 +36,7 @@ namespace Ui {
 class QListWidgetItem;
 class QModelIndex;
 class QMovie;
+class QNetworkReply;
 class QLabel;
 class QNetworkAccessManager;
 class QSpacerItem;
@@ -54,6 +55,8 @@ public:
 
 public slots:
     void quitEvent();
+    void handleSslErrors(QNetworkReply *reply,
+                         const QList<QSslError> &errors);
     void trayActivated(QSystemTrayIcon::ActivationReason reason);
     void addTrackerTriggered();
     void prefsTriggered();
@@ -67,6 +70,7 @@ public slots:
     void tableViewContextMenu(const QPoint &p);
 
     void iconDownloaded();
+    void htmlIconDownloaded();
     void bugsUpdated();
     void bugClicked(const QModelIndex &);
     void finishedDetecting(QMap<QString, QString> data);
@@ -100,6 +104,7 @@ private:
     void addTracker(QMap<QString, QString> info);
     void addTrackerToList(Backend *newTracker);
     void fetchIcon(const QString &url, const QString &savePath);
+    void fetchHTMLIcon(const QString &url, const QString &savePath);
     bool isOnline();
     void loadDetails(long long id);
     bool hasPendingChanges();

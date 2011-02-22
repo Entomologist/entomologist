@@ -81,6 +81,8 @@ MainWindow::MainWindow(QWidget *parent) :
     splitterSizes << 100;
     splitterSizes << 400;
     pManager = new QNetworkAccessManager();
+    connect(pManager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
+            this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
 
     ui->setupUi(this);
     setupTrayIcon();
@@ -651,7 +653,6 @@ MainWindow::addTrackerToList(Backend *newTracker)
     mBackendMap[newTracker->id()] = newTracker;
 
     syncTracker(newTracker);
-    // TODO this doesn't work for sites that link to the shortcut icon in the html <head>
     if(!QFile::exists(iconPath))
         fetchIcon(newTracker->url(), iconPath);
 }
@@ -789,10 +790,7 @@ MainWindow::fetchIcon(const QString &url,
 {
     QUrl u(url);
     QString fetch = "https://" + u.host() + "/favicon.ico";
-
-    // Some sites might not use the favicon.ico convention,
-    // but instead link to it in the HTML, but I don't think
-    // we'll bother with that.
+    qDebug() << "Fetching " << fetch;
 
     QNetworkRequest req = QNetworkRequest(QUrl(fetch));
     req.setAttribute(QNetworkRequest::User, QVariant(savePath));
@@ -806,12 +804,15 @@ void
 MainWindow::iconDownloaded()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    QString savePath = reply->request().attribute(QNetworkRequest::User).toString();
+    qDebug() << "Icon downloaded";
     if (reply->error())
     {
         reply->close();
+        qDebug() << "Couldn't get icon";
+        fetchHTMLIcon(reply->url().toString(), savePath);
         return;
     }
-    QString savePath = reply->request().attribute(QNetworkRequest::User).toString();
     QByteArray logoData = reply->readAll();
     // The favicon can be in various formats, so convert it to something
     // we know we can safely display
@@ -832,6 +833,70 @@ MainWindow::iconDownloaded()
         icon.save(savePath, "PNG");
     }
     reply->close();
+}
+
+void
+MainWindow::fetchHTMLIcon(const QString &url,
+                          const QString &savePath)
+{
+    QUrl u(url);
+    QString fetch = "https://" + u.host() + "/";
+    qDebug() << "Fetching " << fetch;
+    QNetworkRequest req = QNetworkRequest(QUrl(fetch));
+    req.setAttribute(QNetworkRequest::User, QVariant(savePath));
+    QNetworkReply *rep = pManager->get(req);
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(htmlIconDownloaded()));
+}
+
+void
+MainWindow::htmlIconDownloaded()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    QString url = reply->url().toString();
+    QString savePath = reply->request().attribute(QNetworkRequest::User).toString();
+    if (reply->error())
+    {
+        reply->close();
+        qDebug() << "Couldn't get an icon or HTML for " << url << " so I'm giving up: " << reply->errorString();
+        qDebug() << reply->readAll();
+        return;
+    }
+
+    QString html(reply->readAll());
+    QRegExp reg("<link (rel=\"([^\"]+)\")?\\s*(type=\"([^\"]+)\")?\\s*(href=\"([^\"]+)\")?\\s*/?>");
+    QString iconPath = "";
+    // Look for the first match
+    int pos = 0;
+    while ((pos = reg.indexIn(html, pos)) != -1)
+    {
+        if (reg.cap(2).endsWith("icon"))
+        {
+            iconPath = reg.cap(6);
+            break;
+        }
+
+        pos += reg.matchedLength();
+    }
+
+    if (iconPath.isEmpty())
+    {
+        qDebug() << "Couldn't find an icon in " << url;
+        return;
+    }
+
+    if (!iconPath.startsWith("http"))
+    {
+        qDebug() << "Path was wrong, fixing";
+        iconPath= "https://" + QUrl(url).host() + "/" + iconPath;
+    }
+    qDebug() << "Going to fetch " << iconPath;
+
+    QNetworkRequest req = QNetworkRequest(QUrl(iconPath));
+    req.setAttribute(QNetworkRequest::User, QVariant(savePath));
+    QNetworkReply *rep = pManager->get(req);
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(iconDownloaded()));
 }
 
 // Sync a specific tracker
@@ -1607,4 +1672,12 @@ MainWindow::eventFilter(QObject *obj, QEvent *event)
         return true;
     }
     return false;
+}
+
+// TODO implement this?
+void
+MainWindow::handleSslErrors(QNetworkReply *reply,
+                         const QList<QSslError> &errors)
+{
+    reply->ignoreSslErrors();
 }
