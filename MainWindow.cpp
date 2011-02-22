@@ -282,6 +282,15 @@ MainWindow::setupDB()
     QString dbPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
     dbPath.append(QDir::separator()).append("entomologist.bugs.db");
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
+    if (!db.isValid())
+    {
+        qDebug() << "Couldn't create the database connection";
+        QMessageBox box;
+        box.setText("Could not create an sqlite database.  Exiting.");
+        box.exec();
+        exit(1);
+    }
+
     db.setDatabaseName(dbPath);
 
     if (!QFile::exists(dbPath))
