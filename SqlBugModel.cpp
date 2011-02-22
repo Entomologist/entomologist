@@ -42,8 +42,10 @@ SqlBugModel::data(const QModelIndex &item,
      QVariant value = QSqlQueryModel::data(item, role);
      if (role == Qt::DecorationRole && item.column() == 2)
      {
-        QString iconPath = QString ("%1%2%3.png")
+        QString iconPath = QString ("%1%2%3%4%5.png")
                                     .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
+                                    .arg(QDir::separator())
+                                    .arg("entomologist")
                                     .arg(QDir::separator())
                                     .arg(QSqlQueryModel::data(item, Qt::DisplayRole).toString());
         if (!QFile::exists(iconPath))

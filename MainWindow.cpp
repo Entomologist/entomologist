@@ -281,6 +281,7 @@ MainWindow::setupDB()
 
     QDir dir;
     QString dbPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+    dbPath.append(QDir::separator()).append("entomologist");
     if (!dir.mkpath(dbPath))
     {
         qDebug() << "Could not mkpath " << dbPath;
@@ -645,6 +646,7 @@ MainWindow::addTrackerToList(Backend *newTracker)
     ui->trackerList->addItem(newItem);
 
     QString iconPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+    iconPath.append(QDir::separator()).append("entomologist");
     iconPath.append(QDir::separator()).append(QString("%1.png").arg(newTracker->name()));
     mBackendMap[newTracker->id()] = newTracker;
 
