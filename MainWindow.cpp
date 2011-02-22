@@ -296,7 +296,14 @@ MainWindow::setupDB()
     if (!QFile::exists(dbPath))
     {
         qDebug() << "Creating database";
-        db.open();
+        if (!db.open())
+        {
+            qDebug() << "Error " << db.lastError().text();
+            QMessageBox box;
+            box.setText(QString("Error creating database: %1").arg(db.lastError().text()));
+            box.exec();
+            exit(1);
+        }
 
         // Create database
         QSqlQuery query(db);
@@ -305,6 +312,7 @@ MainWindow::setupDB()
             QMessageBox box;
             box.setText("Could not create tracker table");
             box.exec();
+            exit(1);
         }
 
         if (!query.exec(QString(createBugSql).arg("bugs")))
@@ -312,6 +320,7 @@ MainWindow::setupDB()
             QMessageBox box;
             box.setText("Could not create bug table");
             box.exec();
+            exit(1);
         }
 
         if (!query.exec(QString(createBugSql).arg("shadow_bugs")))
@@ -319,6 +328,7 @@ MainWindow::setupDB()
             QMessageBox box;
             box.setText("Could not create bug table");
             box.exec();
+            exit(1);
         }
 
         if (!query.exec(QString(createCommentsSql).arg("comments")))
@@ -326,6 +336,7 @@ MainWindow::setupDB()
             QMessageBox box;
             box.setText("Could not create comment table");
             box.exec();
+            exit(1);
         }
 
         if (!query.exec(QString(createCommentsSql).arg("shadow_comments")))
@@ -333,6 +344,7 @@ MainWindow::setupDB()
             QMessageBox box;
             box.setText("Could not create shadow comments table");
             box.exec();
+            exit(1);
         }
 
         if (!query.exec(createMetaSql))
@@ -340,6 +352,7 @@ MainWindow::setupDB()
             QMessageBox box;
             box.setText("Could not create the entomologist table");
             box.exec();
+            exit(1);
         }
 
         if (!query.exec(QString("INSERT INTO entomologist VALUES (\'%1\')").arg(DB_VERSION)))
@@ -347,11 +360,12 @@ MainWindow::setupDB()
             QMessageBox box;
             box.setText("Could not set database version");
             box.exec();
+            exit(1);
         }
     }
     else
     {
-        qDebug() << "DB is open";
+        qDebug() << "DB exists";
         db.open();
     }
 
