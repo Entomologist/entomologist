@@ -1435,14 +1435,16 @@ MainWindow::updateTracker(const QString &id, QMap<QString, QString> data)
         backendError(q.lastError().text());
         return;
     }
+    QString iconDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+    iconDir.append(QDir::separator()).append("entomologist");
 
     // Rename the icon, if necessary
     QString oldPath = QString ("%1%2%3.png")
-                                .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
+                                .arg(iconDir)
                                 .arg(QDir::separator())
                                 .arg(b->name());
     QString newPath = QString ("%1%2%3.png")
-                                .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
+                                .arg(iconDir)
                                 .arg(QDir::separator())
                                 .arg(data["name"]);
 
