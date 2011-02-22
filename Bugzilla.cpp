@@ -152,8 +152,16 @@ Bugzilla::getUserEmail()
         QVariantList args;
         QVariantList array;
         QVariantMap params;
-        array << mUsername;
-        params["match"] = array;
+        if (mBugzillaId.isEmpty())
+        {
+            array << mUsername;
+            params["names"] = array;
+        }
+        else
+        {
+            array << mBugzillaId.toInt();
+            params["ids"] = array;
+        }
         args << params;
         pClient->call("User.get", args, this, SLOT(emailRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
@@ -172,7 +180,6 @@ Bugzilla::getUserBugs()
                                      "&emailtype1=substring&email1=%2&ctype=csv")
                                     .arg(mLastSync.toString("yyyy-MM-dd"))
                                     .arg(mEmail);
-        qDebug() << "Fetching " << url;
         QNetworkRequest req = QNetworkRequest(QUrl(url));
         QNetworkReply *rep = pManager->get(req);
         connect(rep, SIGNAL(finished()),
@@ -204,7 +211,6 @@ Bugzilla::getReportedBugs()
                                      "&emailtype1=substring&email1=%2&ctype=csv")
                                     .arg(mLastSync.toString("yyyy-MM-dd"))
                                     .arg(mEmail);
-        qDebug() << "Fetching " << url;
         QNetworkRequest req = QNetworkRequest(QUrl(url));
         QNetworkReply *rep = pManager->get(req);
         connect(rep, SIGNAL(finished()),
@@ -235,7 +241,6 @@ Bugzilla::getCCs()
                                  "&email1=%2&ctype=csv")
                          .arg(mLastSync.toString("yyyy-MM-dd"))
                          .arg(mEmail);
-
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
@@ -471,13 +476,36 @@ void Bugzilla::versionRpcResponse(QVariant &arg)
 void Bugzilla::loginRpcResponse(QVariant &arg)
 {
     qDebug() << "RPC response LOGIN";
+    QVariantMap map = arg.toMap();
+    if (!map.isEmpty())
+    {
+        mBugzillaId = map.value("id").toString();
+    }
+
     getUserEmail();
 }
 
 void Bugzilla::emailRpcResponse(QVariant &arg)
 {
-    qDebug() << "RPC response USER_EMAIL";
-    mEmail = arg.toMap().value("users").toList().at(0).toMap().value("email").toString();
+    qDebug() << "RPC response USER_EMAIL: " << arg;
+    QVariantMap userMap = arg.toMap();
+    if (userMap.isEmpty())
+    {
+        qDebug() << "usermap is empty!";
+        mEmail = mUsername;
+        getCCs();
+        return;
+    }
+
+    QVariantList userList = userMap.value("users").toList();
+    if (userList.isEmpty())
+    {
+        mEmail = mUsername;
+        getCCs();
+        return;
+    }
+
+    mEmail = userList.at(0).toMap().value("email").toString();
     getCCs();
 }
 

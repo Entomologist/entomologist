@@ -80,6 +80,7 @@ protected:
     void parseBuglistCSV(const QString &csv, const QString &bugType);
     QMap<QString, QString> getShadowValues(const QString &id);
     QVariantMap mBugs;
+    QString mBugzillaId;
     QList< QMap<QString, QString> > mPostQueue;
     QList< QMap<QString, QString> > mCommentQueue;
     QString mActiveCommentId;
