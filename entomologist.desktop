@@ -1,0 +1,8 @@
+[Desktop Entry]
+Type=Application
+Categories=Development;Debugger;
+Exec=entomologist
+Icon=entomologist
+Name=Entomologist
+GenericName=Bug browser
+Version=1.0

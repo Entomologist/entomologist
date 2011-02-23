@@ -4,18 +4,9 @@
 #
 
 # norootforbuild
-
+Url:    http://entomologist.sourceforge.net
 Name:           entomologist
-Version:	0.2
-Release:	0
-Summary:	Open-source bug tracking on the desktop
-Group:		Productivity/Other
-License:	GPL v2
-Url:		http://entomologist.sourceforge.net
-BuildRequires:	libqt4-devel
-Source:		%{name}-%{version}.tar.gz
-BuildRoot:      %{_tmppath}/%{name}-%{version}-build
-AutoReqProv:    on
+BuildRequires:  gcc-c++
 
 %if 0%{?fedora_version}
     %define breq qt4-devel
@@ -33,6 +24,16 @@ AutoReqProv:    on
     %define lrelease /usr/bin/lrelease
 %endif
 
+Version:	0.3
+Release:	0
+Summary:	Open-source bug tracking on the desktop
+Group:		Productivity/Other
+License:	GPL v2
+BuildRequires: %{breq}
+Requires: sqlite3 libqt4-sql-sqlite
+Source:		%{name}-%{version}.tar.gz
+BuildRoot:      %{_tmppath}/%{name}-%{version}-build
+AutoReqProv:    on
 
 %description
 A desktop client for monitoring bugs across multiple bug trackers (bugzilla, launchpad, trac, etc).
@@ -53,6 +54,9 @@ install -d $RPM_BUILD_ROOT/usr/bin
 install -d $RPM_BUILD_ROOT/usr/share/entomologist
 install -m 755 -p entomologist $RPM_BUILD_ROOT/%{_bindir}
 make install
+%if 0%{?suse_version}
+    %suse_update_desktop_file entomologist
+%endif
 
 %clean
 rm -rf $RPM_BUILD_ROOT
@@ -66,6 +70,12 @@ rm -rf $RPM_BUILD_ROOT
 %doc README INSTALL
 %{_bindir}/entomologist
 %{_prefix}/share/entomologist/*.qm
+%{_prefix}/share/applications/entomologist.desktop
+%dir %{_datadir}/icons/hicolor/*/apps/
+%dir %{_datadir}/icons/hicolor/*/
+%dir %{_datadir}/icons/hicolor/
+%{_datadir}/icons/hicolor/*/apps/entomologist.*
+%doc COPYING
 
 %changelog
 
