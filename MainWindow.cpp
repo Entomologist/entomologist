@@ -284,15 +284,6 @@ MainWindow::setupDB()
     QDir dir;
     QString dbPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
     dbPath.append(QDir::separator()).append("entomologist");
-    if (!dir.mkpath(dbPath))
-    {
-        qDebug() << "Could not mkpath " << dbPath;
-        QMessageBox box;
-        box.setText(tr("Could not create data directory.  Exiting"));
-        box.exec();
-        exit(1);
-    }
-
     dbPath.append(QDir::separator()).append("entomologist.bugs.db");
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     if (!db.isValid())
