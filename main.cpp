@@ -63,7 +63,18 @@ int singleInstance(void)
     int fd;
 
     QString path = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
-    path.append(QDir::separator()).append("entomologist").append(QDir::separator()).append("entomologist.lock");
+    path.append(QDir::separator()).append("entomologist");
+    QDir dir;
+    if (!dir.mkpath(path))
+    {
+        qDebug() << "Could not mkpath " << path;
+        QMessageBox box;
+        box.setText("Could not create data directory.  Exiting");
+        box.exec();
+        exit(1);
+    }
+    path.append(QDir::separator()).append("entomologist.lock");
+
 
     lock.l_type = F_WRLCK;
     lock.l_whence = SEEK_SET;
