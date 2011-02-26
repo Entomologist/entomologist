@@ -42,6 +42,9 @@ public:
 
    QMap<QString, QString> data();
 
+public slots:
+    void serverFocusOut();
+    void hostTextChanged(const QString &text);
 protected:
     void changeEvent(QEvent *e);
 

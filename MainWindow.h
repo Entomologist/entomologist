@@ -42,6 +42,7 @@ class QNetworkAccessManager;
 class QSpacerItem;
 class QProgressDialog;
 class QTimer;
+class QSqlDatabase;
 class Backend;
 class Autodetector;
 class SqlBugModel;
@@ -64,6 +65,7 @@ public slots:
     void aboutTriggered();
     void showActionTriggered();
     void searchTriggered();
+    void changelogTriggered();
     void workOfflineTriggered();
     void trackerListItemChanged(QListWidgetItem  *item);
     void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
@@ -72,6 +74,7 @@ public slots:
     void iconDownloaded();
     void htmlIconDownloaded();
     void bugsUpdated();
+    void commentsCached();
     void bugClicked(const QModelIndex &);
     void finishedDetecting(QMap<QString, QString> data);
     void newCommentClicked();
@@ -91,6 +94,9 @@ protected:
 
 private:
     void setupDB();
+    void openDB();
+    void createTables();
+    void checkDatabaseVersion();
     void deleteTracker(const QString &id);
     void updateTracker(const QString &id, QMap<QString, QString> data);
     void setupTracker(Backend *newBug, QMap<QString, QString> info);
@@ -101,6 +107,7 @@ private:
     void startAnimation();
     void stopAnimation();
     void loadTrackers();
+    void loadComments();
     void addTracker(QMap<QString, QString> info);
     void addTrackerToList(Backend *newTracker);
     void fetchIcon(const QString &url, const QString &savePath);
@@ -113,11 +120,13 @@ private:
     void toggleButtons();
     void filterTable();
     void setTimer();
+    int insertTracker(QMap<QString, QString> tracker);
     QString getChangelog();
+    QString autodetectTracker(const QString &url);
 
     int mSyncRequests;
     QMap<QString, Backend*> mBackendMap;
-    QString autodetectTracker(const QString &url);
+    QString mDbPath;
     Backend *pActiveBackend;
     QString mActiveBugId, mActivePriority, mActiveStatus, mActiveSeverity;
     QString mBaseQuery, mWhereQuery, mTrackerQuery, mSortQuery, mActiveQuery;

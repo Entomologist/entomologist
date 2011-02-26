@@ -45,7 +45,8 @@ public:
     void checkValidSeverities();
     void checkValidStatuses();
     void uploadAll();
-    void buildBugUrl(const QString &id);
+    QString buildBugUrl(const QString &id);
+    QString autoCacheComments() { return "1"; }
 
 public slots:
     void idDetailsFinished();
@@ -64,6 +65,7 @@ public slots:
     void reportedRpcResponse(QVariant &arg);
     void commentRpcResponse(QVariant &arg);
     void rpcError(int error, const QString &message);
+    void versionError(int error, const QString &message);
     void priorityResponse(QVariant &arg);
     void severityResponse(QVariant &arg);
     void addCommentResponse(QVariant &arg);
@@ -89,7 +91,7 @@ protected:
     void getReportedBugs();
     void getCCs();
     void getComments(QStringList idList);
-
+    QString friendlyTime(const QString &time);
 };
 
 #endif // BUGZILLA_H

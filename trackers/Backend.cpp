@@ -66,3 +66,9 @@ Backend::updateSync()
     mLastSync = QDateTime::currentDateTime();
     pSqlWriter->updateSync(mId.toInt(), mLastSync.toUTC().toString("yyyy-MM-ddThh:mm:ss"));
 }
+
+void
+Backend::saveCredentials()
+{
+    pSqlWriter->updateCredentials(mId.toInt(), mUsername, mPassword);
+}

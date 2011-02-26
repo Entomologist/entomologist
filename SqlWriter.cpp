@@ -40,11 +40,29 @@ SqlWriter::~SqlWriter()
 }
 
 void
+SqlWriter::saveCredentials(int id,
+                           const QString &username,
+                           const QString &password)
+{
+    QSqlQuery q;
+    q.prepare("UPDATE trackers SET username=:username, password=:password WHERE id=:id");
+    q.bindValue(":id", id);
+    q.bindValue(":username", username);
+    q.bindValue(":password", password);
+    if (!q.exec())
+    {
+        qDebug() << "Couldn't update credentials: " << q.lastError().text();
+        emit failure(q.lastError().text());
+    }
+}
+
+void
 SqlWriter::insertBugs(QList<QMap<QString, QString> > bugList)
 {
     qDebug() << "Going to write " << bugList.count() << " bugs";
     bool error = false;
     QString bugDeleteSql;
+    QDateTime modifiedTime;
     QString commentDeleteSql;
     QString bugInsertSql;
     QSqlQuery bugDeleteQuery;
@@ -53,8 +71,8 @@ SqlWriter::insertBugs(QList<QMap<QString, QString> > bugList)
     QStringList idList;
     bugDeleteSql = "DELETE FROM bugs WHERE bug_id=:bug_id AND tracker_id=:tracker_id";
     commentDeleteSql = "DELETE FROM comments WHERE bug_id=:bug_id AND tracker_id=:tracker_id";
-    bugInsertSql = "INSERT INTO bugs (tracker_id, bug_id, severity, priority, assigned_to, status, summary, component, product, bug_type)"
-                   " VALUES (:tracker_id, :bug_id, :severity, :priority, :assigned_to, :status, :summary, :component, :product, :bug_type)";
+    bugInsertSql = "INSERT INTO bugs (tracker_id, bug_id, severity, priority, assigned_to, status, summary, component, product, bug_type, last_modified)"
+                   " VALUES (:tracker_id, :bug_id, :severity, :priority, :assigned_to, :status, :summary, :component, :product, :bug_type, :last_modified)";
     bugInsertQuery.prepare(bugInsertSql);
     bugDeleteQuery.prepare(bugDeleteSql);
     commentDeleteQuery.prepare(commentDeleteSql);
@@ -91,6 +109,7 @@ SqlWriter::insertBugs(QList<QMap<QString, QString> > bugList)
         bugInsertQuery.bindValue(":component", parameterMap["component"]);
         bugInsertQuery.bindValue(":product", parameterMap["product"]);
         bugInsertQuery.bindValue(":bug_type", parameterMap["bug_type"]);
+        bugInsertQuery.bindValue(":last_modified", parameterMap["last_modified"]);
         if (!bugInsertQuery.exec())
         {
             error = true;
@@ -110,6 +129,45 @@ SqlWriter::insertBugs(QList<QMap<QString, QString> > bugList)
     {
         mDatabase.rollback();
     }
+}
+
+void
+SqlWriter::insertBugComments(QList<QMap<QString, QString> >commentList)
+{
+    if (commentList.size() == 0)
+    {
+        emit commentFinished();
+        return;
+    }
+
+    QSqlQuery q;
+    QString sql = "DELETE FROM comments WHERE bug_id=:bug_id AND tracker_id=:tracker_id";
+    q.prepare(sql);
+    q.bindValue(":bug_id", commentList.at(0).value("bug_id"));
+    q.bindValue(":tracker_id", commentList.at(0).value("tracker_id"));
+    q.exec();
+
+    sql = "INSERT INTO comments (tracker_id, bug_id, comment_id, author, comment, timestamp, private)"
+                  " VALUES (:tracker_id, :bug_id, :comment_id, :author, :comment, :timestamp, :private)";
+    q.prepare(sql);
+    for (int i = 0; i < commentList.size(); ++i)
+    {
+        QMap<QString,QString> parameterMap = commentList.at(i);
+        q.bindValue(":tracker_id", parameterMap["tracker_id"]);
+        q.bindValue(":bug_id", parameterMap["bug_id"]);
+        q.bindValue(":comment_id", parameterMap["comment_id"]);
+        q.bindValue(":author", parameterMap["author"]);
+        q.bindValue(":comment", parameterMap["comment"]);
+        q.bindValue(":timestamp", parameterMap["timestamp"]);
+        q.bindValue(":private", parameterMap["private"].toInt());
+        if (!q.exec())
+        {
+            emit failure(q.lastError().text());
+            break;
+        }
+    }
+    emit commentFinished();
+
 }
 
 void

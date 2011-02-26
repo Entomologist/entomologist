@@ -74,6 +74,8 @@ public:
     // The top level sync call
     virtual void sync() {}
 
+    virtual void getComments(const QString &bugId) {}
+
     // This is used to override login methods (like in Novell Bugzilla)
     virtual void login() {}
 
@@ -90,7 +92,11 @@ public:
 
     // Given a bug ID, create an HTTP url for viewing in a web browser
     // (called by the bug list context menu)
-    virtual void buildBugUrl(const QString &id) {}
+    virtual QString buildBugUrl(const QString &id) {}
+
+    // If a tracker automatically downloads comments on syncs, it
+    // should return "1" here, otherwise "0"
+    virtual QString autoCacheComments() {}
 
     // This keeps track of how many bugs were updated in the last sync.
     // It's used to pop up the system tray notification.
@@ -98,6 +104,7 @@ public:
 
 signals:
     void bugsUpdated();
+    void commentsCached();
     void versionChecked(QString version);
     void prioritiesFound(QStringList priorities);
     void severitiesFound(QStringList severities);
@@ -111,6 +118,7 @@ public slots:
 
 protected:
     void updateSync();
+    void saveCredentials();
 
     QDateTime mLastSync;
     QString mId;

@@ -45,8 +45,13 @@ signals:
 public slots:
     void deleteBugs(const QString &trackerId);
     void insertBugs(QList<QMap<QString, QString> > bugList);
+    // insertComments inserts comments for a number of different bugs.
+    // insertBugComments inserts comments for just one bug
     void insertComments(QList<QMap<QString, QString> > commentList);
+    void insertBugComments(QList<QMap<QString, QString> > commentList);
+
     void syncDB(int id, const QString &timestamp);
+    void saveCredentials(int id, const QString &username, const QString &password);
 
 private:
     QSqlDatabase mDatabase;

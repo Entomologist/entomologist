@@ -26,7 +26,10 @@
 #include <QNetworkCookieJar>
 
 #include "libmaia/maiaXmlRpcClient.h"
-#include "NovellBugzilla.h"
+#include "trackers/NovellBugzilla.h"
+//#include "trackers/Launchpad.h"
+//#include "trackers/Google.h"
+#include "trackers/Mantis.h"
 #include "Autodetector.h"
 
 Autodetector::Autodetector()
@@ -34,6 +37,7 @@ Autodetector::Autodetector()
 {
     novellBugzilla = NULL;
     genericBugzilla = NULL;
+    mantis = NULL;
 }
 
 void
@@ -50,11 +54,21 @@ Autodetector::detect(QMap<QString, QString> data)
     }
     mData["url"]  = temp;
     mUrl = QUrl(temp);
-    if (mUrl.host() == "bugzilla.novell.com")
+    if (mUrl.host().toLower() == "bugzilla.novell.com")
     {
         mDetectionState = NOVELL_CHECK;
         novellBugzilla = new NovellBugzilla(temp);
         checkVersion(novellBugzilla);
+    }
+    else if (mUrl.host().toLower() == "code.google.com")
+    {
+        mData["type"] = "Google";
+        emit finishedDetecting(mData);
+    }
+    else if (mUrl.host().toLower().endsWith("launchpad.net"))
+    {
+        mData["type"] = "Launchpad";
+        emit finishedDetecting(mData);
     }
     else
     {
@@ -86,7 +100,24 @@ Autodetector::versionChecked(QString version)
     if (version == "-1")
     {
         mData["type"] = "Unknown";
-        // Here is where it would check Launchpad, etc.
+        if (mDetectionState == BUGZILLA_CHECK)
+        {
+            delete genericBugzilla;
+            genericBugzilla = NULL;
+            qDebug() << "Checking mantis";
+            mDetectionState = MANTIS_CHECK;
+            mantis = new Mantis(mData["url"]);
+            checkVersion(mantis);
+            return;
+        }
+        else if (mDetectionState == MANTIS_CHECK)
+        {
+            qDebug() << "Mantis said no, too";
+            delete mantis;
+            mantis = NULL;
+        }
+
+        qDebug() << "Done detecting";
         emit finishedDetecting(mData);
         return;
     }
@@ -99,6 +130,12 @@ Autodetector::versionChecked(QString version)
     else if (mDetectionState == BUGZILLA_CHECK)
     {
         mData["type"] = "Bugzilla";
+    }
+    else if (mDetectionState == MANTIS_CHECK)
+    {
+        mData["type"] = "Mantis";
+        mantis->setUsername(mData["username"]);
+        mantis->setPassword(mData["password"]);
     }
 
     getValidValues();
@@ -114,6 +151,8 @@ Autodetector::prioritiesFound(QStringList priorities)
         novellBugzilla->checkValidStatuses();
     else if (genericBugzilla != NULL)
         genericBugzilla->checkValidStatuses();
+    else if (mantis != NULL)
+        mantis->checkValidStatuses();
 }
 
 void
@@ -126,6 +165,9 @@ Autodetector::statusesFound(QStringList statuses)
         novellBugzilla->checkValidSeverities();
     else if (genericBugzilla != NULL)
         genericBugzilla->checkValidSeverities();
+    else if (mantis != NULL)
+        mantis->checkValidSeverities();
+
 }
 
 void
@@ -135,9 +177,11 @@ Autodetector::severitiesFound(QStringList severities)
         mData["valid_severities"] = severities.join(",");
 
     if (novellBugzilla != NULL)
-        delete novellBugzilla;
+        novellBugzilla->deleteLater();
     else if (genericBugzilla != NULL)
-        delete genericBugzilla;
+        genericBugzilla->deleteLater();
+    else if (mantis != NULL)
+        mantis->deleteLater();
 
     emit finishedDetecting(mData);
 }
@@ -149,4 +193,7 @@ Autodetector::getValidValues()
         novellBugzilla->checkValidPriorities();
     else if (genericBugzilla != NULL)
         genericBugzilla->checkValidPriorities();
+    else if (mantis != NULL)
+        mantis->checkValidPriorities();
+
 }

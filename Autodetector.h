@@ -32,6 +32,7 @@
 class Backend;
 class NovellBugzilla;
 class Bugzilla;
+class Mantis;
 
 class Autodetector : public QObject
 {
@@ -41,7 +42,9 @@ public:
     enum detectionState
     {
         NOVELL_CHECK = 0,
-        BUGZILLA_CHECK
+        BUGZILLA_CHECK,
+        LAUNCHPAD_CHECK,
+        MANTIS_CHECK
     };
 
     Autodetector();
@@ -52,6 +55,7 @@ public slots:
     void prioritiesFound(QStringList priorities);
     void severitiesFound(QStringList severities);
     void statusesFound(QStringList statuses);
+
 signals:
     void finishedDetecting(QMap<QString, QString> data);
 
@@ -63,6 +67,7 @@ private:
     detectionState mDetectionState;
     NovellBugzilla *novellBugzilla;
     Bugzilla *genericBugzilla;
+    Mantis *mantis;
 };
 
 #endif // AUTODETECTOR_H

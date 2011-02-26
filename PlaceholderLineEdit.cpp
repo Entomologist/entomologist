@@ -50,6 +50,7 @@ PlaceholderLineEdit::focusOutEvent(QFocusEvent *e)
     if (text() == "")
         setPlaceholder();
     QLineEdit::focusOutEvent(e);
+    emit lostFocus();
 }
 
 void

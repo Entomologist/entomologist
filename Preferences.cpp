@@ -51,6 +51,7 @@ Preferences::~Preferences()
     delete ui;
 }
 
+
 void
 Preferences::stateChanged(int state)
 {

@@ -29,6 +29,11 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
     ui(new Ui::NewTracker)
 {
     ui->setupUi(this);
+    ui->hintLabel->setText("");
+    connect(ui->urlEdit, SIGNAL(lostFocus()),
+            this, SLOT(serverFocusOut()));
+    connect(ui->urlEdit, SIGNAL(textChanged(QString)),
+            this, SLOT(hostTextChanged(QString)));
     ui->urlEdit->setPlaceholderText(tr("For example: bugzilla.novell.com or bugs.example.com/bugtracker/"));
     if (edit)
     {
@@ -42,6 +47,15 @@ NewTracker::~NewTracker()
     delete ui;
 }
 
+void
+NewTracker::hostTextChanged(const QString &text)
+{
+    if (text.startsWith("https://code.google.com") || text.startsWith("code.google.com"))
+        ui->hintLabel->setText(tr("Your username should be your Gmail address, and the format of the URL should be <tt>code.google.com/p/<b>PROJECT_NAME</b></tt>"));
+    else
+        ui->hintLabel->setText("");
+}
+
 QMap<QString, QString>
 NewTracker::data()
 {
@@ -53,6 +67,14 @@ NewTracker::data()
     info["password"] = ui->passEdit->text();
     info["last_sync"] = "1970-01-01T00:00:00";
     return(info);
+}
+
+void
+NewTracker::serverFocusOut()
+{
+    QString server = ui->urlEdit->text();
+    if (server.toLower().endsWith("launchpad.net"))
+        ui->passEdit->setEnabled(false);
 }
 
 void

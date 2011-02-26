@@ -39,7 +39,6 @@ public:
 public slots:
     void accepted();
     void stateChanged(int state);
-
 protected:
     void changeEvent(QEvent *e);
 

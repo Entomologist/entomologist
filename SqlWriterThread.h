@@ -40,7 +40,10 @@ public:
     void clearBugs(const QString &trackerId);
     void insertBugs(QList<QMap<QString, QString> > bugList);
     void insertComments(QList<QMap<QString, QString> > commentList);
+    void insertBugComments(QList<QMap<QString, QString> > commentList);
+
     void updateSync(int id, const QString &timestamp);
+    void updateCredentials(int id, const QString &username, const QString &password);
 
 signals:
     void success();
@@ -50,7 +53,9 @@ signals:
     void deleteBugs(const QString &trackerId);
     void newBugs(QList<QMap<QString, QString> > bugList);
     void newComments(QList<QMap<QString, QString> > commentList);
+    void newBugComments(QList<QMap<QString, QString> > commentList);
     void syncDB(int id, const QString &timestamp);
+    void saveCredentials(int id, const QString &username, const QString &password);
 
 private:
     SqlWriter *pWriter;

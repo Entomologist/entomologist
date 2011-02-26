@@ -51,10 +51,14 @@ SqlWriterThread::run()
             pWriter, SLOT(insertBugs(QList<QMap<QString,QString> >)));
     connect(this, SIGNAL(newComments(QList<QMap<QString,QString> >)),
             pWriter, SLOT(insertComments(QList<QMap<QString,QString> >)));
+    connect(this, SIGNAL(newBugComments(QList<QMap<QString,QString> >)),
+            pWriter, SLOT(insertBugComments(QList<QMap<QString,QString> >)));
     connect(this, SIGNAL(syncDB(int, QString)),
             pWriter, SLOT(syncDB(int, QString)));
     connect(this, SIGNAL(deleteBugs(QString)),
             pWriter, SLOT(deleteBugs(QString)));
+    connect(this, SIGNAL(saveCredentials(int,QString,QString)),
+            pWriter, SLOT(saveCredentials(int,QString,QString)));
     connect(pWriter, SIGNAL(failure(QString)),
             this, SIGNAL(failure(QString)));
     connect(pWriter, SIGNAL(success()),
@@ -80,10 +84,23 @@ SqlWriterThread::insertComments(QList<QMap<QString, QString> > commentList)
     emit newComments(commentList);
 }
 
+
+void
+SqlWriterThread::insertBugComments(QList<QMap<QString, QString> > commentList)
+{
+    emit newBugComments(commentList);
+}
+
 void
 SqlWriterThread::updateSync(int id, const QString &timestamp)
 {
     emit syncDB(id, timestamp);
+}
+
+void
+SqlWriterThread::updateCredentials(int id, const QString &username, const QString &password)
+{
+    emit saveCredentials(id, username, password);
 }
 
 void

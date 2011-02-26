@@ -33,6 +33,9 @@ public:
     PlaceholderLineEdit(QWidget *parent = 0);
     void setPlaceholderText(const QString &placeholder);
 
+signals:
+    void lostFocus();
+
 protected:
     void focusInEvent(QFocusEvent *e);
     void focusOutEvent(QFocusEvent *e);

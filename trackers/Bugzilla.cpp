@@ -46,7 +46,7 @@ Bugzilla::Bugzilla(const QString &url)
     pClient = new MaiaXmlRpcClient(QUrl(mUrl + "/xmlrpc.cgi"), "Entomologist/0.1");
 
     // To keep the CSV output easy to parse, we specify the specific columns we're interested in
-    QNetworkCookie columnCookie("COLUMNLIST", "bug_severity%20priority%20assigned_to%20bug_status%20product%20component%20short_short_desc");
+    QNetworkCookie columnCookie("COLUMNLIST", "changeddate%20bug_severity%20priority%20assigned_to%20bug_status%20product%20component%20short_short_desc");
     QList<QNetworkCookie> list;
     list << columnCookie;
     pCookieJar->setCookiesFromUrl(list, QUrl(url));
@@ -96,7 +96,7 @@ Bugzilla::checkVersion()
 {
     qDebug() << "Checking version";
     QVariantList args;
-    pClient->call("Bugzilla.version", args, this, SLOT(versionRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+    pClient->call("Bugzilla.version", args, this, SLOT(versionRpcResponse(QVariant&)), this, SLOT(versionError(int, const QString &)));
 }
 
 // Upload all of the bug changes
@@ -456,7 +456,14 @@ Bugzilla::rpcError(int error, const QString &message)
     emit backendError(e);
 }
 
-void Bugzilla::versionRpcResponse(QVariant &arg)
+void
+Bugzilla::versionError(int error, const QString &message)
+{
+    emit versionChecked("-1");
+}
+
+void
+Bugzilla::versionRpcResponse(QVariant &arg)
 {
     qDebug() << "Version check";
     QString version = arg.toMap().value("version").toString();
@@ -519,6 +526,7 @@ void Bugzilla::reportedRpcResponse(QVariant &arg)
     }
     getUserBugs();
 }
+
 void Bugzilla::bugRpcResponse(QVariant &arg)
 {
     qDebug() << "USER_BUGS";
@@ -551,6 +559,9 @@ void Bugzilla::bugRpcResponse(QVariant &arg)
         newBug["component"] = responseMap.value("component").toString();
         newBug["product"] = responseMap.value("product").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
+        // Bugs from RPC come in in ISO format (YYYY-MM-DDTHH:MM:SS) so convert
+        // to an easier to read format
+        newBug["last_modified"] = friendlyTime(responseMap.value("last_change_time").toString());
         insertList << newBug;
     }
 
@@ -587,7 +598,6 @@ void Bugzilla::commentRpcResponse(QVariant &arg)
     }
     mPendingCommentInsertions = 1;
     pSqlWriter->insertComments(commentInsertionList);
-
 }
 
 void
@@ -627,7 +637,7 @@ Bugzilla::reportedBugListFinished()
         reply->close();
         return;
     }
-   qDebug() << "reportedBugListFinished";
+    qDebug() << "reportedBugListFinished";
     QString csv = reply->readAll();
     parseBuglistCSV(csv, "Reported");
     reply->close();
@@ -669,6 +679,7 @@ Bugzilla::userBugListFinished()
         newBug["component"] = responseMap.value("component").toString();
         newBug["product"] = responseMap.value("product").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
+        newBug["last_modified"] = responseMap.value("last_change_time").toString();
         insertList << newBug;
     }
 
@@ -715,18 +726,20 @@ Bugzilla::parseBuglistCSV(const QString &csv,
          QVariantMap newBug;
          newBug["id"]  = bug.at(0);
          entry = bug.at(1);
-         newBug["severity"] = entry.remove(reg);
+         newBug["last_change_time"] = entry.remove(reg);
          entry = bug.at(2);
-         newBug["priority"] = entry.remove(reg);
+         newBug["severity"] = entry.remove(reg);
          entry = bug.at(3);
-         newBug["assigned_to"] = entry.remove(reg);
+         newBug["priority"] = entry.remove(reg);
          entry = bug.at(4);
-         newBug["status"] = entry.remove(reg);
+         newBug["assigned_to"] = entry.remove(reg);
          entry = bug.at(5);
-         newBug["product"] = entry.remove(reg);
+         newBug["status"] = entry.remove(reg);
          entry = bug.at(6);
+         newBug["product"] = entry.remove(reg);
+         entry = bug.at(7);
          newBug["component"] = entry.remove(reg);
-         entry = list.at(i).section(',', 7);
+         entry = list.at(i).section(',', 8);
          newBug["summary"] = entry.remove(reg);
          newBug["bug_type"] = bugType;
          mBugs[bug.at(0)] = newBug;
@@ -916,10 +929,11 @@ Bugzilla::commentInsertionFinished()
     }
 }
 
-void
+QString
 Bugzilla::buildBugUrl(const QString &id)
 {
-    qDebug() << "Building " << mUrl + "/show_bug.cgi?id=" + id;
+    QString url = mUrl + "/show_bug.cgi?id=" + id;
+    return(url);
 }
 
 // TODO implement this?
@@ -928,4 +942,20 @@ Bugzilla::handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors)
 {
     reply->ignoreSslErrors();
+}
+
+// Utility function to convert date/times to more readable ones
+QString
+Bugzilla::friendlyTime(const QString &time)
+{
+    QDateTime newTime = QDateTime::fromString(time, Qt::ISODate);
+    if (!newTime.isValid())
+    {
+        newTime = QDateTime::fromString(time, "yyyy-MM-dd hh:mm:ss");
+    }
+
+    if (!newTime.isValid())
+        return(time);
+
+    return(newTime.toString("yyyy-MM-dd hh:mm:ss"));
 }
