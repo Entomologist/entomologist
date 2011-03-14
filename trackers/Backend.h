@@ -92,11 +92,11 @@ public:
 
     // Given a bug ID, create an HTTP url for viewing in a web browser
     // (called by the bug list context menu)
-    virtual QString buildBugUrl(const QString &id) {}
+    virtual QString buildBugUrl(const QString &id) { return(""); }
 
     // If a tracker automatically downloads comments on syncs, it
     // should return "1" here, otherwise "0"
-    virtual QString autoCacheComments() {}
+    virtual QString autoCacheComments() { return(""); }
 
     // This keeps track of how many bugs were updated in the last sync.
     // It's used to pop up the system tray notification.
