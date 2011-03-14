@@ -5,11 +5,12 @@ unix:isEmpty(PREFIX):PREFIX = /usr
 QT += network \
     sql \
     xml
+
 # Disabling until Launchpad support is ready
-# win32:LIBS += -lqjson
-# macx:LIBS += -framework \
-#    qjson
-# else:LIBS += -lqjson
+win32:LIBS += -lqjson
+macx:LIBS += -framework \
+     qjson
+else:LIBS += -lqjson
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
@@ -39,7 +40,8 @@ SOURCES += main.cpp \
     qtsoap/qtsoap.cpp \
     trackers/Mantis.cpp \
     ChangelogWindow.cpp \
-    ChangelogListDelegate.cpp
+    ChangelogListDelegate.cpp \
+    trackers/Launchpad.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -63,7 +65,8 @@ HEADERS += MainWindow.h \
     qtsoap/qtsoap.h \
     trackers/Mantis.h \
     ChangelogWindow.h \
-    ChangelogListDelegate.h
+    ChangelogListDelegate.h \
+    trackers/Launchpad.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \

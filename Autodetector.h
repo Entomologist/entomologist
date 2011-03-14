@@ -32,6 +32,7 @@
 class Backend;
 class NovellBugzilla;
 class Bugzilla;
+class Launchpad;
 class Mantis;
 
 class Autodetector : public QObject
@@ -67,6 +68,7 @@ private:
     detectionState mDetectionState;
     NovellBugzilla *novellBugzilla;
     Bugzilla *genericBugzilla;
+    Launchpad *launchpad;
     Mantis *mantis;
 };
 

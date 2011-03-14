@@ -27,7 +27,7 @@
 
 #include "libmaia/maiaXmlRpcClient.h"
 #include "trackers/NovellBugzilla.h"
-//#include "trackers/Launchpad.h"
+#include "trackers/Launchpad.h"
 //#include "trackers/Google.h"
 #include "trackers/Mantis.h"
 #include "Autodetector.h"
@@ -38,6 +38,7 @@ Autodetector::Autodetector()
     novellBugzilla = NULL;
     genericBugzilla = NULL;
     mantis = NULL;
+    launchpad = NULL;
 }
 
 void
@@ -67,8 +68,9 @@ Autodetector::detect(QMap<QString, QString> data)
     }
     else if (mUrl.host().toLower().endsWith("launchpad.net"))
     {
-        mData["type"] = "Launchpad";
-        emit finishedDetecting(mData);
+        mDetectionState = LAUNCHPAD_CHECK;
+        launchpad = new Launchpad(temp);
+        checkVersion(launchpad);
     }
     else
     {
@@ -137,6 +139,10 @@ Autodetector::versionChecked(QString version)
         mantis->setUsername(mData["username"]);
         mantis->setPassword(mData["password"]);
     }
+    else if (mDetectionState == LAUNCHPAD_CHECK)
+    {
+        mData["type"] = "Launchpad";
+    }
 
     getValidValues();
 }
@@ -153,6 +159,8 @@ Autodetector::prioritiesFound(QStringList priorities)
         genericBugzilla->checkValidStatuses();
     else if (mantis != NULL)
         mantis->checkValidStatuses();
+    else if (launchpad != NULL)
+        launchpad->checkValidStatuses();
 }
 
 void
@@ -167,6 +175,8 @@ Autodetector::statusesFound(QStringList statuses)
         genericBugzilla->checkValidSeverities();
     else if (mantis != NULL)
         mantis->checkValidSeverities();
+    else if (launchpad != NULL)
+        launchpad->checkValidSeverities();
 
 }
 
@@ -182,6 +192,8 @@ Autodetector::severitiesFound(QStringList severities)
         genericBugzilla->deleteLater();
     else if (mantis != NULL)
         mantis->deleteLater();
+    else if (launchpad != NULL)
+        launchpad->deleteLater();
 
     emit finishedDetecting(mData);
 }
@@ -195,5 +207,7 @@ Autodetector::getValidValues()
         genericBugzilla->checkValidPriorities();
     else if (mantis != NULL)
         mantis->checkValidPriorities();
+    else if (launchpad != NULL)
+        launchpad->checkValidPriorities();
 
 }

@@ -48,7 +48,7 @@
 #include "SqlBugModel.h"
 #include "trackers/Bugzilla.h"
 #include "trackers/NovellBugzilla.h"
-//#include "trackers/Launchpad.h"
+#include "trackers/Launchpad.h"
 //#include "trackers/Google.h"
 #include "trackers/Mantis.h"
 #include "NewTracker.h"
@@ -699,11 +699,11 @@ MainWindow::addTracker(QMap<QString,QString> info)
         NovellBugzilla *newBug = new NovellBugzilla(info["url"]);
         setupTracker(newBug, info);
     }
-//    else if (QUrl(info["url"]).host().toLower().endsWith("launchpad.net"))
-//    {
-//        Launchpad *newBug = new Launchpad(info["url"]);
-//        setupTracker(newBug, info);
-//    }
+    else if (QUrl(info["url"]).host().toLower().endsWith("launchpad.net"))
+    {
+        Launchpad *newBug = new Launchpad(info["url"]);
+        setupTracker(newBug, info);
+    }
 //    else if (info["type"] == "Google")
 //    {
 //        Google *newBug = new Google(info["url"]);
@@ -1134,16 +1134,16 @@ MainWindow::finishedDetecting(QMap<QString, QString> data)
     {
         // Launchpad doesn't yet support retrieving details for multiple bugs with a single call,
         // so we're going to have to punt on it.
-        QMessageBox box;
-        box.setText(tr("Sorry, Launchpad is not yet supported."));
-        box.exec();
-        delete detector;
-        return;
-
+//        QMessageBox box;
+//        box.setText(tr("Sorry, Launchpad is not yet supported."));
+//        box.exec();
+//        delete detector;
+//        return;
+//
         // If the user managed to enter a password into the Add Tracker dialog, we want to discard
         // it, as Launchpad uses OAuth, and we store the OAuth token and secret in the
         // password field.  It's hacky, I know.
-        //data["password"] =  "";
+        data["password"] =  "";
     }
 
     delete detector;
