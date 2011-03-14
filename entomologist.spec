@@ -24,7 +24,7 @@ BuildRequires:  gcc-c++
     %define lrelease /usr/bin/lrelease
 %endif
 
-Version:	0.3
+Version:	0.4
 Release:	0
 Summary:	Open-source bug tracking on the desktop
 Group:		Productivity/Other
