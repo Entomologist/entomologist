@@ -1,126 +1,78 @@
-<html>
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.1//EN" "http://www.w3.org/TR/xhtml11/DTD/xhtml11.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
-<TITLE>Entomologist</TITLE>
-<link rel="stylesheet" href="stylesheet.css" type="text/css" />
+<meta http-equiv='X-UA-Compatible' content='IE=EmulateIE7' />
+
+<title> Entomologist - Home</title>
+
+<link rel='stylesheet' type='text/css' href='stylesheet.css'/>
 </head>
-
 <body>
-<div id="container">
-    <div id="header">
-    <h1><a href="#">Entomologist</a></h1>
-    <p>Open-source bug tracking on the desktop</p>
-    <div class="clear"></div>
-    </div>
-
-    <div id="navigation">
-    <ul>
-      <LI><a href="#about">About</a></LI>
-        <li><a href="#download">Download</a></li>
-        <li><a href="#source">Source Code</a></li>
-        <li><a href="#support">Support</a></li>
-        <li><a href="#todo">TODOs/Roadmap</a></li>
-        <li><a href="#trackers">Supported Trackers</a></li>
-    </ul>
-    </div>
-
-    <div id="content">
-        <div id="about">
-          <h2>About</h2>
-          The goal of Entomologist is to provide a cross-platform, open source bug tracker client that works with multiple bug trackers (Bugzilla, Launchpad, etc) and provides an easier way to work with bugs on the desktop.<br><br>
-          Currently, it will cache bugs pulled from Bugzilla (3.2+) and MantisBT instances and certain fields can be modified or comments added.  Modified fields in the bug list will show up in <font color="red">red</font>, and they
-          can be submitted back to the bug tracker by pressing the <b>Upload</b> button.  There are other things on the <a href="#todo">todo list</a>.  File a bug or send me <a href="#support">an email</a> if you have any feature requests.<br><br>
-          <img src="main_window.png"><br>
-          <small><i>This is an old screenshot</i></small>
-          <br>
+  <div id="wrapper">
+    <div id="main">
+      <div id="content-wrapper">
+        <div id="content">
+          <div id="header-image">
+             <div class="entomologist_header"></div>
+          </div>
+          <div id="navigation">
+            <div id="nav-content">
+              <ul>
+                <li id="active"><a href="index.html">Home</a></li>
+                <li id="downloadheader"><a href="download.html">Download</a></li>
+                <li id="screenshotheader"><a href="screenshots.html">Screenshots</a></li>
+                <li id="supportheader"><a href="support.html">Support</a></li>
+                <li id="roadmapheader"><a href="roadmap--todos.html">Roadmap & TODOs</a></li>
+              </ul>
+            </div>
+          </div>
+          <div id="nav-bottom"></div>
+          <div id="content-main">
+          <div id='entomologist-content-container'><div >
+          <div id="split-pane" style="width: 100%;">
+            <div id="split-pane-left-hand" class="column" style="width: 70%; float: left; overflow: visible; margin: 0; padding: 0;">
+            <div style="padding-right: 5px;" class="columnlistp">
+            <h2  style=" text-align: left; ">About<span></span><br /></h2>
+              <span class='imgPusher' style='float:left;height:0px'></span>
+              <span style=' float: left; position: relative; z-index: 10; ;clear:left;margin-top:0px;*margin-top:0px'>
+                <a href='screenshots.html'>
+                  <img src="images/index_screenshot.png" style="margin-top: 5px; margin-bottom: 10px; margin-left: 0px; margin-right: 10px; border-width:1px;padding:3px;" alt="Picture" class="galleryImageBorder" /></a>
+                  <div style="display: block; font-size: 90%; margin-top: -10px; margin-bottom: 10px; text-align: center;"></div>
+              </span>
+              <div  class="paragraph" style=" text-align: left; display: block; ">
+                The goal of Entomologist is to provide a cross-platform, open source bug tracker client that works with multiple bug trackers (Bugzilla, Launchpad, etc) and provides an easier way to work with bugs on the desktop.
+              </div>
+              <hr  style=" visibility: hidden; clear: both; width: 100%; "></hr>
+              <h2  style=" text-align: left; ">Supported Trackers<br /></h2>
+              <div  class="paragraph" style=" text-align: left; display: block; ">
+                <ul>
+                  <li>Bugzilla 3.2+</li>
+                  <li>MantisBT 1.1+</li>
+                </ul>
+              </div>
+            </div>
+          </div>
+          <div id="split-pane-right-hand" class="column" style="width: 30%; left: 30%; float: left; overflow: visible; margin: 0; padding: 0;">
+            <div style="padding-left: 5px;" class="columnlistp">
+              <div  style=" margin-bottom: 10px; margin-top: 10px; ">
+                <div style="text-align: center;">
+                  <script src="http://entomologist.sourceforge.net/feed2js/feed2js.php?src=http%3A%2F%2Fsourceforge.net%2Fexport%2Frss2_projnews.php%3Fgroup_id%3D401469&chan=title&num=4&desc=0&html=p&targ=y&utf=y" type="text/javascript">
+                  </script>
+                </div>
+                <style type="text/css">
+                </style>
+              </div>
+            </div>
+          </div>
         </div>
-        <div id="download">
-          <h2>Download</h2>
-          <p>You can find packages for various distributions in <a href="http://download.opensuse.org/repositories/home:/mbarringer/">http://download.opensuse.org/repositories/home:/mbarringer/</a>, or use the 1-Click Install links:<br><br>
-          <ul>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/openSUSE_11.4/entomologist.ymp?base=openSUSE%3A11.4&query=Entomologist">openSUSE 11.4</a></li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/openSUSE_11.3/entomologist.ymp?base=openSUSE%3A11.3&query=entomologist">openSUSE 11.3</a></li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/openSUSE_11.2/entomologist.ymp?base=openSUSE%3A11.2&query=entomologist">openSUSE 11.2</a></li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/openSUSE_Factory/entomologist.ymp?base=openSUSE%3AFactory&query=Entomologist">openSUSE Factory</a></li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/SLE_11_SP1/entomologist.ymp?base=SUSE%3ASLE-11%3ASP1&query=entomologist">SLED 11 SP1</a></li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/Fedora_14/entomologist.ymp?base=Fedora%3A14&query=Entomologist">Fedora 14</a> (untested - let me know if it works for you!)</li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/Fedora_13/entomologist.ymp?base=Fedora%3A13&query=Entomologist">Fedora 13</a> (untested - let me know if it works for you!)</li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/Fedora_12/entomologist.ymp?base=Fedora%3A12&query=Entomologist">Fedora 12</a> (untested - let me know if it works for you!)</li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/Mandriva_2010/entomologist.ymp?base=Mandriva%3A2010&query=Entomologist">Mandriva 2010</a> (untested - let me know if it works for you!)</li>
-            <li><a href="http://software.opensuse.org/ymp/home:mbarringer/Mandriva_2010.1/entomologist.ymp?base=Mandriva%3A2010.1&query=Entomologist">Mandriva 2010.1</a> (untested - let me know if it works for you!)</li>
-          </ul>
-          <br><p><tt>.deb</tt> packages are also provided:</p>
-          <ul>
-            <li><a href="http://download.opensuse.org/repositories/home:/mbarringer/xUbuntu_10.10/">(K)Ubuntu 10.10</a></li>
-            <li><a href="http://download.opensuse.org/repositories/home:/mbarringer/xUbuntu_10.04/">(K)Ubuntu 10.04</a> (untested - let me know if it works for you!)</li>
-            <li><a href="http://download.opensuse.org/repositories/home:/mbarringer/Debian_6.0/">Debian 6.0</a> (untested - let me know if it works for you!)</li>
-          </ul>
-          <br><br>
-        </div>
-        <div id="source">
-        <h2>Source Code</h2>
-	Source code is hosted on <a href="http://sourceforge.net/projects/entomologist/develop">SourceForge</a>.  To get the source, you can:<br/><br/>
-	<p><tt>git clone git://entomologist.git.sourceforge.net/gitroot/entomologist/entomologist (read-only)</tt><br/><br/></p>
-  <p>Or browse it <a href="http://entomologist.git.sourceforge.net/git/gitweb.cgi?p=entomologist/entomologist;a=tree">here</a>.<br/><br/></p>
-  <p>To install, run <tt>qmake</tt> and <tt>make</tt></p><br/><br>
-        </div>
-
-        <div id="support">
-		<h2>Support</h2>
-		You can email the author at <tt><b>mbarringer</b></tt> at the <tt><b>suse.de</b></tt> domain.  Bug reports and suggestions are always welcome.
-    <br>
-    You can sign up for the <a href="https://lists.sourceforge.net/lists/listinfo/entomologist-announce">announcement mailing list</a> if you're interested,
-    or check the list of <a href="https://sourceforge.net/tracker/?group_id=401469&atid=1664321">known issues</a>.
-    <br/><br/>
-  </div>
-  <div id="todo">
-          <h2>TODO List</h2>
-    <div>
-      <ul>
-            <li>More tracker support</li>
-            <li>Bug resolution</li>
-            <li>Better details screen</li>
-            <li>Bug TODO lists</li>
-            <li>Bug bookmarking</li>
-            <li>Supportable Windows, Mac, and Android builds</li>
-      </ul>
-      <br><br>
-      <h2>Roadmap</h2>
-      <i>"Prediction is difficult, especially about the future."</i><br><br>
-      <ul>
-              <li><strike><b>Version 0.4</b> - Support for MantisBT.  Bug sorting by modification time.</strike></li>
-              <li><b>Version 0.5</b> - Support for Launchpad.
-              <li><b>Version 0.6</b> - Generic Trac support</li>
-              <li><b>Version 0.7</b> - RT support</li>
-              <li><b>Version 0.8</b> - Google Project Hosting</li>
-      </ul><br><br>
-
-        </div>
+        <div style="clear: both; visibility: hidden; height: 0px; overflow: hidden;"></div>
       </div>
-      <div id ="trackers">
-  <h2>Supported Trackers</h2>
-  <ul>
-          <li>Bugzilla 3.2, 3.4, 3.6</li>
-          <li>MantisBT 1.1+ - <i>as of version 0.4</i></li>
-  </ul>
-</div>
-
-      <div>
-  <center>
-    <a href="http://sourceforge.net/projects/entomologist"><img src="http://sflogo.sourceforge.net/sflogo.php?group_id=401469&amp;type=10" width="80" height="15" alt="Hosted at SourceForge.net"/></a>
-  </center>
+    </div>
+  </div>
 </div>
 </div>
-<!-- Piwik -->
-<script type="text/javascript">
-  var pkBaseURL = (("https:" == document.location.protocol) ? "https://sourceforge.net/apps/piwik/entomologist/" : "http://sourceforge.net/apps/piwik/entomologist/");
-  document.write(unescape("%3Cscript src='" + pkBaseURL + "piwik.js' type='text/javascript'%3E%3C/script%3E"));
-  </script><script type="text/javascript">
-  try {
-    var piwikTracker = Piwik.getTracker(pkBaseURL + "piwik.php", 1);
-    piwikTracker.trackPageView();
-    piwikTracker.enableLinkTracking();
-  } catch( err ) {}
-</script><noscript><p><img src="http://sourceforge.net/apps/piwik/entomologist/piwik.php?idsite=1" style="border:0" alt=""/></p></noscript>
-<!-- End Piwik Tag -->
+</div>
+</div>
 </body>
 </html>
+
