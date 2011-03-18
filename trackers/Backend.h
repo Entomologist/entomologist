@@ -115,6 +115,7 @@ signals:
 public slots:
     virtual void commentInsertionFinished() {}
     virtual void bugsInsertionFinished(QStringList idList) {}
+    void sqlError(QString message);
 
 protected:
     void updateSync();

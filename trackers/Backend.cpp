@@ -72,3 +72,9 @@ Backend::saveCredentials()
 {
     pSqlWriter->updateCredentials(mId.toInt(), mUsername, mPassword);
 }
+
+void
+Backend::sqlError(QString message)
+{
+    emit backendError(message);
+}
