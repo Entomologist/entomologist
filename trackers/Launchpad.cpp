@@ -20,14 +20,17 @@
  *  Author: Matt Barringer <mbarringer@suse.de>
  *
  */
+#include <QBuffer>
 #include <QDateTime>
 #include <QUuid>
 #include <QStringList>
 #include <QString>
+#include <QSqlTableModel>
 #include <QMessageBox>
 #include <QDesktopServices>
 #include <QVariantMap>
 #include <qjson/parser.h>
+#include <qjson/serializer.h>
 
 #include "Launchpad.h"
 
@@ -39,6 +42,9 @@ Launchpad::Launchpad(const QString &url, QObject *parent) :
         mApiUrl = "https://api." + QUrl(url).host();
     else
         mApiUrl = url;
+            pManager->setCookieJar(pCookieJar);
+    connect(pManager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
+            this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
     connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
             this, SLOT(bugsInsertionFinished(QStringList)));
     connect(pSqlWriter, SIGNAL(commentFinished()),
@@ -77,6 +83,7 @@ Launchpad::sync()
 void
 Launchpad::login()
 {
+// No need with OAuth
 }
 
 void
@@ -177,15 +184,15 @@ Launchpad::reporterListFinished()
 void
 Launchpad::bugListFinished()
 {
-    qDebug() << "Bug list finished";
+    qDebug() << "Launchpad bug list finished";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    QString response = reply->readAll();
     if (reply->error())
     {
         emit backendError(reply->errorString());
         return;
     }
     reply->deleteLater();
-    QString response = reply->readAll();
     QJson::Parser parser;
     bool ok;
     QVariant bugs = parser.parse(response.toAscii(), &ok);
@@ -217,6 +224,44 @@ Launchpad::bugListFinished()
     }
 
     pSqlWriter->insertBugs(insertList);
+}
+
+void
+Launchpad::bugUploadFinished()
+{
+    qDebug() << "Bug list finished";
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    QString id = reply->request().attribute(QNetworkRequest::User).toString();
+    QString response = reply->readAll();
+
+    if (reply->error())
+    {
+        qDebug() << "Got an error reply: " << response;
+        qDebug() << reply->request().rawHeaderList();
+        emit backendError(reply->errorString());
+        return;
+    }
+    reply->deleteLater();
+    qDebug() << response;
+    mUploadList.remove(id);
+    QSqlQuery sql;
+    sql.exec(QString("DELETE FROM shadow_bugs WHERE bug_id=\'%1\' AND tracker_id=%2").arg(id).arg(mId));
+    getNextUpload();
+}
+
+void
+Launchpad::commentUploadFinished()
+{
+    qDebug() << "Bug list finished";
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        emit backendError(reply->errorString());
+        return;
+    }
+    reply->deleteLater();
+    QString response = reply->readAll();
+
 }
 
 void
@@ -362,7 +407,92 @@ Launchpad::getComments(const QString &bugId)
 void
 Launchpad::uploadAll()
 {
+// Qt < 4.7 don't allow us to make an HTTP PATCH call
+#if QT_VERSION < 0x040700
+    emit bugsUpdated();
+    return;
+#endif
+    mUploadList.clear();
+    mCommentUploadList.clear();
+    QString sql = QString("SELECT bug_id, severity, priority, assigned_to, status, summary FROM shadow_bugs where tracker_id=%1")
+                       .arg(mId);
+    QString commentSql = QString("SELECT bug_id, comment, private FROM shadow_comments WHERE tracker_id=%1")
+                         .arg(mId);
+    QSqlQuery comment(commentSql);
+    while (comment.next())
+    {
+        QVariantMap map;
+        map["bug_id"] = comment.value(0).toString();
+        map["comment"] = comment.value(1).toString();
+        map["private"] = comment.value(2).toString();
+        mCommentUploadList << map;
+    }
 
+    QSqlQuery q(sql);
+    while (q.next())
+    {
+        QVariantMap ret;
+        if (!q.value(2).isNull())
+            ret["importance"] = q.value(2).toString().remove(QRegExp("<[^>]*>"));
+        if (!q.value(3).isNull())
+            ret["assignee_link"] = QString("%1/1.0/~%2")
+                                   .arg(mUrl)
+                                   .arg(q.value(3).toString().remove(QRegExp("<[^>]*>")));
+        if (!q.value(4).isNull())
+            ret["status"] = q.value(4).toString().remove(QRegExp("<[^>]*>"));
+        mUploadList[q.value(0).toString()] = ret;
+    }
+    getNextUpload();
+
+}
+void
+Launchpad::getNextUpload()
+{
+    qDebug() << "getNextUpload...";
+    QString bugId = "";
+    QMapIterator<QString, QVariant> i(mUploadList);
+    if (!i.hasNext())
+    {
+        getNextCommentUpload();
+        return;
+    }
+    i.next();
+
+    bugId = i.key();
+    QVariantMap values = i.value().toMap();
+    QJson::Serializer serializer;
+    QByteArray serialized = serializer.serialize(values);
+    QBuffer *out = new QBuffer(&serialized, pManager);
+    out->open(QIODevice::ReadOnly);
+    qDebug() << serialized;
+    QString url = QString("%1/1.0/bugs/%2/bug_tasks")
+                         .arg(mApiUrl)
+                         .arg(bugId);
+    QNetworkRequest req = QNetworkRequest(QUrl(url));
+    req.setAttribute(QNetworkRequest::User, bugId);
+    req.setRawHeader("Authentication", authorizationHeader().toAscii());
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    qDebug() << "sending custom request to " << url;
+    QNetworkReply *rep = pManager->sendCustomRequest(req, "PATCH", out);
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(bugUploadFinished()));
+    qDebug() << "sent";
+}
+
+void
+Launchpad::getNextCommentUpload()
+{
+    if (mCommentUploadList.size() == 0)
+    {
+        qDebug() << "Done uploading comments";
+        sync();
+        return;
+    }
+
+    qDebug() << "Going to upload a comment...";
+    QVariantMap map = mCommentUploadList.at(0).toMap();
+    //////
+    sync();
 }
 
 QString
@@ -370,6 +500,7 @@ Launchpad::buildBugUrl(const QString &id)
 {
     return("");
 }
+
 
 // OAuth related functions
 
@@ -519,4 +650,11 @@ void
 Launchpad::networkError(QNetworkReply::NetworkError e)
 {
     qDebug() << "Network error: " << e;
+}
+
+void
+Launchpad::handleSslErrors(QNetworkReply *reply,
+                         const QList<QSslError> &errors)
+{
+    reply->ignoreSslErrors();
 }

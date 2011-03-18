@@ -25,9 +25,13 @@ public:
 signals:
 
 public slots:
+    void handleSslErrors(QNetworkReply *reply,
+                         const QList<QSslError> &errors);
     void requestTokenFinished();
     void requestRealTokenFinished();
     void bugListFinished();
+    void bugUploadFinished();
+    void commentUploadFinished();
     void subscriberListFinished();
     void reporterListFinished();
     void networkError(QNetworkReply::NetworkError e);
@@ -41,10 +45,15 @@ private:
     void getReporterBugs();
     void authenticateUser();
     void getRealToken();
+    void getNextUpload();
+    void getNextCommentUpload();
+
     void handleJSON(QVariant json, const QString &type);
     QString authorizationHeader();
     QString mApiUrl;
     QString mConsumerToken, mToken, mSecret;
+    QVariantMap mUploadList;
+    QVariantList mCommentUploadList;
     QVariantMap mBugs;
 };
 

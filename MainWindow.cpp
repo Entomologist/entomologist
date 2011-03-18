@@ -1132,14 +1132,17 @@ MainWindow::finishedDetecting(QMap<QString, QString> data)
     }
     else if (type == "Launchpad")
     {
-        // Launchpad doesn't yet support retrieving details for multiple bugs with a single call,
-        // so we're going to have to punt on it.
-//        QMessageBox box;
-//        box.setText(tr("Sorry, Launchpad is not yet supported."));
-//        box.exec();
-//        delete detector;
-//        return;
-//
+
+// Launchpad uses a non-standard HTTP method ("PATCH") to update bugs.  Support for custom HTTP commands is
+// only available in Qt 4.7+, so we must disable that functionality in older versions.
+ #if QT_VERSION < 0x040700
+        QMessageBox box;
+        box.setText(tr("Launchpad support will be read-only."));
+        box.setDetailedText(tr("Entomologist was compiled against an older version of Qt, probably because you're running an older distribution. "
+                               "In order to have write-access to Launchpad, you'll need a binary compiled to use Qt 4.7 or higher"));
+        box.exec();
+#endif
+
         // If the user managed to enter a password into the Add Tracker dialog, we want to discard
         // it, as Launchpad uses OAuth, and we store the OAuth token and secret in the
         // password field.  It's hacky, I know.
