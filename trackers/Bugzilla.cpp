@@ -924,7 +924,7 @@ Bugzilla::commentInsertionFinished()
     mPendingCommentInsertions--;
     if (mPendingCommentInsertions < 1)
     {
-        Bugzilla::updateSync();
+        updateSync();
         emit bugsUpdated();
     }
 }

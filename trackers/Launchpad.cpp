@@ -94,7 +94,7 @@ Launchpad::getUserBugs()
                          .arg(mUsername)
                          .arg(mLastSync.toString("yyyy-MM-ddThh:mm:ss"));
     QNetworkRequest req = QNetworkRequest(QUrl(url));
-    req.setRawHeader("Authentication", authorizationHeader().toAscii());
+    req.setRawHeader("Authorization", authorizationHeader().toAscii());
     qDebug() << "getUserBugs fetching " << url;
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
@@ -109,7 +109,7 @@ Launchpad::getSubscriberBugs()
                          .arg(mUsername)
                          .arg(mLastSync.toString("yyyy-MM-ddThh:mm:ss"));
     QNetworkRequest req = QNetworkRequest(QUrl(url));
-    req.setRawHeader("Authentication", authorizationHeader().toAscii());
+    req.setRawHeader("Authorization", authorizationHeader().toAscii());
     qDebug() << "getSubscriberBugs fetching " << url;
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
@@ -124,7 +124,7 @@ Launchpad::getReporterBugs()
                          .arg(mUsername)
                          .arg(mLastSync.toString("yyyy-MM-ddThh:mm:ss"));
     QNetworkRequest req = QNetworkRequest(QUrl(url));
-    req.setRawHeader("Authentication", authorizationHeader().toAscii());
+    req.setRawHeader("Authorization", authorizationHeader().toAscii());
     qDebug() << "getReporterBugs fetching " << url;
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
@@ -236,8 +236,6 @@ Launchpad::bugUploadFinished()
 
     if (reply->error())
     {
-        qDebug() << "Got an error reply: " << response;
-        qDebug() << reply->request().rawHeaderList();
         emit backendError(reply->errorString());
         return;
     }
@@ -398,7 +396,7 @@ Launchpad::getComments(const QString &bugId)
     qDebug() << "Launchpad getComments URL: " << url;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     req.setAttribute(QNetworkRequest::User, bugId);
-    req.setRawHeader("Authentication", authorizationHeader().toAscii());
+    req.setRawHeader("Authorization", authorizationHeader().toAscii());
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
             this, SLOT(commentFinished()));
@@ -448,6 +446,7 @@ Launchpad::uploadAll()
 void
 Launchpad::getNextUpload()
 {
+#if QT_VERSION >= 0x040700
     qDebug() << "getNextUpload...";
     QString bugId = "";
     QMapIterator<QString, QVariant> i(mUploadList);
@@ -459,24 +458,40 @@ Launchpad::getNextUpload()
     i.next();
 
     bugId = i.key();
+    QSqlQuery q;
+    q.prepare("SELECT product FROM bugs WHERE bug_id=:bug AND tracker_id=:tracker");
+    q.bindValue(":bug", bugId);
+    q.bindValue(":tracker_id", mId);
+    q.exec();
+    q.next();
+    if (q.value(0).isNull())
+    {
+        // We need a project ("target" in Launchpad terms) in order
+        // to modify the bug
+        getNextCommentUpload();
+        return;
+    }
     QVariantMap values = i.value().toMap();
     QJson::Serializer serializer;
-    QByteArray serialized = serializer.serialize(values);
-    QBuffer *out = new QBuffer(&serialized, pManager);
+    QByteArray *serialized = new QByteArray(serializer.serialize(values));
+    QBuffer *out = new QBuffer(serialized, pManager);
     out->open(QIODevice::ReadOnly);
-    qDebug() << serialized;
-    QString url = QString("%1/1.0/bugs/%2/bug_tasks")
+    QString url = QString("%1/1.0/%2/+bug/%3")
                          .arg(mApiUrl)
+                         .arg(q.value(0).toString())
                          .arg(bugId);
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     req.setAttribute(QNetworkRequest::User, bugId);
-    req.setRawHeader("Authentication", authorizationHeader().toAscii());
+    req.setRawHeader("Authorization", authorizationHeader().toAscii());
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    req.setHeader(QNetworkRequest::ContentLengthHeader, serialized->length());
+    req.setRawHeader("Referer", url.toAscii());
+    req.setRawHeader("Cookie", "OPENSESAME");
     qDebug() << "sending custom request to " << url;
     QNetworkReply *rep = pManager->sendCustomRequest(req, "PATCH", out);
     connect(rep, SIGNAL(finished()),
             this, SLOT(bugUploadFinished()));
-    qDebug() << "sent";
+#endif
 }
 
 void
@@ -507,12 +522,11 @@ Launchpad::buildBugUrl(const QString &id)
 QString
 Launchpad::authorizationHeader()
 {
-    qDebug() << "Authorization header";
     QString header("OAuth realm=\"%1\","
                    "oauth_consumer_key=\"%2\","
                    "oauth_token=\"%3\","
                    "oauth_signature_method=\"PLAINTEXT\","
-                   "oauth_signature=\"%4\","
+                   "oauth_signature=\"&%4\","
                    "oauth_timestamp=\"%5\","
                    "oauth_nonce=\"%6\","
                    "oauth_version=\"1.0\"");
