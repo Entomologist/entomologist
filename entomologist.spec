@@ -6,7 +6,7 @@
 # norootforbuild
 Url:    http://entomologist.sourceforge.net
 Name:           entomologist
-BuildRequires:  gcc-c++
+BuildRequires:  gcc-c++ qjson
 
 %if 0%{?fedora_version}
     %define breq qt4-devel
@@ -24,7 +24,7 @@ BuildRequires:  gcc-c++
     %define lrelease /usr/bin/lrelease
 %endif
 
-Version:	0.4
+Version:	0.5
 Release:	0
 Summary:	Open-source bug tracking on the desktop
 Group:		Productivity/Other
