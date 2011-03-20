@@ -90,18 +90,11 @@ Mantis::setView()
     else
         queryType = "user_monitor[]=0&reporter_id[]=0&handler_id[]=-1";
     QString url = mUrl + "/view_all_set.php?f=3";
-    QString query = QString("type=1&page_number=1&view_type=simple&%1"
-                            "&do_filter_by_date=1"
-                            "&start_year=%2&start_month=%3&start_day=%4"
-                            "&end_year=%5&end_month=%6&end_day=%7&hide_status[]=80")
-            .arg(queryType)
-            .arg(mLastSync.toString("yyyy"))
-            .arg(mLastSync.toString("M"))
-            .arg(mLastSync.toString("d"))
-            .arg(future.toString("yyyy"))
-            .arg(future.toString("M"))
-            .arg(future.toString("d"));
-    qDebug() << "Set mantis filter to: " << query;
+    // I'm not sure why I missed this in 0.4, but Mantis's date range
+    // filter doesn't actually filter on modified times, so we'll
+    // have to download all bugs on each sync.
+    QString query = QString("type=1&page_number=1&view_type=simple&%1&hide_status[]=80")
+            .arg(queryType);
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply *rep = pManager->post(req, query.toAscii());
     connect(rep, SIGNAL(finished()),
@@ -127,6 +120,7 @@ Mantis::getReported()
     connect(rep, SIGNAL(finished()),
             this, SLOT(reportedResponse()));
 }
+
 void
 Mantis::getMonitored()
 {
@@ -368,6 +362,7 @@ Mantis::response()
     }
     else if (messageName == "mc_issue_updateResponse")
     {
+
         mUploadList.remove(mCurrentUploadId);
         QSqlQuery sql;
         sql.exec(QString("DELETE FROM shadow_bugs WHERE bug_id=\'%1\' AND tracker_id=%2").arg(mCurrentUploadId).arg(mId));
@@ -438,6 +433,11 @@ Mantis::getComments(const QString &bugId)
 void
 Mantis::uploadAll()
 {
+    if (!hasPendingChanges())
+    {
+        emit bugsUpdated();
+        return;
+    }
     mUploadList.clear();
     mCommentUploadList.clear();
     mUploadingBugs = true;
@@ -471,7 +471,13 @@ Mantis::uploadAll()
             ret["short_desc"] = q.value(5).toString().remove(QRegExp("<[^>]*>"));
         mUploadList[q.value(0).toString()] = ret;
     }
-    qDebug() << mUploadList;
+
+    if ((mCommentUploadList.size() == 0) && (mUploadList.size() == 0))
+    {
+        emit bugsUpdated();
+        return;
+    }
+
     getNextUpload();
 }
 

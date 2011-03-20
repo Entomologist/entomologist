@@ -49,7 +49,6 @@ Launchpad::Launchpad(const QString &url, QObject *parent) :
             this, SLOT(bugsInsertionFinished(QStringList)));
     connect(pSqlWriter, SIGNAL(commentFinished()),
             this, SLOT(commentInsertionFinished()));
-
 }
 
 Launchpad::~Launchpad()
@@ -229,37 +228,61 @@ Launchpad::bugListFinished()
 void
 Launchpad::bugUploadFinished()
 {
-    qDebug() << "Bug list finished";
+    qDebug() << "Bug upload finished";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     QString id = reply->request().attribute(QNetworkRequest::User).toString();
     QString response = reply->readAll();
 
     if (reply->error())
     {
+        qDebug() << response;
         emit backendError(reply->errorString());
         return;
     }
     reply->deleteLater();
-    qDebug() << response;
+
+    QJson::Parser parser;
+    bool ok;
+    QVariantMap bugs = parser.parse(response.toAscii(), &ok).toMap();
+
+    if (!ok)
+    {
+        emit backendError(tr("A parser error occurred, sorry."));
+        return;
+    }
+
     mUploadList.remove(id);
     QSqlQuery sql;
     sql.exec(QString("DELETE FROM shadow_bugs WHERE bug_id=\'%1\' AND tracker_id=%2").arg(id).arg(mId));
+    sql.prepare("UPDATE bugs SET priority=:priority , status=:status WHERE bug_id=:bug_id AND tracker_id=:tracker_id");
+    sql.bindValue(":priority", bugs.value("importance").toString());
+    sql.bindValue(":status", bugs.value("status").toString());
+    sql.bindValue(":bug_id", id);
+    sql.bindValue(":tracker_id", mId);
+    sql.exec();
     getNextUpload();
 }
 
 void
 Launchpad::commentUploadFinished()
 {
-    qDebug() << "Bug list finished";
+    qDebug() << "Comment upload finished";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    QString response = reply->readAll();
+    qDebug() << response;
+
     if (reply->error())
     {
         emit backendError(reply->errorString());
         return;
     }
     reply->deleteLater();
-    QString response = reply->readAll();
-
+    QVariantMap map = mCommentUploadList.takeAt(0).toMap();
+    QSqlQuery sql;
+    sql.exec(QString("DELETE FROM shadow_comments WHERE bug_id=\'%1\' AND tracker_id=%2")
+                    .arg(map.value("bug_id").toString())
+                     .arg(mId));
+    getNextCommentUpload();
 }
 
 void
@@ -308,6 +331,9 @@ Launchpad::commentFinished()
 void
 Launchpad::handleJSON(QVariant json, const QString &type)
 {
+    qDebug() << "-----------";
+    qDebug() << json;
+    qDebug() << "------------";
     QVariantList entries = json.toMap().value("entries").toList();
     for (int i = 0; i < entries.size(); ++i)
     {
@@ -332,8 +358,9 @@ Launchpad::handleJSON(QVariant json, const QString &type)
         newBug["product"] = bugMap.value("bug_target_name").toString();
         newBug["bug_type"] = type;
 
-        // Launchpad doesn't have a general last modified value
-        newBug["last_modified"] = bugMap.value("date_created").toString();
+        // Launchpad doesn't have a general last modified value for the bug tasks
+        // and I don't really want to be making an additional call for each bug in the list
+        newBug["last_modified"] =  friendlyTime(bugMap.value("date_created").toString());
         mBugs[newBug.value("bug_id").toString()] = newBug;
     }
 }
@@ -410,6 +437,12 @@ Launchpad::uploadAll()
     emit bugsUpdated();
     return;
 #endif
+    if (!hasPendingChanges())
+    {
+        emit bugsUpdated();
+        return;
+    }
+    qDebug() << mLastSync.toString("yyyy-MM-ddThh:mm:ss");
     mUploadList.clear();
     mCommentUploadList.clear();
     QString sql = QString("SELECT bug_id, severity, priority, assigned_to, status, summary FROM shadow_bugs where tracker_id=%1")
@@ -441,8 +474,8 @@ Launchpad::uploadAll()
         mUploadList[q.value(0).toString()] = ret;
     }
     getNextUpload();
-
 }
+
 void
 Launchpad::getNextUpload()
 {
@@ -459,6 +492,8 @@ Launchpad::getNextUpload()
 
     bugId = i.key();
     QSqlQuery q;
+    // We need a project ("target" in Launchpad terms) in order
+    // to modify the bug
     q.prepare("SELECT product FROM bugs WHERE bug_id=:bug AND tracker_id=:tracker");
     q.bindValue(":bug", bugId);
     q.bindValue(":tracker_id", mId);
@@ -466,8 +501,6 @@ Launchpad::getNextUpload()
     q.next();
     if (q.value(0).isNull())
     {
-        // We need a project ("target" in Launchpad terms) in order
-        // to modify the bug
         getNextCommentUpload();
         return;
     }
@@ -482,7 +515,8 @@ Launchpad::getNextUpload()
                          .arg(bugId);
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     req.setAttribute(QNetworkRequest::User, bugId);
-    req.setRawHeader("Authorization", authorizationHeader().toAscii());
+    qDebug ()<< "Auth header: " << authorizationHeader().toAscii();
+    req.setRawHeader("Authorization", authorizationHeader().toAscii());    
     req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
     req.setHeader(QNetworkRequest::ContentLengthHeader, serialized->length());
     req.setRawHeader("Referer", url.toAscii());
@@ -497,17 +531,48 @@ Launchpad::getNextUpload()
 void
 Launchpad::getNextCommentUpload()
 {
+    qDebug() << "getNextCommentUpload...";
     if (mCommentUploadList.size() == 0)
     {
-        qDebug() << "Done uploading comments";
-        sync();
+        emit bugsUpdated();
         return;
     }
 
     qDebug() << "Going to upload a comment...";
     QVariantMap map = mCommentUploadList.at(0).toMap();
-    //////
-    sync();
+    QString bugId = map.value("bug_id").toString();
+    QSqlQuery q;
+    // We need a project ("target" in Launchpad terms) in order
+    // to modify the bug
+    q.prepare("SELECT product FROM bugs WHERE bug_id=:bug AND tracker_id=:tracker");
+    q.bindValue(":bug", bugId);
+    q.bindValue(":tracker_id", mId);
+    q.exec();
+    q.next();
+    if (q.value(0).isNull())
+    {
+        emit bugsUpdated();
+        return;
+    }
+
+    QVariantMap commentMap;
+    commentMap.insert("content", map.value("comment").toString());
+    QJson::Serializer serializer;
+    QString url = QString("%1/1.0/bugs/%2")
+            .arg(mApiUrl)
+            .arg(bugId);
+    QNetworkRequest req = QNetworkRequest(QUrl(url));
+    req.setAttribute(QNetworkRequest::User, bugId);
+    req.setRawHeader("Authorization", authorizationHeader().toAscii());
+//    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+//    req.setHeader(QNetworkRequest::ContentLengthHeader, comment.length());
+    req.setRawHeader("Referer", url.toAscii());
+    req.setRawHeader("Cookie", "OPENSESAME");
+    qDebug() << "sending custom request to " << url;
+    QString comment = QString("ws.op=newMessage&content=\"%1\"").arg(map.value("comment").toString());
+    QNetworkReply *rep = pManager->post(req, comment.toAscii());
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(commentUploadFinished()));
 }
 
 QString
@@ -531,11 +596,18 @@ Launchpad::authorizationHeader()
                    "oauth_nonce=\"%6\","
                    "oauth_version=\"1.0\"");
 
+    if (mSecret.isEmpty())
+    {
+        QStringList list = mPassword.split(" ");
+        mToken = list.at(0);
+        mSecret = list.at(1);
+    }
     QUuid c = QUuid::createUuid();
     QString nonce = c.toString();
     uint timestamp = QDateTime::currentDateTime().toUTC().toTime_t();
     qDebug() << "Authorization header";
-    return header.arg(mUrl).arg(mConsumerToken).arg(mToken).arg(mSecret).arg(timestamp).arg(nonce);
+    QString url = "https://api." + QUrl(mUrl).host();
+    return header.arg(url).arg(mConsumerToken).arg(mToken).arg(mSecret).arg(timestamp).arg(nonce);
 }
 
 void

@@ -120,6 +120,8 @@ public slots:
 protected:
     void updateSync();
     void saveCredentials();
+    bool hasPendingChanges();
+    QString friendlyTime(const QString &time);
 
     QDateTime mLastSync;
     QString mId;

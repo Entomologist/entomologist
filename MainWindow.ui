@@ -207,8 +207,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>623</width>
-          <height>207</height>
+          <width>633</width>
+          <height>198</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -313,11 +313,42 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>603</width>
-          <height>165</height>
+          <width>609</width>
+          <height>163</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
+         <item>
+          <layout class="QHBoxLayout" name="horizontalLayout_2">
+           <item>
+            <widget class="QLabel" name="bugDetailsLabel">
+             <property name="font">
+              <font>
+               <pointsize>15</pointsize>
+               <weight>75</weight>
+               <bold>true</bold>
+              </font>
+             </property>
+             <property name="text">
+              <string>TextLabel</string>
+             </property>
+            </widget>
+           </item>
+           <item>
+            <spacer name="horizontalSpacer_3">
+             <property name="orientation">
+              <enum>Qt::Horizontal</enum>
+             </property>
+             <property name="sizeHint" stdset="0">
+              <size>
+               <width>40</width>
+               <height>20</height>
+              </size>
+             </property>
+            </spacer>
+           </item>
+          </layout>
+         </item>
          <item>
           <widget class="QGroupBox" name="groupBox">
            <property name="title">
@@ -418,7 +449,7 @@
      <x>0</x>
      <y>0</y>
      <width>641</width>
-     <height>28</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menuShow">

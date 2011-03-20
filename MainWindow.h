@@ -109,7 +109,7 @@ private:
     void loadTrackers();
     void loadComments();
     void addTracker(QMap<QString, QString> info);
-    void addTrackerToList(Backend *newTracker);
+    void addTrackerToList(Backend *newTracker, bool sync = false);
     void fetchIcon(const QString &url, const QString &savePath);
     void fetchHTMLIcon(const QString &url, const QString &savePath);
     bool isOnline();
@@ -123,9 +123,13 @@ private:
     int insertTracker(QMap<QString, QString> tracker);
     QString getChangelog();
     QString autodetectTracker(const QString &url);
+    void syncNextTracker();
 
     int mSyncRequests;
+    int mSyncPosition;
+    bool mUploading;
     QMap<QString, Backend*> mBackendMap;
+    QList<Backend *> mBackendList;
     QString mDbPath;
     Backend *pActiveBackend;
     QString mActiveBugId, mActivePriority, mActiveStatus, mActiveSeverity;

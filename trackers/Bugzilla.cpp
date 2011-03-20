@@ -88,6 +88,8 @@ void
 Bugzilla::sync()
 {
     mUpdateCount = 0;
+    mUploading = false;
+    qDebug() << "Bugzilla::sync for " << name() << " at " << mLastSync;
     login();
 }
 
@@ -103,7 +105,19 @@ Bugzilla::checkVersion()
 void
 Bugzilla::uploadAll()
 {
-    qDebug() << "uploadAll";
+    qDebug() << "Upload all for " << name() << mLastSync;
+    if (!hasPendingChanges())
+    {
+        emit bugsUpdated();
+        return;
+    }
+    mUploading = true;
+    login();
+}
+
+void Bugzilla::doUploading()
+{
+    qDebug() << "doUploading";
     // First, iterate through the shadow_bugs table
     QString ids;
     QSqlTableModel model;
@@ -192,8 +206,9 @@ Bugzilla::getUserBugs()
         usernameArgs << mUsername << mEmail;
         params["assigned_to"] = usernameArgs;
         params["resolution"] = ""; // Only show open bugs
-        params["last_change_time"] = mLastSync.toString("yyyy-MM-ddThh:mm:ss");
+        params["last_change_time"] = mLastSync.addDays(-1).toString("yyyy-MM-ddThh:mm:ss");
         args << params;
+        qDebug() << params;
         pClient->call("Bug.search", args, this, SLOT(bugRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
 }
@@ -223,7 +238,7 @@ Bugzilla::getReportedBugs()
         usernameArgs << mUsername << mEmail;
         params["reporter"] = usernameArgs;
         params["resolution"] = ""; // Only show open bugs
-        params["last_change_time"] = mLastSync.toString("yyyy-MM-ddThh:mm:ss");
+        params["last_change_time"] = mLastSync.addDays(-1).toString("yyyy-MM-ddThh:mm:ss");
         args << params;
         pClient->call("Bug.search", args, this, SLOT(reportedRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
@@ -333,8 +348,12 @@ Bugzilla::postComments()
     model.setFilter(QString("tracker_id=%1").arg(mId));
     model.select();
     if (model.rowCount() == 0)
+    {
+        mUploading = false;
+        qDebug() << "Calling sync from postComments.";
+        sync();
         return;
-
+    }
     for (int i = 0; i < model.rowCount(); ++i)
     {
         QSqlRecord record = model.record(i);
@@ -353,6 +372,8 @@ void Bugzilla::postComment()
     if (mCommentQueue.size() == 0)
     {
         // We're done posting the changes, so resync with the remote server
+        mUploading = false;
+        qDebug() << "Calling sync from postcomment";
         sync();
         return;
     }
@@ -383,6 +404,7 @@ Bugzilla::getComments(QStringList idList)
 {
     if (mVersion == "3.2")
     {
+        qDebug() << "Get comments for 3.2, " << idList;
         // Now to get the comments, we need to call showbug.cgi with all of the relevent IDs,
         // and handle the XML.
         // TODO: Is there an upper limit on the number of IDs per-call?
@@ -451,7 +473,6 @@ Bugzilla::checkValidStatuses()
 void
 Bugzilla::rpcError(int error, const QString &message)
 {
-    qDebug() << "rpcError";
     QString e = QString("Error %1: %2").arg(error).arg(message);
     emit backendError(e);
 }
@@ -465,8 +486,8 @@ Bugzilla::versionError(int error, const QString &message)
 void
 Bugzilla::versionRpcResponse(QVariant &arg)
 {
-    qDebug() << "Version check";
     QString version = arg.toMap().value("version").toString();
+    qDebug() << "Bugzilla version response: " << version;
     version = version.remove(version.lastIndexOf('.'), version.length() + 1);
     if (version.toFloat() < 3.2)
     {
@@ -487,7 +508,10 @@ void Bugzilla::loginRpcResponse(QVariant &arg)
         mBugzillaId = map.value("id").toString();
     }
 
-    getUserEmail();
+    if (mUploading)
+        doUploading();
+    else
+        getUserEmail();
 }
 
 void Bugzilla::emailRpcResponse(QVariant &arg)
@@ -689,6 +713,7 @@ Bugzilla::userBugListFinished()
 void
 Bugzilla::bugsInsertionFinished(QStringList idList)
 {
+    qDebug() << "bugInsertionFinished";
     getComments(idList);
 }
 
@@ -834,7 +859,6 @@ Bugzilla::itemPostFinished()
     reply->close();
 }
 
-
 void
 Bugzilla::commentXMLFinished()
 {
@@ -843,7 +867,6 @@ Bugzilla::commentXMLFinished()
     {
         emit backendError(reply->errorString());
         reply->close();
-
         return;
     }
 
@@ -853,6 +876,7 @@ Bugzilla::commentXMLFinished()
     QMap<QString, QString> commentMap;
     QXmlStreamReader xmlReader(xml);
     mPendingCommentInsertions = 0;
+    bool insertedComment = false;
     while (!xmlReader.atEnd())
     {
         xmlReader.readNext();
@@ -903,6 +927,7 @@ Bugzilla::commentXMLFinished()
                 {
                     // Save the comments
                         mPendingCommentInsertions++;
+                        insertedComment = true;
                         pSqlWriter->insertComments(commentList);
                 }
 
@@ -916,6 +941,12 @@ Bugzilla::commentXMLFinished()
         }
     }
 
+    // If we reach here, that means we didn't have anything to do
+    if (!insertedComment)
+    {
+        updateSync();
+        emit bugsUpdated();
+    }
 }
 
 void
@@ -944,18 +975,4 @@ Bugzilla::handleSslErrors(QNetworkReply *reply,
     reply->ignoreSslErrors();
 }
 
-// Utility function to convert date/times to more readable ones
-QString
-Bugzilla::friendlyTime(const QString &time)
-{
-    QDateTime newTime = QDateTime::fromString(time, Qt::ISODate);
-    if (!newTime.isValid())
-    {
-        newTime = QDateTime::fromString(time, "yyyy-MM-dd hh:mm:ss");
-    }
 
-    if (!newTime.isValid())
-        return(time);
-
-    return(newTime.toString("yyyy-MM-dd hh:mm:ss"));
-}

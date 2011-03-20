@@ -79,6 +79,7 @@ protected:
     void postItem();
     void postComments();
     void postComment();
+    void doUploading();
     void parseBuglistCSV(const QString &csv, const QString &bugType);
     QMap<QString, QString> getShadowValues(const QString &id);
     QVariantMap mBugs;
@@ -86,12 +87,12 @@ protected:
     QList< QMap<QString, QString> > mPostQueue;
     QList< QMap<QString, QString> > mCommentQueue;
     QString mActiveCommentId;
+    bool mUploading;
     void getUserEmail();
     void getUserBugs();
     void getReportedBugs();
     void getCCs();
     void getComments(QStringList idList);
-    QString friendlyTime(const QString &time);
 };
 
 #endif // BUGZILLA_H

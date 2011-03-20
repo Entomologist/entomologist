@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>400</width>
-    <height>90</height>
+    <height>132</height>
    </rect>
   </property>
   <property name="sizePolicy">
@@ -70,6 +70,13 @@
     <widget class="QCheckBox" name="confirmationCheckBox">
      <property name="text">
       <string>Don't ask for confirmation before uploading</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="startupSyncCheckbox">
+     <property name="text">
+      <string>Sync trackers on startup</string>
      </property>
     </widget>
    </item>

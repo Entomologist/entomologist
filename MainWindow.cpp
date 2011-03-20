@@ -83,6 +83,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // mSyncRequests tracks how many sync requests have been made
     // in order to know when to re-enable the widgets
     mSyncRequests = 0;
+    mUploading = false;
     QSettings settings("Entomologist");
 
     // Resize the splitters, otherwise they'll be 50/50
@@ -197,6 +198,8 @@ MainWindow::MainWindow(QWidget *parent) :
     setupDB();
     toggleButtons();
     loadTrackers();
+    if (settings.value("startup-sync", false).toBool() == true)
+        syncNextTracker();
 }
 
 MainWindow::~MainWindow()
@@ -538,6 +541,11 @@ MainWindow::loadDetails(long long id)
     mActiveStatus.remove(QRegExp("<[^>]*>"));
     ui->statusCombo->setCurrentIndex(ui->statusCombo->findText(mActiveStatus));
 
+    QString bugDetailsLabel = QString("%1 #%2 - %3")
+            .arg(r.value(2).toString())
+            .arg(r.value(3).toString())
+            .arg(r.value(9).toString());
+    ui->bugDetailsLabel->setText(bugDetailsLabel);
     if ((pActiveBackend->autoCacheComments() == "0") && (isOnline()))
     {
         mSyncRequests++;
@@ -727,6 +735,7 @@ void
 MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
 {
     qDebug() << "Setup tracker";
+    bool autosync = false;
     newBug->setId(info["id"]);
     newBug->setName(info["name"]);
     newBug->setUsername(info["username"]);
@@ -749,16 +758,17 @@ MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
         info["auto_cache_comments"] = newBug->autoCacheComments();
         int tracker = insertTracker(info);
         newBug->setId(QString("%1").arg(tracker));
+        mSyncPosition = mBackendList.size() + 1;
+        autosync = true;
     }
 
-
-    addTrackerToList(newBug);
+    addTrackerToList(newBug, autosync);
 }
 
 // Adds a tracker to the tracker list on the left
 // side of the screen
 void
-MainWindow::addTrackerToList(Backend *newTracker)
+MainWindow::addTrackerToList(Backend *newTracker, bool sync)
 {
     qDebug() << "Adding tracker to list";
     QListWidgetItem *newItem = new QListWidgetItem(newTracker->name());
@@ -771,10 +781,11 @@ MainWindow::addTrackerToList(Backend *newTracker)
     iconPath.append(QDir::separator()).append("entomologist");
     iconPath.append(QDir::separator()).append(QString("%1.png").arg(newTracker->name()));
     mBackendMap[newTracker->id()] = newTracker;
-
-    syncTracker(newTracker);
+    mBackendList.append(newTracker);
     if(!QFile::exists(iconPath))
         fetchIcon(newTracker->url(), iconPath);
+    if (sync)
+        syncTracker(newTracker);
 }
 
 // When the user clicks the sort header in the bug view, this
@@ -831,9 +842,17 @@ MainWindow::bugsUpdated()
     mSyncRequests--;
     if (mSyncRequests == 0)
     {
-        filterTable();
-        stopAnimation();
-        notifyUser();
+        if (mSyncPosition == mBackendList.size())
+        {
+            filterTable();
+            mUploading = false;
+            stopAnimation();
+            notifyUser();
+        }
+        else
+        {
+            syncNextTracker();
+        }
     }
 }
 
@@ -924,7 +943,7 @@ MainWindow::fetchIcon(const QString &url,
 {
     QUrl u(url);
     QString fetch = "http://" + u.host() + "/favicon.ico";
-    qDebug() << "Fetching " << fetch;
+    qDebug() << "fetchIcon: " << fetch;
 
     QNetworkRequest req = QNetworkRequest(QUrl(fetch));
     req.setAttribute(QNetworkRequest::User, QVariant(savePath));
@@ -946,13 +965,15 @@ MainWindow::iconDownloaded()
 
     if (!redirect.toUrl().isEmpty() && !wasRedirected)
     {
-            reply->deleteLater();
-            QNetworkRequest req = QNetworkRequest(redirect.toUrl());
-            req.setAttribute(QNetworkRequest::User, QVariant(savePath));
-            req.setAttribute((QNetworkRequest::Attribute)(QNetworkRequest::User+1), QVariant(1));
-            QNetworkReply *rep = pManager->get(req);
-            connect(rep, SIGNAL(finished()),
-                    this, SLOT(iconDownloaded()));
+        qDebug() << "Was redirected to " << redirect.toUrl();
+        reply->deleteLater();
+        QNetworkRequest req = QNetworkRequest(redirect.toUrl());
+        req.setAttribute(QNetworkRequest::User, QVariant(savePath));
+        req.setAttribute((QNetworkRequest::Attribute)(QNetworkRequest::User+1), QVariant(1));
+        QNetworkReply *rep = pManager->get(req);
+        connect(rep, SIGNAL(finished()),
+                this, SLOT(iconDownloaded()));
+        return;
     }
 
     qDebug() << "Icon downloaded";
@@ -981,8 +1002,18 @@ MainWindow::iconDownloaded()
 
         reader.setScaledSize(iconSize);
         const QImage icon = reader.read();
-        icon.save(savePath, "PNG");
+        if (icon.format() == QImage::Format_Invalid)
+            fetchHTMLIcon(reply->url().toString(), savePath);
+        else
+            icon.save(savePath, "PNG");
     }
+    else
+    {
+        qDebug() << "Invalid image";
+        fetchHTMLIcon(reply->url().toString(), savePath);
+    }
+
+    logoBuffer.close();
     reply->close();
 }
 
@@ -1165,11 +1196,24 @@ MainWindow::resync()
         return;
     }
 
-    QMapIterator<QString, Backend *> i(mBackendMap);
-    while (i.hasNext())
+    mSyncPosition = 0;
+    syncNextTracker();
+}
+
+void
+MainWindow::syncNextTracker()
+{
+    Backend *b = mBackendList.at(mSyncPosition);
+    ui->syncingLabel->setText(QString("Syncing %1...").arg(b->name()));
+    mSyncPosition++;
+    if (mUploading)
     {
-        i.next();
-        syncTracker(i.value());
+        mSyncRequests++;
+        b->uploadAll();
+    }
+    else
+    {
+        syncTracker(b);
     }
 }
 
@@ -1202,15 +1246,10 @@ MainWindow::upload()
     if (reallyUpload)
     {
         startAnimation();
-        QMapIterator<QString, Backend *> i(mBackendMap);
-        while (i.hasNext())
-        {
-            i.next();
-            mSyncRequests++;
-            i.value()->uploadAll();
-        }
+        mUploading = true;
+        mSyncPosition = 0;
+        syncNextTracker();
     }
-
 }
 
 // Build up a changelog for the changelog dialog box
@@ -1642,6 +1681,7 @@ MainWindow::customContextMenuRequested(const QPoint &pos)
     QMenu contextMenu(tr("Context menu"), this);
     QAction *editAction = contextMenu.addAction(tr("Edit"));
     QAction *deleteAction = contextMenu.addAction(tr("Delete"));
+    QAction *resyncAction = contextMenu.addAction(tr("Resync"));
     QAction *a = contextMenu.exec(QCursor::pos());
     Backend *b = mBackendMap[id];
 
@@ -1665,6 +1705,11 @@ MainWindow::customContextMenuRequested(const QPoint &pos)
             ui->trackerList->takeItem(ui->trackerList->row(currentItem));
             deleteTracker(id);
         }
+    }
+    else if (a == resyncAction)
+    {
+        mSyncPosition = mBackendList.size();
+        syncTracker(b);
     }
     // Reset any list selection
     ui->trackerList->setCurrentItem(NULL);
@@ -1720,9 +1765,8 @@ void
 MainWindow::searchTriggered()
 {
     QString searchText = ui->searchEdit->text();
-    if (searchText.isEmpty()) return;
-
     QStringList query;
+
     // Summary
     query << QString("(bugs.summary LIKE \'\%%1\%\')").arg(searchText);
     // Comment

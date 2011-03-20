@@ -122,6 +122,7 @@ SqlWriter::insertBugs(QList<QMap<QString, QString> > bugList)
 
     if (!error)
     {
+        qDebug() << "Emitting bugsFinished";
         mDatabase.commit();
         emit bugsFinished(idList);
     }
@@ -129,6 +130,7 @@ SqlWriter::insertBugs(QList<QMap<QString, QString> > bugList)
     {
         mDatabase.rollback();
     }
+
 }
 
 void

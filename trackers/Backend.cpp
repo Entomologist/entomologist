@@ -63,7 +63,7 @@ Backend::setLastSync(const QString &dateTime)
 void
 Backend::updateSync()
 {
-    mLastSync = QDateTime::currentDateTime();
+    mLastSync = QDateTime::currentDateTime().toUTC();
     pSqlWriter->updateSync(mId.toInt(), mLastSync.toUTC().toString("yyyy-MM-ddThh:mm:ss"));
 }
 
@@ -77,4 +77,40 @@ void
 Backend::sqlError(QString message)
 {
     emit backendError(message);
+}
+
+// Utility function to convert date/times to more readable ones
+QString
+Backend::friendlyTime(const QString &time)
+{
+    QDateTime newTime = QDateTime::fromString(time, Qt::ISODate);
+    if (!newTime.isValid())
+    {
+        newTime = QDateTime::fromString(time, "yyyy-MM-dd hh:mm:ss");
+    }
+
+    if (!newTime.isValid())
+        return(time);
+
+    return(newTime.toString("yyyy-MM-dd hh:mm:ss"));
+}
+
+bool
+Backend::hasPendingChanges()
+{
+    QSqlQuery q;
+    q.exec(QString("SELECT COUNT(id) FROM shadow_bugs WHERE tracker_id=%1").arg(mId));
+    if (q.next())
+    {
+        if (q.value(0).toInt() > 0)
+            return true;
+    }
+
+    q.exec(QString("SELECT COUNT(id) FROM shadow_comments WHERE tracker_id=%1").arg(mId));
+    if (q.next())
+    {
+        if (q.value(0).toInt() > 0)
+            return true;
+    }
+    return false;
 }
