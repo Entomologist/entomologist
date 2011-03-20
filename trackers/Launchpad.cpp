@@ -29,8 +29,8 @@
 #include <QMessageBox>
 #include <QDesktopServices>
 #include <QVariantMap>
-#include <qjson/parser.h>
-#include <qjson/serializer.h>
+#include "qjson/parser.h"
+#include "qjson/serializer.h"
 
 #include "Launchpad.h"
 

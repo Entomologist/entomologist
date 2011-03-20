@@ -6,11 +6,7 @@ QT += network \
     sql \
     xml
 
-# Disabling until Launchpad support is ready
-win32:LIBS += -lqjson
-macx:LIBS += -framework \
-     qjson
-else:LIBS += -lqjson
+macx:LIBS += -framework
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
@@ -41,7 +37,14 @@ SOURCES += main.cpp \
     trackers/Mantis.cpp \
     ChangelogWindow.cpp \
     ChangelogListDelegate.cpp \
-    trackers/Launchpad.cpp
+    trackers/Launchpad.cpp \
+    qjson/parserrunnable.cpp \
+    qjson/parser.cpp \
+    qjson/json_scanner.cpp \
+    qjson/serializerrunnable.cpp \
+    qjson/serializer.cpp \
+    qjson/qobjecthelper.cpp \
+    qjson/json_parser.cc
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -66,7 +69,20 @@ HEADERS += MainWindow.h \
     trackers/Mantis.h \
     ChangelogWindow.h \
     ChangelogListDelegate.h \
-    trackers/Launchpad.h
+    trackers/Launchpad.h \
+    qjson/qjson_debug.h \
+    qjson/position.hh \
+    qjson/parserrunnable.h \
+    qjson/parser_p.h \
+    qjson/parser.h \
+    qjson/location.hh \
+    qjson/json_scanner.h \
+    qjson/json_parser.hh \
+    qjson/stack.hh \
+    qjson/serializerrunnable.h \
+    qjson/serializer.h \
+    qjson/qobjecthelper.h \
+    qjson/qjson_export.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
