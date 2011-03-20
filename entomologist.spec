@@ -6,7 +6,7 @@
 # norootforbuild
 Url:    http://entomologist.sourceforge.net
 Name:           entomologist
-BuildRequires:  gcc-c++ qjson
+BuildRequires:  gcc-c++
 
 %if 0%{?fedora_version}
     %define breq qt4-devel
