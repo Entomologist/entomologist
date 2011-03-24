@@ -10,7 +10,7 @@ macx:LIBS += -framework
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
-VERSION = 0.5
+VERSION = 0.5.1
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 SOURCES += main.cpp \
     MainWindow.cpp \

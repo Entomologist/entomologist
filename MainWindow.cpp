@@ -83,6 +83,10 @@ MainWindow::MainWindow(QWidget *parent) :
     // mSyncRequests tracks how many sync requests have been made
     // in order to know when to re-enable the widgets
     mSyncRequests = 0;
+    // mSyncPosition is used to iterate through the backend list,
+    // so we only sync one repository at a time, rather than flinging
+    // requests at all of them at once.
+    mSyncPosition = 0;
     mUploading = false;
     QSettings settings("Entomologist");
 
