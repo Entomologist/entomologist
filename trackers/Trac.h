@@ -66,7 +66,6 @@ public slots:
 
 private:
     MaiaXmlRpcClient *pClient;
-    bool mTriedHTTP;
     QMap<QString, QString> mBugMap;
     QStringList mSeverities;
 };

@@ -47,7 +47,6 @@ Trac::Trac(const QString &url,
             this, SLOT(commentInsertionFinished()));
     connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
             this, SLOT(bugsInsertionFinished(QStringList)));
-    mTriedHTTP = false;
 }
 
 void Trac::setUsername(const QString &username)
@@ -161,7 +160,8 @@ Trac::ccRpcResponse(QVariant &arg)
     pClient->call("ticket.query", args, this, SLOT(reporterRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
-void Trac::reporterRpcResponse(QVariant &arg)
+void
+Trac::reporterRpcResponse(QVariant &arg)
 {
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
@@ -177,7 +177,8 @@ void Trac::reporterRpcResponse(QVariant &arg)
     pClient->call("ticket.query", args, this, SLOT(ownerRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
-void Trac::ownerRpcResponse(QVariant &arg)
+void
+Trac::ownerRpcResponse(QVariant &arg)
 {
     // The search response just gives us a list of bug numbers.
     // In order to get the full details, we bundle a bunch of XMLRPC
@@ -200,9 +201,11 @@ void Trac::ownerRpcResponse(QVariant &arg)
     pClient->call("system.multicall", args, this, SLOT(bugDetailsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
-void Trac::bugDetailsRpcResponse(QVariant &arg)
+void
+Trac::bugDetailsRpcResponse(QVariant &arg)
 {
     qDebug() << arg;
+
     emit bugsUpdated();
 }
 
