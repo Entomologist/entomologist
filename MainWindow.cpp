@@ -49,6 +49,7 @@
 #include "trackers/Bugzilla.h"
 #include "trackers/NovellBugzilla.h"
 #include "trackers/Launchpad.h"
+//#include "trackers/Trac.h"
 //#include "trackers/Google.h"
 #include "trackers/Mantis.h"
 #include "NewTracker.h"
@@ -1207,6 +1208,7 @@ MainWindow::resync()
 void
 MainWindow::syncNextTracker()
 {
+    if (mBackendList.empty()) return;
     Backend *b = mBackendList.at(mSyncPosition);
     ui->syncingLabel->setText(QString("Syncing %1...").arg(b->name()));
     mSyncPosition++;
