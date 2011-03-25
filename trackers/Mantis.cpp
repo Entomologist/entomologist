@@ -384,6 +384,7 @@ Mantis::response()
 void
 Mantis::checkVersion()
 {
+    qDebug() << "Checking Mantis version";
     QtSoapMessage request;
     request.setMethod(QtSoapQName("mc_version", "http://futureware.biz/mantisconnect"));
     pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");

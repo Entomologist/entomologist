@@ -5,12 +5,11 @@ unix:isEmpty(PREFIX):PREFIX = /usr
 QT += network \
     sql \
     xml
-
 macx:LIBS += -framework
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
-VERSION = 0.5.1
+VERSION = 0.5.2
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 SOURCES += main.cpp \
     MainWindow.cpp \
@@ -44,7 +43,8 @@ SOURCES += main.cpp \
     qjson/serializerrunnable.cpp \
     qjson/serializer.cpp \
     qjson/qobjecthelper.cpp \
-    qjson/json_parser.cc
+    qjson/json_parser.cc \
+    trackers/Trac.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -82,7 +82,8 @@ HEADERS += MainWindow.h \
     qjson/serializerrunnable.h \
     qjson/serializer.h \
     qjson/qobjecthelper.h \
-    qjson/qjson_export.h
+    qjson/qjson_export.h \
+    trackers/Trac.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \

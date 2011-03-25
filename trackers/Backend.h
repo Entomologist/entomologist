@@ -50,10 +50,10 @@ public:
     void setUrl(const QString &url) { mUrl = url; }
     QString url() { return mUrl; }
 
-    void setUsername(const QString &username) { mUsername = username; }
+    virtual void setUsername(const QString &username) { mUsername = username; }
     QString username() { return mUsername; }
 
-    void setPassword(const QString &password) { mPassword = password; }
+    virtual void setPassword(const QString &password) { mPassword = password; }
     QString password() { return mPassword; }
 
     void setEmail(const QString &email) { mEmail = email; }

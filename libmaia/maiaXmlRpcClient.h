@@ -31,7 +31,6 @@
 #include <QtCore>
 #include <QtXml>
 #include <QtNetwork>
-
 #include "maiaObject.h"
 
 class MaiaXmlRpcClient : public QObject {
@@ -40,7 +39,7 @@ class MaiaXmlRpcClient : public QObject {
 	public:
 		MaiaXmlRpcClient(QObject* parent = 0);
 		MaiaXmlRpcClient(QUrl url, QObject* parent = 0);
-		MaiaXmlRpcClient(QUrl url, QString userAgent, QObject *parent = 0);
+        MaiaXmlRpcClient(QUrl url, QString userAgent, QObject *parent = 0);
 		void setUrl(QUrl url);
 		void setUserAgent(QString userAgent);
 		QNetworkReply* call(QString method, QList<QVariant> args,
@@ -49,15 +48,19 @@ class MaiaXmlRpcClient : public QObject {
 		void setSslConfiguration(const QSslConfiguration &config);
 		QSslConfiguration sslConfiguration () const;
         void setCookieJar(QNetworkCookieJar *jar);
-
+        void setUserName(const QString &user) { userName = user; }
+        void setPassword(const QString &pass) { password = pass; }
 	signals:
 		void sslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
 	
 	private slots:
 		void replyFinished(QNetworkReply*);
+        void authenticationRequired(QNetworkReply* reply, QAuthenticator* auth);
 
 	private:
 		void init();
+        QString userName, password;
+        int authRequests;
 		QNetworkAccessManager manager;
 		QNetworkRequest request;
 		QMap<QNetworkReply*, MaiaObject*> callmap;

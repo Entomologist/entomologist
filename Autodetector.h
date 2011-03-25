@@ -34,6 +34,7 @@ class NovellBugzilla;
 class Bugzilla;
 class Launchpad;
 class Mantis;
+class Trac;
 
 class Autodetector : public QObject
 {
@@ -45,7 +46,8 @@ public:
         NOVELL_CHECK = 0,
         BUGZILLA_CHECK,
         LAUNCHPAD_CHECK,
-        MANTIS_CHECK
+        MANTIS_CHECK,
+        TRAC_CHECK
     };
 
     Autodetector();
@@ -56,6 +58,7 @@ public slots:
     void prioritiesFound(QStringList priorities);
     void severitiesFound(QStringList severities);
     void statusesFound(QStringList statuses);
+    void backendError(QString msg);
 
 signals:
     void finishedDetecting(QMap<QString, QString> data);
@@ -70,6 +73,7 @@ private:
     Bugzilla *genericBugzilla;
     Launchpad *launchpad;
     Mantis *mantis;
+    Trac *trac;
 };
 
 #endif // AUTODETECTOR_H

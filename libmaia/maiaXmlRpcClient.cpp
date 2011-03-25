@@ -29,6 +29,7 @@
 #include "maiaFault.h"
 
 #include <QDebug>
+#include <QAuthenticator>
 
 MaiaXmlRpcClient::MaiaXmlRpcClient(QObject* parent) : QObject(parent),
 	manager(this), request() 
@@ -46,7 +47,12 @@ MaiaXmlRpcClient::MaiaXmlRpcClient(QUrl url, QObject* parent) : QObject(parent),
 MaiaXmlRpcClient::MaiaXmlRpcClient(QUrl url, QString userAgent, QObject *parent) : QObject(parent) {
 	// userAgent should adhere to RFC 1945 http://tools.ietf.org/html/rfc1945
 	init();
-	request.setRawHeader("User-Agent", userAgent.toAscii());
+    request.setRawHeader("User-Agent", userAgent.toAscii());
+    if(url.userName().length() > 0 ) {
+        userName = url.userName();
+        password = url.password();
+    }
+
 	setUrl(url);
 }
 
@@ -63,6 +69,8 @@ void MaiaXmlRpcClient::init() {
 			this, SLOT(replyFinished(QNetworkReply*)));
 	connect(&manager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
 			this, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)));
+    connect(&manager, SIGNAL(authenticationRequired(QNetworkReply*, QAuthenticator*)),
+                this, SLOT(authenticationRequired(QNetworkReply*,QAuthenticator*)));
 }
 
 void MaiaXmlRpcClient::setUrl(QUrl url) {
@@ -80,6 +88,7 @@ QNetworkReply* MaiaXmlRpcClient::call(QString method, QList<QVariant> args,
 							QObject* responseObject, const char* responseSlot,
 							QObject* faultObject, const char* faultSlot) {
 	MaiaObject* call = new MaiaObject(this);
+    authRequests = 0;
 	connect(call, SIGNAL(aresponse(QVariant &, QNetworkReply *)), responseObject, responseSlot);
 	connect(call, SIGNAL(fault(int, const QString &, QNetworkReply *)), faultObject, faultSlot);
 
@@ -98,14 +107,29 @@ QSslConfiguration MaiaXmlRpcClient::sslConfiguration () const {
 	return request.sslConfiguration();
 }
 
+void
+MaiaXmlRpcClient::authenticationRequired(QNetworkReply* reply,
+                                         QAuthenticator* auth)
+{
+    if (authRequests == 0)
+    {
+        auth->setUser(userName);
+        auth->setPassword(password);
+        authRequests++;
+    }
+    else
+    {
+        reply->close();
+    }
+
+}
+
 void MaiaXmlRpcClient::replyFinished(QNetworkReply* reply) {
 	QString response;
 	if(!callmap.contains(reply))
 		return;
 
-    QVariant possibleRedirectUrl = reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
-
-	if(reply->error() != QNetworkReply::NoError) {
+    if(reply->error() != QNetworkReply::NoError) {
 		MaiaFault fault(-32300, reply->errorString());
 		response = fault.toString();
 	} else {

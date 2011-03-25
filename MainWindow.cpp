@@ -49,7 +49,7 @@
 #include "trackers/Bugzilla.h"
 #include "trackers/NovellBugzilla.h"
 #include "trackers/Launchpad.h"
-//#include "trackers/Trac.h"
+#include "trackers/Trac.h"
 //#include "trackers/Google.h"
 #include "trackers/Mantis.h"
 #include "NewTracker.h"
@@ -730,6 +730,11 @@ MainWindow::addTracker(QMap<QString,QString> info)
     else if (info["type"] == "Mantis")
     {
         Mantis *newBug = new Mantis(info["url"]);
+        setupTracker(newBug, info);
+    }
+    else if (info["type"] == "Trac")
+    {
+        Trac *newBug = new Trac(info["url"], info["username"], info["password"]);
         setupTracker(newBug, info);
     }
 }

@@ -29,6 +29,7 @@
 #include "trackers/NovellBugzilla.h"
 #include "trackers/Launchpad.h"
 //#include "trackers/Google.h"
+#include "trackers/Trac.h"
 #include "trackers/Mantis.h"
 #include "Autodetector.h"
 
@@ -39,6 +40,7 @@ Autodetector::Autodetector()
     genericBugzilla = NULL;
     mantis = NULL;
     launchpad = NULL;
+    trac = NULL;
 }
 
 void
@@ -93,7 +95,16 @@ Autodetector::checkVersion(Backend *b)
             this, SLOT(prioritiesFound(QStringList)));
     connect(b, SIGNAL(statusesFound(QStringList)),
             this, SLOT(statusesFound(QStringList)));
+    connect(b, SIGNAL(backendError(QString)),
+            this, SLOT(backendError(QString)));
     b->checkVersion();
+}
+
+void
+Autodetector::backendError(QString msg)
+{
+    mData["type"] = "Unknown";
+    emit finishedDetecting(mData);
 }
 
 void
@@ -106,11 +117,22 @@ Autodetector::versionChecked(QString version)
         {
             delete genericBugzilla;
             genericBugzilla = NULL;
+            qDebug() << "Checking trac";
+            mDetectionState = TRAC_CHECK;
+            trac = new Trac(mData["url"], mData["username"], mData["password"]);
+            checkVersion(trac);
+            return;
+        }
+        else if (mDetectionState == TRAC_CHECK)
+        {
+            delete trac;
+            trac = NULL;
             qDebug() << "Checking mantis";
             mDetectionState = MANTIS_CHECK;
             mantis = new Mantis(mData["url"]);
             checkVersion(mantis);
             return;
+
         }
         else if (mDetectionState == MANTIS_CHECK)
         {
@@ -143,6 +165,12 @@ Autodetector::versionChecked(QString version)
     {
         mData["type"] = "Launchpad";
     }
+    else if (mDetectionState == TRAC_CHECK)
+    {
+        mData["type"] = "Trac";
+        trac->setUsername(mData["username"]);
+        trac->setPassword(mData["password"]);
+    }
 
     getValidValues();
 }
@@ -161,6 +189,8 @@ Autodetector::prioritiesFound(QStringList priorities)
         mantis->checkValidStatuses();
     else if (launchpad != NULL)
         launchpad->checkValidStatuses();
+    else if (trac != NULL)
+        trac->checkValidStatuses();
 }
 
 void
@@ -177,7 +207,8 @@ Autodetector::statusesFound(QStringList statuses)
         mantis->checkValidSeverities();
     else if (launchpad != NULL)
         launchpad->checkValidSeverities();
-
+    else if (trac != NULL)
+        trac->checkValidSeverities();
 }
 
 void
@@ -194,6 +225,8 @@ Autodetector::severitiesFound(QStringList severities)
         mantis->deleteLater();
     else if (launchpad != NULL)
         launchpad->deleteLater();
+    else if (trac != NULL)
+        trac->deleteLater();
 
     emit finishedDetecting(mData);
 }
@@ -209,5 +242,7 @@ Autodetector::getValidValues()
         mantis->checkValidPriorities();
     else if (launchpad != NULL)
         launchpad->checkValidPriorities();
+    else if (trac != NULL)
+        trac->checkValidPriorities();
 
 }
