@@ -135,33 +135,108 @@ void
 Mantis::handleCSV(const QString &csv, const QString &bugType)
 {
     QVector<QString> bug;
+
     QString entry;
+    QString colEntry;
+    int colId = -1,
+        colProduct = -1,
+        colAssignedTo = -1,
+        colPriority = -1,
+        colSeverity = -1,
+        colComponent = -1,
+        colLastModified = -1,
+        colSummary = -1,
+        colStatus = -1;
     QRegExp reg("^\"|\"$");
     QRegExp removeLeadingZeros("^0+");
     QStringList list = csv.split("\n", QString::SkipEmptyParts);
-    for (int i = 1; i < list.size(); ++i) // the first line is the column descriptions
+
+    // The first line is the column descriptions, so parse them
+    // and map them to what we want
+    bug = parseCSVLine(list.at(0));
+    for (int i = 0; i < bug.size(); ++i)
+    {
+        colEntry = bug.at(i).toLower().remove(reg);
+        if (colEntry == "id")
+            colId = i;
+        else if (colEntry == "project")
+            colProduct = i;
+        else if (colEntry == "category")
+            colComponent = i;
+        else if (colEntry == "assigned to")
+            colAssignedTo = i;
+        else if (colEntry == "priority")
+            colPriority = i;
+        else if (colEntry == "severity")
+            colSeverity = i;
+        else if (colEntry == "updated")
+            colLastModified = i;
+        else if (colEntry == "summary")
+            colSummary = i;
+        else if (colEntry == "status")
+            colStatus = i;
+    }
+
+    for (int i = 1; i < list.size(); ++i)
     {
         bug = parseCSVLine(list.at(i));
         QVariantMap newBug;
-        entry = bug.at(0);
+        if (colId != -1)
+            entry = bug.at(colId);
+        else
+            break;
+
         qDebug() << "CSV Found " << entry;
         newBug["id"]  = entry.remove(removeLeadingZeros);
-        entry = bug.at(1);
+
+        if (colProduct)
+            entry = bug.at(colProduct);
+        else
+            entry = "";
         newBug["product"] = entry.remove(reg);
-        entry = bug.at(3);
+
+        if (colAssignedTo)
+            entry = bug.at(colAssignedTo);
+        else
+            entry = "";
         newBug["assigned_to"] = entry.remove(reg);
-        entry = bug.at(4);
+
+        if (colPriority)
+            entry = bug.at(colPriority);
+        else
+            entry = "";
         newBug["priority"] = entry.remove(reg);
-        entry = bug.at(5);
+
+        if (colSeverity)
+            entry = bug.at(colSeverity);
+        else
+            entry = "";
         newBug["severity"] = entry.remove(reg);
-        entry = bug.at(9);
+
+        if (colComponent)
+            entry = bug.at(colComponent);
+        else
+            entry = "";
         newBug["component"] = entry.remove(reg);
-        entry = bug.at(16);
+
+        if (colLastModified)
+            entry = bug.at(colLastModified);
+        else
+            entry = "1970-01-01";
         newBug["last_modified"] = entry.remove(reg);
-        entry = bug.at(17);
+
+        if (colSummary)
+            entry = bug.at(colSummary);
+        else
+            entry = "";
         newBug["summary"] = entry.remove(reg);
-        entry = bug.at(18);
+
+        if (colStatus)
+            entry = bug.at(colStatus);
+        else
+            entry = "";
         newBug["status"] = entry.remove(reg);
+
         newBug["bug_type"] = bugType;
         mBugs[bug.at(0)] = newBug;
     }
