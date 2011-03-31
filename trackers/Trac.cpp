@@ -47,7 +47,6 @@ Trac::Trac(const QString &url,
             this, SLOT(commentInsertionFinished()));
     connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
             this, SLOT(bugsInsertionFinished(QStringList)));
-    mTriedHTTP = false;
 }
 
 void Trac::setUsername(const QString &username)
@@ -161,12 +160,13 @@ Trac::ccRpcResponse(QVariant &arg)
     pClient->call("ticket.query", args, this, SLOT(reporterRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
-void Trac::reporterRpcResponse(QVariant &arg)
+void
+Trac::reporterRpcResponse(QVariant &arg)
 {
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
     {
-        mBugMap.insert(bugs.at(i), "Reporter");
+        mBugMap.insert(bugs.at(i), "Reported");
     }
 
     QVariantList args;
@@ -177,8 +177,14 @@ void Trac::reporterRpcResponse(QVariant &arg)
     pClient->call("ticket.query", args, this, SLOT(ownerRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
-void Trac::ownerRpcResponse(QVariant &arg)
+void
+Trac::ownerRpcResponse(QVariant &arg)
 {
+    QStringList bugs = arg.toStringList();
+    for (int i = 0; i < bugs.size(); ++i)
+    {
+        mBugMap.insert(bugs.at(i), "Assigned");
+    }
     // The search response just gives us a list of bug numbers.
     // In order to get the full details, we bundle a bunch of XMLRPC
     // calls into one array, and ship that off to trac.
@@ -199,11 +205,52 @@ void Trac::ownerRpcResponse(QVariant &arg)
     args.insert(0, methodList);;
     pClient->call("system.multicall", args, this, SLOT(bugDetailsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
-
-void Trac::bugDetailsRpcResponse(QVariant &arg)
+void
+Trac::changelogRpcResponse(QVariant &arg)
 {
     qDebug() << arg;
     emit bugsUpdated();
+}
+
+void
+Trac::bugDetailsRpcResponse(QVariant &arg)
+{
+    QList<QMap<QString, QString> > insertList;
+    QVariantList bugList = arg.toList();
+    for (int i = 0; i < bugList.size(); ++i)
+    {
+        // It's QVariantLists all the way down...
+        QVariantList infoList = bugList.at(i).toList().at(0).toList();
+        QString bugId = infoList.at(0).toString();
+        for (int j = 0; j < infoList.size(); ++j )
+        {
+            if (infoList.at(j).type() == QVariant::Map)
+            {
+                QVariantMap bug = infoList.at(j).toMap();
+                QMap<QString, QString> newBug;
+                newBug["tracker_id"] = mId;
+                newBug["bug_id"] = bugId;
+                if (!bug.value("severity").isNull())
+                    newBug["severity"] = bug.value("severity").toString();
+                else
+                    newBug["severity"] = bug.value("type").toString();
+
+                newBug["priority"] = bug.value("priority").toString();
+                newBug["assigned_to"] = bug.value("owner").toString();
+                newBug["status"] = bug.value("status").toString();
+                newBug["summary"] = bug.value("summary").toString();
+                newBug["component"] = bug.value("component").toString();
+                newBug["product"] = "";
+                newBug["bug_type"] = mBugMap.value(bugId);
+                newBug["last_modified"] = bug.value("changetime")
+                                             .toDateTime()
+                                             .toString("yyyy-MM-dd hh:mm:ss");
+                insertList << newBug;
+            }
+        }
+    }
+
+    pSqlWriter->insertBugs(insertList);
 }
 
 void
@@ -262,13 +309,25 @@ Trac::rpcError(int error,
 void
 Trac::commentInsertionFinished()
 {
-
 }
 
 void
 Trac::bugsInsertionFinished(QStringList idList)
 {
+    QVariantList args, methodList;
 
+    for (int i = 0; i < idList.size(); ++i)
+    {
+        QVariantMap newMethod;
+        QVariantList newParams;
+        newParams.append(idList.at(i).toInt());
+        newMethod.insert("methodName", "ticket.changeLog");
+        newMethod.insert("params", newParams);
+        methodList.append(newMethod);
+    }
+
+    args.insert(0, methodList);;
+    pClient->call("system.multicall", args, this, SLOT(changelogRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
 void
