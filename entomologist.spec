@@ -24,7 +24,7 @@ BuildRequires:  gcc-c++
     %define lrelease /usr/bin/lrelease
 %endif
 
-Version:	0.5
+Version:	0.5.2
 Release:	0
 Summary:	Open-source bug tracking on the desktop
 Group:		Productivity/Other
@@ -46,8 +46,12 @@ Authors:
 %setup
 
 %build
-%{qmake} PREFIX=$RPM_BUILD_ROOT/%{_prefix} Entomologist.pro
-make buildroot=$RPM_BUILD_ROOT CFLAGS="$RPM_OPT_FLAGS"
+export CFLAGS="$RPM_OPT_FLAGS"
+export CPPFLAGS="$RPM_OPT_FLAGS"
+export CXXFLAGS="$RPM_OPT_FLAGS"
+export LDFLAGS="$LDFLAGS $RPM_OPT_FLAGS"
+%{qmake} QMAKE_CXXFLAGS="$RPM_OPT_FLAGS" PREFIX=$RPM_BUILD_ROOT/%{_prefix} Entomologist.pro
+make buildroot=$RPM_BUILD_ROOT
 
 %install
 install -d $RPM_BUILD_ROOT/usr/bin
