@@ -75,8 +75,6 @@ Trac::sync()
                     .arg(mUsername)
                     .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
-    qDebug() << query;
-
     pClient->call("ticket.query", args, this, SLOT(ccRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
@@ -89,7 +87,6 @@ void
 Trac::checkVersion()
 {
     QVariantList args;
-    qDebug() << "Calling system.getAPIVersion";
     pClient->call("system.getAPIVersion", args, this, SLOT(versionRpcResponse(QVariant&)), this, SLOT(versionRpcError(int, const QString &)));
 }
 
@@ -205,10 +202,21 @@ Trac::ownerRpcResponse(QVariant &arg)
     args.insert(0, methodList);;
     pClient->call("system.multicall", args, this, SLOT(bugDetailsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
+
 void
 Trac::changelogRpcResponse(QVariant &arg)
 {
-    qDebug() << arg;
+    QVariantList changelogList = arg.toList();
+    for (int i = 0; i < changelogList.size(); ++i)
+    {
+        //qDebug() << "i: " << i;
+        QVariantList changes = changelogList.at(i).toList().at(0).toList();
+        for (int j = 0; j < changes.size(); ++j)
+        {
+            qDebug() << i << ":" << j;
+            qDebug() << changes.at(j);
+        }
+    }
     emit bugsUpdated();
 }
 
