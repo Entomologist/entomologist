@@ -37,6 +37,7 @@ public:
     void login();
     void checkVersion();
     void checkValidPriorities();
+    void getComments(const QString &bugId);
     void checkValidSeverities();
     void checkValidStatuses();
     void uploadAll();
@@ -49,6 +50,7 @@ public:
 public slots:
     void commentInsertionFinished();
     void bugsInsertionFinished(QStringList idList);
+    void uploadFinished(QVariant &arg);
     void versionRpcResponse(QVariant &arg);
     void priorityRpcResponse(QVariant &arg);
     void severityRpcResponse(QVariant &arg);
@@ -69,6 +71,7 @@ private:
     MaiaXmlRpcClient *pClient;
     QMap<QString, QString> mBugMap;
     QStringList mSeverities;
+    QString mActiveCommentId;
 };
 
 #endif // GITHUB_H

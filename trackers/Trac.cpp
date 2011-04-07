@@ -79,6 +79,15 @@ Trac::sync()
 }
 
 void
+Trac::getComments(const QString &bugId)
+{
+    QVariantList args;
+    args.append(bugId.toInt());
+    mActiveCommentId = bugId;
+    pClient->call("ticket.changeLog", args, this, SLOT(changelogRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+}
+
+void
 Trac::login()
 {
 }
@@ -111,10 +120,74 @@ Trac::checkValidStatuses()
     pClient->call("ticket.status.getAll", args, this, SLOT(statusRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
+// This works for trac API 1.1.2, but "in the future" they may require
+// that the action map come with a _ts timestamp listing the *last* time the
+// bug updated (so we would need to make get calls for each updated bug).
 void
 Trac::uploadAll()
 {
+    if (!hasPendingChanges())
+    {
+        emit bugsUpdated();
+        return;
+    }
 
+    QVariantList args, methodList;
+    QVariantMap commentActionMap;
+    commentActionMap["action"] = "leave";
+
+    QString sql = QString("SELECT bug_id, severity, priority, assigned_to, status, summary FROM shadow_bugs where tracker_id=%1")
+                       .arg(mId);
+    QString commentSql = QString("SELECT bug_id, comment, private FROM shadow_comments WHERE tracker_id=%1")
+                         .arg(mId);
+    QSqlQuery comment(commentSql);
+    while (comment.next())
+    {
+        QVariantMap newMethod;
+        QVariantList newParams;
+        newParams.append(comment.value(0).toInt());
+        newParams.append(comment.value(1).toString());
+        newParams.append(commentActionMap);
+        newParams.append(false);
+        newParams.append(mUsername);
+        newMethod.insert("methodName", "ticket.update");
+        newMethod.insert("params", newParams);
+        methodList.append(newMethod);
+    }
+
+    QSqlQuery q(sql);
+    while (q.next())
+    {
+        QVariantMap actionMap;
+        actionMap["action"] = "leave";
+        if (!q.value(1).isNull())
+            actionMap["type"] = q.value(1).toString().remove(QRegExp("<[^>]*>"));
+        if (!q.value(2).isNull())
+            actionMap["priority"] = q.value(2).toString().remove(QRegExp("<[^>]*>"));
+        if (!q.value(3).isNull())
+        {
+            actionMap["action"] = "reassign";
+            actionMap["owner"] = q.value(3).toString().remove(QRegExp("<[^>]*>"));
+        }
+        if (!q.value(4).isNull())
+            actionMap["status"] = q.value(4).toString().remove(QRegExp("<[^>]*>"));
+        if (!q.value(5).isNull())
+            actionMap["summary"] = q.value(5).toString().remove(QRegExp("<[^>]*>"));
+
+        QVariantMap newMethod;
+        QVariantList newParams;
+        newParams.append(q.value(0).toInt());
+        newParams.append("");
+        newParams.append(actionMap);
+        newParams.append(false);
+        newParams.append(mUsername);
+        newMethod.insert("methodName", "ticket.update");
+        newMethod.insert("params", newParams);
+        methodList.append(newMethod);
+    }
+
+    args.insert(0, methodList);;
+    pClient->call("system.multicall", args, this, SLOT(uploadFinished(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
 QString
@@ -122,6 +195,27 @@ Trac::buildBugUrl(const QString &id)
 {
     return QString("%1/ticket/%2").arg(mUrl).arg(id);
 }
+
+void
+Trac::uploadFinished(QVariant &arg)
+{
+    QSqlQuery sql;
+    QVariantList bugList = arg.toList();
+    for (int i = 0; i < bugList.size(); ++i)
+    {
+        qDebug() << i;
+        QString bugId = bugList.at(i).toList().at(0).toList().at(0).toString();
+        sql.exec(QString("DELETE FROM shadow_comments WHERE bug_id=\'%1\' AND tracker_id=%2")
+                        .arg(bugId)
+                        .arg(mId));
+        sql.exec(QString("DELETE FROM shadow_bugs WHERE bug_id=\'%1\' AND tracker_id=%2")
+                        .arg(bugId)
+                        .arg(mId));
+    }
+
+    sync();
+}
+
 void
 Trac::priorityRpcResponse(QVariant &arg)
 {
@@ -206,18 +300,32 @@ Trac::ownerRpcResponse(QVariant &arg)
 void
 Trac::changelogRpcResponse(QVariant &arg)
 {
+    QList<QMap<QString, QString> > list;
     QVariantList changelogList = arg.toList();
     for (int i = 0; i < changelogList.size(); ++i)
     {
-        //qDebug() << "i: " << i;
-        QVariantList changes = changelogList.at(i).toList().at(0).toList();
-        for (int j = 0; j < changes.size(); ++j)
+        QVariantList changes = changelogList.at(i).toList();
+        QDateTime time = changes.at(0).toDateTime();
+        QString author = changes.at(1).toString();
+        QString field = changes.at(2).toString();
+        QString oldValue = changes.at(3).toString();
+        QString newValue = changes.at(4).toString();
+        if ((field == "comment") && (!newValue.isEmpty()))
         {
-            qDebug() << i << ":" << j;
-            qDebug() << changes.at(j);
+            // It's an actual comment
+            QMap<QString, QString> newComment;
+            newComment["tracker_id"] = mId;
+            newComment["bug_id"] = mActiveCommentId;
+            newComment["author"] = author;
+            newComment["comment_id"] = oldValue;
+            newComment["comment"] = newValue;
+            newComment["timestamp"] = time.toString("yyyy-MM-dd hh:mm:ss");
+            newComment["private"] = "0";
+            list << newComment;
         }
     }
-    emit bugsUpdated();
+
+    pSqlWriter->insertBugComments(list);
 }
 
 void
@@ -317,25 +425,14 @@ Trac::rpcError(int error,
 void
 Trac::commentInsertionFinished()
 {
+    emit commentsCached();
 }
 
 void
 Trac::bugsInsertionFinished(QStringList idList)
 {
-    QVariantList args, methodList;
-
-    for (int i = 0; i < idList.size(); ++i)
-    {
-        QVariantMap newMethod;
-        QVariantList newParams;
-        newParams.append(idList.at(i).toInt());
-        newMethod.insert("methodName", "ticket.changeLog");
-        newMethod.insert("params", newParams);
-        methodList.append(newMethod);
-    }
-
-    args.insert(0, methodList);;
-    pClient->call("system.multicall", args, this, SLOT(changelogRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+    updateSync();
+    emit bugsUpdated();
 }
 
 void
