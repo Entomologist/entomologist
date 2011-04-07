@@ -2,22 +2,10 @@
 <html xmlns="http://www.w3.org/1999/xhtml" xml:lang="en" lang="en">
 <head>
 <meta http-equiv='X-UA-Compatible' content='IE=EmulateIE7' />
-<script type="text/javascript" src="javascripts/jquery-1.4.4.min.js"></script>
-<script type="text/javascript" src="javascripts/jquery.fancybox-1.3.4.pack.js"></script>
-<title> Screenshots - Entomologist</title>
+<title> Tracker Notes - Entomologist</title>
 <link rel='stylesheet' type='text/css' href='stylesheet.css'/>
-<link rel='stylesheet' href="jquery.fancybox-1.3.4.css" type="text/css" media="screen" />
-<script type="text/javascript">
-$(document).ready(function() {
-
-  /* This is basic - uses default settings */
-  
-  $(".single_image").fancybox();
-});
-
-</script>
-
 </head>
+
 <body>
   <div id="wrapper">
     <div id="main">
@@ -40,29 +28,20 @@ $(document).ready(function() {
           </div>
           <div id="nav-bottom"></div>
           <div id="content-main">
-            <div id='entomologist-content-container'>
-              <div  class="paragraph" style=" text-align: left; ">
-                <table cellpadding = "0" cellspacing="0" border="0">
-                  <tr>
-                    <td><a class="single_image" href="images/screenshots/buglist.png"><img src="images/screenshots/buglist_small.png" alt=""/></a></td>
-                    <td><a class="single_image" href="images/screenshots/changebugs.png"><img src="images/screenshots/changebugs_small.png" alt=""/></a></td>
-                    <td><a class="single_image" href="images/screenshots/changelog.png"><img src="images/screenshots/changelog_small.png" alt=""/></a></td>
-                  </tr>
-                  <tr>
-                    <td align="center">List bugs from multiple trackers</td><td align="center">Change bug attributes</td><td align = "center">View the changelog</td>
-                  </tr>
-                  <tr>
-                    <td><a class="single_image" href="images/screenshots/filterandsort.png"><img src="images/screenshots/filterandsort_small.png" alt=""></a></td>
-                  </tr>
-                  <tr>
-                    <td align="center">Filter and sort bugs</td>
-                  </tr>
-                </table>
-              </div>
+          <div id='entomologist-content-container'>
+            <h2  style=" text-align: left; ">Tracker Notes<span></span><br /></h2>
+            <div  class="paragraph" style=" text-align: left; display: block; ">Entomologist supports the following trackers:<br />
+              <ul>
+                <li><h3 style="text-align: left;">Bugzilla 3.2+</h3> Entomologist will cache all updated bugs and comments on sync.</li>
+                <li><h3 style="text-align: left;">MantisBT</h3> Entomologist will cache all updated bugs on sync, but only cache comments on individual bugs when they're double-clicked in the list.</li>
+                <li><h3 style="text-align: left;">Launchpad</h3> Entomologist will cache all updated bugs on sync, but only cache comments on individual bugs when they're double-clicked in the list.</li>
+                <li><h3 style="text-align: left;">Trac 0.12</h3> Entomologist will cache all updated bugs on sync, but only cache comments on individual bugs when they're double-clicked in the list.  The
+                Trac install needs to have the <a href="http://trac-hacks.org/wiki/XmlRpcPlugin">XMLRPC plugin</a> enabled, and Entomologist has not been tested with an install that uses Account Manager.  Please <a href="support.html">let us know</a> if it doesn't work for you.</li>
             </div>
           </div>
         </div>
       </div>
+    </div>
     </div>
   </div>
 <!-- Piwik -->
