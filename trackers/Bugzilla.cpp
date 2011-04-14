@@ -56,6 +56,7 @@ Bugzilla::Bugzilla(const QString &url)
     QSslConfiguration config = pClient->sslConfiguration();
     config.setProtocol(QSsl::AnyProtocol);
     pClient->setSslConfiguration(config);
+
     connect(pClient, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
     connect(pManager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
@@ -161,7 +162,7 @@ Bugzilla::getUserEmail()
         mEmail = mUsername;
         getCCs();
     }
-    else if ((mVersion == "3.4") || (mVersion == "3.6"))
+    else
     {
         QVariantList args;
         QVariantList array;
@@ -199,7 +200,7 @@ Bugzilla::getUserBugs()
         connect(rep, SIGNAL(finished()),
                 this, SLOT(userBugListFinished()));
     }
-    else if ((mVersion == "3.4") || (mVersion == "3.6"))
+    else
     {
         QVariantList args, usernameArgs;
         QVariantMap params;
@@ -231,12 +232,15 @@ Bugzilla::getReportedBugs()
         connect(rep, SIGNAL(finished()),
                 this, SLOT(reportedBugListFinished()));
     }
-    else if ((mVersion == "3.4") || (mVersion == "3.6"))
+    else
     {
         QVariantList args, usernameArgs;
         QVariantMap params;
         usernameArgs << mUsername << mEmail;
-        params["reporter"] = usernameArgs;
+        if ((mVersion == "3.4") || (mVersion == "3.6"))
+            params["reporter"] = usernameArgs;
+        else
+            params["creator"] = usernameArgs;
         params["resolution"] = ""; // Only show open bugs
         params["last_change_time"] = mLastSync.addDays(-1).toString("yyyy-MM-ddThh:mm:ss");
         args << params;
@@ -247,13 +251,13 @@ Bugzilla::getReportedBugs()
 void
 Bugzilla::getCCs()
 {
-    qDebug() << "Getting CCs...";
     QString url = mUrl + QString("/buglist.cgi?emailcc1=1&emailtype1=substring"
                                  "&query_format=advanced&bug_status=NEW&bug_status=ASSIGNED&bug_status=NEEDINFO&bug_status=REOPENED&bug_status=UNCONFIRMED"
                                  "&chfieldfrom=%1"
                                  "&email1=%2&ctype=csv")
                          .arg(mLastSync.toString("yyyy-MM-dd"))
                          .arg(mEmail);
+    qDebug() << url;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
@@ -722,11 +726,24 @@ Bugzilla::ccFinished()
 {
     qDebug() << "CCs are done";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    int wasRedirected = reply->request().attribute(QNetworkRequest::User).toInt();
+    QVariant redirect = reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
     if (reply->error())
     {
         emit backendError(reply->errorString());
         reply->close();
+        return;
+    }
 
+    if (!redirect.toUrl().isEmpty() && !wasRedirected)
+    {
+        qDebug() << "Was redirected to " << redirect.toUrl();
+        reply->deleteLater();
+        QNetworkRequest req = QNetworkRequest(redirect.toUrl());
+        req.setAttribute(QNetworkRequest::User, QVariant(1));
+        QNetworkReply *rep = pManager->get(req);
+        connect(rep, SIGNAL(finished()),
+                this, SLOT(ccFinished()));
         return;
     }
 
