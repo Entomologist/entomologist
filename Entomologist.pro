@@ -44,7 +44,8 @@ SOURCES += main.cpp \
     qjson/serializer.cpp \
     qjson/qobjecthelper.cpp \
     qjson/json_parser.cc \
-    trackers/Trac.cpp
+    trackers/Trac.cpp \
+    Utilities.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -83,7 +84,8 @@ HEADERS += MainWindow.h \
     qjson/serializer.h \
     qjson/qobjecthelper.h \
     qjson/qjson_export.h \
-    trackers/Trac.h
+    trackers/Trac.h \
+    Utilities.hpp
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \

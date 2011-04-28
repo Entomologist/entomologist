@@ -55,6 +55,7 @@
 #include "NewTracker.h"
 #include "MainWindow.h"
 #include "Autodetector.h"
+#include "Utilities.hpp"
 #include "ui_MainWindow.h"
 
 #define DB_VERSION 2
@@ -1393,7 +1394,11 @@ MainWindow::closeEvent(QCloseEvent *event)
 void
 MainWindow::websiteTriggered()
 {
+#ifdef Q_OS_ANDROID
+    Utilities::openAndroidUrl(QUrl("http://entomologist.sourceforge.net"));
+#else
     QDesktopServices::openUrl(QUrl("http://entomologist.sourceforge.net"));
+#endif
 }
 
 // Help -> About
@@ -1916,7 +1921,11 @@ MainWindow::tableViewContextMenu(const QPoint &p)
     else if (a == openAction)
     {
         QString url = b->buildBugUrl(bug);
+#ifdef Q_OS_ANDROID
+        Utilities::openAndroidUrl(QUrl(url));
+#else
         QDesktopServices::openUrl(QUrl(url));
+#endif
     }
 }
 

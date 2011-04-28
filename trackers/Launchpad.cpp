@@ -31,7 +31,7 @@
 #include <QVariantMap>
 #include "qjson/parser.h"
 #include "qjson/serializer.h"
-
+#include "Utilities.hpp"
 #include "Launchpad.h"
 
 Launchpad::Launchpad(const QString &url, QObject *parent) :
@@ -683,7 +683,12 @@ Launchpad::authenticateUser()
     box.setText(authString);
     if (box.exec() == QMessageBox::Ok)
     {
+#ifdef Q_OS_ANDROID
+        Utilities::openAndroidUrl(authUrl);
+#else
         QDesktopServices::openUrl(authUrl);
+#endif
+
         QMessageBox newBox;
         newBox.setText("You've authorized the access?");
         newBox.setStandardButtons(QMessageBox::Cancel|QMessageBox::Ok);
