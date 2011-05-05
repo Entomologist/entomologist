@@ -22,12 +22,16 @@
  */
 #include <QUrl>
 #include "Utilities.hpp"
+#ifdef Q_OS_ANDROID
+#include <jni.h>
+#endif
 
 void
 Utilities::openAndroidUrl(QUrl url)
 {
 #ifdef Q_OS_ANDROID
     JNIEnv *env;
+
     if (m_javaVM->AttachCurrentThread(&env, NULL)<0)
     {
         qCritical()<<"AttachCurrentThread failed";
