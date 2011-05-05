@@ -24,6 +24,8 @@
 #include "Utilities.hpp"
 #ifdef Q_OS_ANDROID
 #include <jni.h>
+extern JavaVM m_javaVM 
+extern jobject objptr
 #endif
 
 void
