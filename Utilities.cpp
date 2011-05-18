@@ -21,11 +21,12 @@
  *
  */
 #include <QUrl>
+#include <QDebug>
 #include "Utilities.hpp"
 #ifdef Q_OS_ANDROID
 #include <jni.h>
-extern JavaVM m_javaVM 
-extern jobject objptr
+extern JavaVM *m_javaVM;
+extern jobject objptr;
 #endif
 
 void
@@ -45,7 +46,7 @@ Utilities::openAndroidUrl(QUrl url)
     {
         jmethodID openBrowserId = env->GetStaticMethodID(applicationClass,
                                             "openBrowser", "(Ljava/lang/String;)V");
-        jstring path = env->NewStringUTF(ptd.getParamAsFile().toLocal8Bit().constData());
+        jstring path = env->NewStringUTF(url.toString().toLocal8Bit().constData());
         env->CallVoidMethod(applicationClass, openBrowserId, path);
     }
     m_javaVM->DetachCurrentThread();

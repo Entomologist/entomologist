@@ -45,7 +45,8 @@ SOURCES += main.cpp \
     qjson/qobjecthelper.cpp \
     qjson/json_parser.cc \
     trackers/Trac.cpp \
-    Utilities.cpp
+    Utilities.cpp \
+    qtmain_android.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
