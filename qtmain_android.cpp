@@ -25,6 +25,7 @@
     SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.
 */
 
+#ifdef Q_OS_ANDROID
 #include <android/log.h>
 #include <pthread.h>
 #include <QSemaphore>
@@ -168,3 +169,4 @@ Q_DECL_EXPORT jint JNICALL JNI_OnLoad(JavaVM* vm, void* /*reserved*/)
     m_javaVM = vm;
     return JNI_VERSION_1_4;
 }
+#endif
