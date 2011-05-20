@@ -24,14 +24,23 @@
 #include <QtGui>
 #include <unistd.h>
 #include <fcntl.h>
+#include <QTextStream>
 
 #include "MainWindow.h"
 
 int singleInstance(void);
+void logHandler(QtMsgType type,
+                const char *msg);
+void openLog(void);
+QTextStream *outStream;
 
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+
+    openLog();
+    qInstallMsgHandler(logHandler);
+
     QString locale = QLocale::system().name();
     QTranslator qtTranslator;
     if (!qtTranslator.load("qt_" + locale, QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
@@ -57,7 +66,57 @@ int main(int argc, char *argv[])
     return a.exec();
 }
 
-int singleInstance(void)
+void openLog(void)
+{
+    QString fileName = QString("%1%2%3%4/entomologist.log")
+                       .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
+                       .arg(QDir::separator())
+                       .arg("entomologist")
+                       .arg(QDir::separator());
+    qDebug() << "Logging to " << fileName;
+    QFile *log = new QFile(fileName);
+    if (log->open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+        outStream = new QTextStream(log);
+    else
+        qDebug() << "Could not open log file!";
+
+}
+ void logHandler(QtMsgType type,
+                 const char *msg)
+ {
+     switch (type)
+     {
+        case QtDebugMsg:
+            *outStream << QTime::currentTime().toString().toAscii().data()
+                      << " DEBUG: "
+                      << msg
+                      << "\n";
+            break;
+        case QtCriticalMsg:
+            *outStream << QTime::currentTime().toString().toAscii().data()
+                      << " CRITICAL: "
+                      << msg
+                      << "\n";
+            break;
+        case QtWarningMsg:
+            *outStream << QTime::currentTime().toString().toAscii().data()
+                      << " WARNING: "
+                      << msg
+                      << "\n";
+            break;
+        case QtFatalMsg:
+            *outStream << QTime::currentTime().toString().toAscii().data()
+                      << " FATAL: "
+                      << msg
+                      << "\n";
+            outStream->flush();
+            abort();
+     }
+     outStream->flush();
+ }
+
+int
+singleInstance(void)
 {
     struct flock lock;
     int fd;
