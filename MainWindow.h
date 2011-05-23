@@ -131,6 +131,7 @@ private:
     QMap<QString, Backend*> mBackendMap;
     QList<Backend *> mBackendList;
     QString mDbPath;
+    bool mDbUpdated;
     Backend *pActiveBackend;
     QString mActiveBugId, mActivePriority, mActiveStatus, mActiveSeverity;
     QString mBaseQuery, mWhereQuery, mTrackerQuery, mSortQuery, mActiveQuery;

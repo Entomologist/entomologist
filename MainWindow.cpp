@@ -58,7 +58,7 @@
 #include "Utilities.hpp"
 #include "ui_MainWindow.h"
 
-#define DB_VERSION 2
+#define DB_VERSION 3
 
 // TODOs:
 // - URL handing needs to be improved
@@ -82,6 +82,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    mDbUpdated = false;
     // mSyncRequests tracks how many sync requests have been made
     // in order to know when to re-enable the widgets
     mSyncRequests = 0;
@@ -204,7 +205,8 @@ MainWindow::MainWindow(QWidget *parent) :
     setupDB();
     toggleButtons();
     loadTrackers();
-    if (settings.value("startup-sync", false).toBool() == true)
+    if ((settings.value("startup-sync", false).toBool() == true)
+       || (mDbUpdated))
         syncNextTracker();
 }
 
@@ -361,7 +363,8 @@ MainWindow::createTables()
                                               "component TEXT,"
                                               "product TEXT,"
                                               "bug_type TEXT,"
-                                              "last_modified TEXT)";
+                                              "last_modified TEXT,"
+                                               "bug_state INTEGER)";
 
     QString createCommentsSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
                                "tracker_id INTEGER,"
@@ -472,7 +475,7 @@ MainWindow::checkDatabaseVersion()
     {
         insertTracker(trackerList.at(i));
     }
-
+    mDbUpdated = true;
 }
 
 int
