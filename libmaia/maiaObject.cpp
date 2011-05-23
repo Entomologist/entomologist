@@ -268,7 +268,7 @@ void MaiaObject::parseResponse(QString response, QNetworkReply* reply) {
 	int errorColumn;
 	if(!doc.setContent(response, &errorMsg, &errorLine, &errorColumn)) {
 		emit fault(-32700, QString("parse error: response not well formed at line %1: %2").arg(errorLine).arg(errorMsg), reply);
-		delete this;
+        delete this;
 		return;
 	}
 	if(doc.documentElement().firstChild().toElement().tagName().toLower() == "params") {
@@ -287,7 +287,7 @@ void MaiaObject::parseResponse(QString response, QNetworkReply* reply) {
 		           tr("parse error: invalid xml-rpc. not conforming to spec."),
 		           reply);
 	}
-	delete this;
+    delete this;
 	return;
 }
 

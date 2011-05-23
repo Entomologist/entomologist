@@ -32,19 +32,22 @@
 #include <QAuthenticator>
 
 MaiaXmlRpcClient::MaiaXmlRpcClient(QObject* parent) : QObject(parent),
-	manager(this), request() 
+    manager(this), request()
 {
 	init();
 }
 
 MaiaXmlRpcClient::MaiaXmlRpcClient(QUrl url, QObject* parent) : QObject(parent),
-	manager(this), request(url)
+    manager(this), request(url)
 {
-	init();
+
+    init();
 	setUrl(url);
 }
 
-MaiaXmlRpcClient::MaiaXmlRpcClient(QUrl url, QString userAgent, QObject *parent) : QObject(parent) {
+MaiaXmlRpcClient::MaiaXmlRpcClient(QUrl url, QString userAgent, QObject *parent) : QObject(parent),
+    manager(this), request(url)
+{
 	// userAgent should adhere to RFC 1945 http://tools.ietf.org/html/rfc1945
 	init();
     request.setRawHeader("User-Agent", userAgent.toAscii());
@@ -56,18 +59,20 @@ MaiaXmlRpcClient::MaiaXmlRpcClient(QUrl url, QString userAgent, QObject *parent)
 	setUrl(url);
 }
 
+
 void MaiaXmlRpcClient::setCookieJar(QNetworkCookieJar *jar)
 {
     manager.setCookieJar(jar);
 }
 
+
 void MaiaXmlRpcClient::init() {
 	request.setRawHeader("User-Agent", "libmaia/0.2");
 	request.setHeader(QNetworkRequest::ContentTypeHeader, "text/xml");
-	
-	connect(&manager, SIGNAL(finished(QNetworkReply*)),
+
+    connect(&manager, SIGNAL(finished(QNetworkReply*)),
 			this, SLOT(replyFinished(QNetworkReply*)));
-	connect(&manager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
+    connect(&manager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
 			this, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)));
     connect(&manager, SIGNAL(authenticationRequired(QNetworkReply*, QAuthenticator*)),
                 this, SLOT(authenticationRequired(QNetworkReply*,QAuthenticator*)));
@@ -87,15 +92,14 @@ void MaiaXmlRpcClient::setUserAgent(QString userAgent) {
 QNetworkReply* MaiaXmlRpcClient::call(QString method, QList<QVariant> args,
 							QObject* responseObject, const char* responseSlot,
 							QObject* faultObject, const char* faultSlot) {
-	MaiaObject* call = new MaiaObject(this);
+    MaiaObject* call = new MaiaObject(this);
     authRequests = 0;
-	connect(call, SIGNAL(aresponse(QVariant &, QNetworkReply *)), responseObject, responseSlot);
-	connect(call, SIGNAL(fault(int, const QString &, QNetworkReply *)), faultObject, faultSlot);
+    connect(call, SIGNAL(aresponse(QVariant &, QNetworkReply *)), responseObject, responseSlot);
+    connect(call, SIGNAL(fault(int, const QString &, QNetworkReply *)), faultObject, faultSlot);
 
-	QNetworkReply* reply = manager.post( request,
-		call->prepareCall(method, args).toUtf8() );
-
-	callmap[reply] = call;
+    QNetworkReply* reply = manager.post( request,
+        call->prepareCall(method, args).toUtf8() );
+    callmap[reply] = call;
 	return reply;
 }
 
@@ -126,10 +130,12 @@ MaiaXmlRpcClient::authenticationRequired(QNetworkReply* reply,
 
 void MaiaXmlRpcClient::replyFinished(QNetworkReply* reply) {
 	QString response;
+    qDebug() << "MaiaXmlRpcClient: replyfinished";
 	if(!callmap.contains(reply))
 		return;
 
     if(reply->error() != QNetworkReply::NoError) {
+        qDebug() << "ERROR : " << reply->errorString();
 		MaiaFault fault(-32300, reply->errorString());
 		response = fault.toString();
 	} else {

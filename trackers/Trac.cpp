@@ -32,13 +32,13 @@ Trac::Trac(const QString &url,
     myUrl.setUserName(username);
     myUrl.setPassword(password);
     pClient = new MaiaXmlRpcClient(myUrl, "Entomologist");
-    qDebug() << QUrl(mUrl + "/login/xmlrpc");
-    pClient->setCookieJar(pCookieJar);
-    pCookieJar->setParent(0);
-
     QSslConfiguration config = pClient->sslConfiguration();
     config.setProtocol(QSsl::AnyProtocol);
+    config.setPeerVerifyMode(QSslSocket::VerifyNone);
     pClient->setSslConfiguration(config);
+    //pClient->setCookieJar(pCookieJar);
+    //pCookieJar->setParent(0);
+
     connect(pClient, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
     connect(pManager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
@@ -376,8 +376,8 @@ Trac::statusRpcResponse(QVariant &arg)
     emit statusesFound(response);
 }
 
- void
- Trac::typeRpcResponse(QVariant &arg)
+void
+Trac::typeRpcResponse(QVariant &arg)
  {
     mSeverities.append(arg.toStringList());
     emit severitiesFound(mSeverities);
@@ -386,6 +386,7 @@ Trac::statusRpcResponse(QVariant &arg)
 void
 Trac::versionRpcResponse(QVariant &arg)
 {
+    qDebug() << "versionRpcResponse";
     QVariantList list = arg.toList();
     QString version;
     // 0 = Trac 0.10.  1 = Trac 0.11+
@@ -411,6 +412,7 @@ Trac::versionRpcResponse(QVariant &arg)
 void Trac::versionRpcError(int error,
                            const QString &message)
 {
+    qDebug()<< "versionRpcError: " << message;
     emit versionChecked("-1");
 }
 
@@ -418,6 +420,7 @@ void
 Trac::rpcError(int error,
                const QString &message)
 {
+    qDebug() << "rpcError" << message;
     QString e = QString("Error %1: %2").arg(error).arg(message);
     emit backendError(e);
 }
@@ -444,5 +447,6 @@ Trac::networkError(QNetworkReply::NetworkError e)
 void
 Trac::handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors)
 {
+    qDebug() << "Ssl error: " << errors;
     reply->ignoreSslErrors();
 }

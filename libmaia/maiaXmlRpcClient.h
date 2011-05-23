@@ -40,6 +40,7 @@ class MaiaXmlRpcClient : public QObject {
 		MaiaXmlRpcClient(QObject* parent = 0);
 		MaiaXmlRpcClient(QUrl url, QObject* parent = 0);
         MaiaXmlRpcClient(QUrl url, QString userAgent, QObject *parent = 0);
+
 		void setUrl(QUrl url);
 		void setUserAgent(QString userAgent);
 		QNetworkReply* call(QString method, QList<QVariant> args,
@@ -52,7 +53,7 @@ class MaiaXmlRpcClient : public QObject {
         void setPassword(const QString &pass) { password = pass; }
 	signals:
 		void sslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
-	
+
 	private slots:
 		void replyFinished(QNetworkReply*);
         void authenticationRequired(QNetworkReply* reply, QAuthenticator* auth);
@@ -61,7 +62,7 @@ class MaiaXmlRpcClient : public QObject {
 		void init();
         QString userName, password;
         int authRequests;
-		QNetworkAccessManager manager;
+        QNetworkAccessManager manager;
 		QNetworkRequest request;
 		QMap<QNetworkReply*, MaiaObject*> callmap;
 };

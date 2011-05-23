@@ -44,17 +44,17 @@ Bugzilla::Bugzilla(const QString &url)
     : Backend(url)
 {
     pClient = new MaiaXmlRpcClient(QUrl(mUrl + "/xmlrpc.cgi"), "Entomologist/0.1");
-
     // To keep the CSV output easy to parse, we specify the specific columns we're interested in
     QNetworkCookie columnCookie("COLUMNLIST", "changeddate%20bug_severity%20priority%20assigned_to%20bug_status%20product%20component%20short_short_desc");
     QList<QNetworkCookie> list;
     list << columnCookie;
     pCookieJar->setCookiesFromUrl(list, QUrl(url));
     pClient->setCookieJar(pCookieJar);
-    pCookieJar->setParent(0);
+    //pCookieJar->setParent(0);
 
     QSslConfiguration config = pClient->sslConfiguration();
     config.setProtocol(QSsl::AnyProtocol);
+    config.setPeerVerifyMode(QSslSocket::VerifyNone);
     pClient->setSslConfiguration(config);
 
     connect(pClient, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
@@ -70,7 +70,6 @@ Bugzilla::Bugzilla(const QString &url)
 
 Bugzilla::~Bugzilla()
 {
-    delete pCookieJar;
 }
 
 void

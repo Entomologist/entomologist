@@ -74,4 +74,4 @@ private:
     QString mActiveCommentId;
 };
 
-#endif // GITHUB_H
+#endif // TRAC_H
