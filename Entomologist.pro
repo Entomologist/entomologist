@@ -5,7 +5,6 @@ unix:isEmpty(PREFIX):PREFIX = /usr
 QT += network \
     sql \
     xml
-macx:LIBS += -framework
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
