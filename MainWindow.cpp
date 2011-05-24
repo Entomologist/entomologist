@@ -145,6 +145,21 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(resync()));
     setTimer();
 
+    QShortcut* commentBug;
+    QShortcut* searchFocus;
+    QShortcut* uploadChange;
+
+    commentBug = new QShortcut(QKeySequence(),this);
+    commentBug->setContext(Qt::ApplicationShortcut);
+    connect(commentBug,SIGNAL(activated()),this,SLOT(commentBugTriggered()));
+
+    searchFocus = new QShortcut(QKeySequence(Qt::META + Qt::Key_Space),this);
+    searchFocus->setContext(Qt::ApplicationShortcut);
+    connect(searchFocus,SIGNAL(activated()),this,SLOT(searchFocusTriggered()));
+
+    uploadChange = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_S),this);
+    uploadChange->setContext(Qt::ApplicationShortcut);
+    connect(uploadChange,SIGNAL(activated()),this,SLOT(upload()));
 
     // Menu actions
     connect(ui->action_Add_Tracker, SIGNAL(triggered()),
@@ -1958,6 +1973,20 @@ MainWindow::changelogTriggered()
     newWindow->exec();
     delete newWindow;
     filterTable();
+}
+void
+MainWindow::commentBugTriggered()
+{
+
+   QModelIndex currentBug =  ui->bugTable->currentIndex();
+  bugClicked(currentBug);
+
+}
+
+void
+MainWindow::searchFocusTriggered() {
+
+    ui->searchEdit->setFocus();
 }
 
 // TODO implement this?
