@@ -38,6 +38,8 @@
 #include <QSpacerItem>
 #include <QImageWriter>
 #include <QSystemTrayIcon>
+#include <QShortcut>
+#include <QKeySequence>
 
 #include "About.h"
 #include "ChangelogWindow.h"
@@ -143,9 +145,12 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(resync()));
     setTimer();
 
+
     // Menu actions
     connect(ui->action_Add_Tracker, SIGNAL(triggered()),
             this, SLOT(addTrackerTriggered()));
+    connect(ui->action_Refresh_Tracker,SIGNAL(triggered()),this,SLOT(resync()));
+
     connect(ui->action_About, SIGNAL(triggered()),
             this, SLOT(aboutTriggered()));
     connect(ui->action_Web_Site, SIGNAL(triggered()),
@@ -1113,6 +1118,7 @@ MainWindow::syncTracker(Backend *tracker)
 void
 MainWindow::addTrackerTriggered()
 {
+
     if (!isOnline())
     {
         QMessageBox box;
