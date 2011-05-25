@@ -133,7 +133,7 @@ digForSystemInfo(void)
         {
             qDebug() << "Unknown UNIX platform: uname failed";
         }
-    #elif define Q_OS_ANDROID
+    #elif defined Q_OS_ANDROID
         qDebug() << "Android";
     #else
         qDebug() << "Unknown platform";

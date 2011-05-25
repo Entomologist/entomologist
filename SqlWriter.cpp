@@ -99,25 +99,28 @@ SqlWriter::insertBugs(QList<QMap<QString, QString> > bugList)
             break;
         }
 
-        bugInsertQuery.bindValue(":tracker_id", parameterMap["tracker_id"]);
-        bugInsertQuery.bindValue(":bug_id", parameterMap["bug_id"]);
-        bugInsertQuery.bindValue(":severity", parameterMap["severity"]);
-        bugInsertQuery.bindValue(":priority", parameterMap["priority"]);
-        bugInsertQuery.bindValue(":assigned_to", parameterMap["assigned_to"]);
-        bugInsertQuery.bindValue(":status", parameterMap["status"]);
-        bugInsertQuery.bindValue(":summary", parameterMap["summary"]);
-        bugInsertQuery.bindValue(":component", parameterMap["component"]);
-        bugInsertQuery.bindValue(":product", parameterMap["product"]);
-        bugInsertQuery.bindValue(":bug_type", parameterMap["bug_type"]);
-        bugInsertQuery.bindValue(":last_modified", parameterMap["last_modified"]);
-        if (!bugInsertQuery.exec())
+        if (parameterMap["bug_state"] == "open")
         {
-            error = true;
-            emit failure(bugInsertQuery.lastError().text());
-            break;
-        }
+            bugInsertQuery.bindValue(":tracker_id", parameterMap["tracker_id"]);
+            bugInsertQuery.bindValue(":bug_id", parameterMap["bug_id"]);
+            bugInsertQuery.bindValue(":severity", parameterMap["severity"]);
+            bugInsertQuery.bindValue(":priority", parameterMap["priority"]);
+            bugInsertQuery.bindValue(":assigned_to", parameterMap["assigned_to"]);
+            bugInsertQuery.bindValue(":status", parameterMap["status"]);
+            bugInsertQuery.bindValue(":summary", parameterMap["summary"]);
+            bugInsertQuery.bindValue(":component", parameterMap["component"]);
+            bugInsertQuery.bindValue(":product", parameterMap["product"]);
+            bugInsertQuery.bindValue(":bug_type", parameterMap["bug_type"]);
+            bugInsertQuery.bindValue(":last_modified", parameterMap["last_modified"]);
+            if (!bugInsertQuery.exec())
+            {
+                error = true;
+                emit failure(bugInsertQuery.lastError().text());
+                break;
+            }
 
-        idList << parameterMap["bug_id"];
+            idList << parameterMap["bug_id"];
+        }
     }
 
     if (!error)

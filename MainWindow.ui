@@ -208,7 +208,7 @@
           <x>0</x>
           <y>0</y>
           <width>633</width>
-          <height>198</height>
+          <height>200</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -292,6 +292,24 @@
             <attribute name="verticalHeaderStretchLastSection">
              <bool>false</bool>
             </attribute>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+            <attribute name="horizontalHeaderStretchLastSection">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="horizontalHeaderCascadingSectionResizes">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="verticalHeaderShowSortIndicator" stdset="0">
+             <bool>false</bool>
+            </attribute>
+            <attribute name="verticalHeaderHighlightSections">
+             <bool>false</bool>
+            </attribute>
+            <attribute name="verticalHeaderStretchLastSection">
+             <bool>false</bool>
+            </attribute>
            </widget>
           </widget>
          </item>
@@ -313,8 +331,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>609</width>
-          <height>163</height>
+          <width>627</width>
+          <height>161</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -452,14 +470,6 @@
      <height>20</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuShow">
-    <property name="title">
-     <string>&amp;Show</string>
-    </property>
-    <addaction name="actionMy_Bugs"/>
-    <addaction name="actionMy_Reports"/>
-    <addaction name="actionMy_CCs"/>
-   </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
      <string>&amp;Help</string>
@@ -476,6 +486,14 @@
     <addaction name="action_Work_Offline"/>
     <addaction name="separator"/>
     <addaction name="action_Quit"/>
+   </widget>
+   <widget class="QMenu" name="menuShow">
+    <property name="title">
+     <string>&amp;Show</string>
+    </property>
+    <addaction name="actionMy_Bugs"/>
+    <addaction name="actionMy_Reports"/>
+    <addaction name="actionMy_CCs"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menuShow"/>
@@ -549,6 +567,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="actionClosed_Bugs">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Closed Bugs</string>
    </property>
   </action>
  </widget>

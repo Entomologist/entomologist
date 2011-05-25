@@ -59,7 +59,7 @@
 #include "Utilities.hpp"
 #include "ui_MainWindow.h"
 
-#define DB_VERSION 3
+#define DB_VERSION 4
 
 // TODOs:
 // - URL handing needs to be improved
@@ -360,8 +360,7 @@ MainWindow::createTables()
                                               "component TEXT,"
                                               "product TEXT,"
                                               "bug_type TEXT,"
-                                              "last_modified TEXT,"
-                                               "bug_state INTEGER)";
+                                              "last_modified TEXT)";
 
     QString createCommentsSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
                                "tracker_id INTEGER,"
@@ -1554,10 +1553,12 @@ MainWindow::filterTable()
         showMy = "Assigned";
     else
         showMy = "XXXAssigned";
+
     if (ui->actionMy_CCs->isChecked())
         showCC = "CC";
     else
         showCC = "XXXCC";
+
     if (ui->actionMy_Reports->isChecked())
         showRep = "Reported";
     else
