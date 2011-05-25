@@ -151,10 +151,15 @@ void openLog(void)
     qDebug() << "Logging to " << fileName;
     QFile *log = new QFile(fileName);
     if (log->open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+    { 
         outStream = new QTextStream(log);
+    }
     else
-        qDebug() << "Could not open log file!";
-
+    {
+        qDebug() << "Could not open log file";
+        log->open(stderr, QIODevice::WriteOnly);
+        outStream = new QTextStream(log);
+    }
 }
  void logHandler(QtMsgType type,
                  const char *msg)
