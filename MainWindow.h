@@ -87,7 +87,6 @@ public slots:
     void backendError(const QString &message);
     void customContextMenuRequested(const QPoint &pos);
     void trackerItemClicked(QListWidgetItem  *item);
-    void commentBugTriggered();
     void searchFocusTriggered();
 protected:
     void changeEvent(QEvent *e);
