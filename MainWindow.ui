@@ -422,6 +422,9 @@
              <property name="text">
               <string>New Comment</string>
              </property>
+             <property name="shortcut">
+              <string>Ctrl+Shift+C</string>
+             </property>
             </widget>
            </item>
           </layout>

@@ -145,13 +145,11 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(resync()));
     setTimer();
 
-    QShortcut* commentBug;
+    // Keyboard shortcuts for search bar focus / upload changes.
     QShortcut* searchFocus;
     QShortcut* uploadChange;
 
-    commentBug = new QShortcut(QKeySequence(),this);
-    commentBug->setContext(Qt::ApplicationShortcut);
-    connect(commentBug,SIGNAL(activated()),this,SLOT(commentBugTriggered()));
+
 
     searchFocus = new QShortcut(QKeySequence(Qt::META + Qt::Key_Space),this);
     searchFocus->setContext(Qt::ApplicationShortcut);
@@ -1974,14 +1972,7 @@ MainWindow::changelogTriggered()
     delete newWindow;
     filterTable();
 }
-void
-MainWindow::commentBugTriggered()
-{
 
-   QModelIndex currentBug =  ui->bugTable->currentIndex();
-  bugClicked(currentBug);
-
-}
 
 void
 MainWindow::searchFocusTriggered() {
