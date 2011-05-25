@@ -55,6 +55,7 @@
 #include "NewTracker.h"
 #include "MainWindow.h"
 #include "Autodetector.h"
+#include "ErrorHandler.h"
 #include "Utilities.hpp"
 #include "ui_MainWindow.h"
 
@@ -283,9 +284,7 @@ MainWindow::setupDB()
         if (!db.open())
         {
             qDebug() << "Error " << db.lastError().text();
-            QMessageBox box;
-            box.setText(QString("Error creating database: %1").arg(db.lastError().text()));
-            box.exec();
+            ErrorHandler::handleError("Error creating database.", db.lastError().text());
             exit(1);
         }
         createTables();
@@ -326,9 +325,7 @@ MainWindow::openDB()
     if (!db.isValid())
     {
         qDebug() << "Couldn't create the database connection";
-        QMessageBox box;
-        box.setText(tr("Could not create the bug database.  Exiting."));
-        box.exec();
+        ErrorHandler::handleError("Couldn't create the database.", "");
         exit(1);
     }
 
@@ -381,60 +378,52 @@ MainWindow::createTables()
     QSqlQuery query(db);
     if (!query.exec(createTrackerSql))
     {
-        QMessageBox box;
-        box.setText("Could not create tracker table");
-        box.exec();
+        qDebug() << "Database error: " << db.lastError().text();
+        ErrorHandler::handleError("Couldn't create the tracker table.", db.lastError().text());
         exit(1);
     }
 
     if (!query.exec(QString(createBugSql).arg("bugs")))
     {
-        QMessageBox box;
-        box.setText("Could not create bug table");
-        box.exec();
+        qDebug() << "Database error: " << db.lastError().text();
+        ErrorHandler::handleError("Couldn't create the bugs table.", db.lastError().text());
         exit(1);
     }
 
     if (!query.exec(QString(createBugSql).arg("shadow_bugs")))
     {
-        QMessageBox box;
-        box.setText("Could not create bug table");
-        box.exec();
+        qDebug() << "Database error: " << db.lastError().text();
+        ErrorHandler::handleError("Couldn't create the shadow bugs table.", db.lastError().text());
         exit(1);
     }
 
     if (!query.exec(QString(createCommentsSql).arg("comments")))
     {
-        QMessageBox box;
-        box.setText("Could not create comment table");
-        box.exec();
+        qDebug() << "Database error: " << db.lastError().text();
+        ErrorHandler::handleError("Couldn't create the comment table.", db.lastError().text());
         exit(1);
     }
 
     if (!query.exec(QString(createCommentsSql).arg("shadow_comments")))
     {
-        QMessageBox box;
-        box.setText("Could not create shadow comments table");
-        box.exec();
+        qDebug() << "Database error: " << db.lastError().text();
+        ErrorHandler::handleError("Couldn't create the shadow comment table.", db.lastError().text());
         exit(1);
     }
 
     if (!query.exec(createMetaSql))
     {
-        QMessageBox box;
-        box.setText("Could not create the entomologist table");
-        box.exec();
+        qDebug() << "Database error: " << db.lastError().text();
+        ErrorHandler::handleError("Couldn't create the entomologist table.", db.lastError().text());
         exit(1);
     }
 
     if (!query.exec(QString("INSERT INTO entomologist VALUES (\'%1\')").arg(DB_VERSION)))
     {
-        QMessageBox box;
-        box.setText("Could not set database version");
-        box.exec();
+        qDebug() << "Database error: " << db.lastError().text();
+        ErrorHandler::handleError("Couldn't set the database version.", db.lastError().text());
         exit(1);
     }
-
 }
 
 void
@@ -472,9 +461,7 @@ MainWindow::checkDatabaseVersion()
     openDB();
     createTables();
     for (int i = 0; i < trackerList.size(); ++i)
-    {
         insertTracker(trackerList.at(i));
-    }
     mDbUpdated = true;
 }
 
@@ -653,12 +640,7 @@ MainWindow::saveCommentClicked()
     q.bindValue(":comment", frame->commentText());
     q.bindValue(":timestamp", frame->timestamp());
     if (!q.exec())
-    {
-        QMessageBox box;
-        box.setText("Could not save comment!");
-        box.setDetailedText(q.lastError().text());
-        box.exec();
-    }
+        ErrorHandler::handleError("Couldn't save the comment!", q.lastError().text());
 
     frame->toggleEdit();
     toggleButtons();
@@ -1159,9 +1141,7 @@ MainWindow::finishedDetecting(QMap<QString, QString> data)
     QString type = data["type"];
     if (type == "Unknown")
     {
-        QMessageBox box;
-        box.setText("Couldn't detect tracker type");
-        box.exec();
+        ErrorHandler::handleError("Couldn't detect tracker type.", "");
         delete detector;
         return;
     }
@@ -1675,10 +1655,7 @@ MainWindow::isOnline()
 void
 MainWindow::backendError(const QString &message)
 {
-    QMessageBox box;
-    box.setText(tr("An error occurred."));
-    box.setDetailedText(message);
-    box.exec();
+    ErrorHandler::handleError("An error occurred.", message);
     bugsUpdated();
 }
 

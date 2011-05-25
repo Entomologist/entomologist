@@ -25,13 +25,18 @@
 #include <unistd.h>
 #include <fcntl.h>
 #include <QTextStream>
-
+#include <QSysInfo>
 #include "MainWindow.h"
+
+#ifdef Q_OS_UNIX
+#include <sys/utsname.h>
+#endif
 
 int singleInstance(void);
 void logHandler(QtMsgType type,
                 const char *msg);
 void openLog(void);
+void digForSystemInfo();
 QTextStream *outStream;
 
 int main(int argc, char *argv[])
@@ -60,14 +65,85 @@ int main(int argc, char *argv[])
         exit(1);
     }
 
+    digForSystemInfo();
     MainWindow w;
     w.show();
     return a.exec();
 }
 
+// Add some useful debug information in case of an error report
+void
+digForSystemInfo(void)
+{
+    qDebug() << "--------------------------------";
+    qDebug() << "Compiled Qt version: " << QT_VERSION_STR;
+    qDebug() << "Runtime Qt version: " << qVersion();
+    #ifdef Q_OS_WIN32
+        QSysInfo::WinVersion v = QSysInfo::WindowsVersion;
+        if (v == QSysInfo::WV_95)
+                qDebug() << "Windows 95";
+        else if (v == QSysInfo::WV_98)
+                qDebug() << "Windows 98";
+        else if (v == QSysInfo::WV_Me)
+                qDebug() << "Windows Me";
+        else if (v == QSysInfo::WV_DOS_based)
+                qDebug() << "Windows 9x/Me";
+        else if (v == QSysInfo::WV_NT)
+                qDebug() << "Windows NT 4.x";
+        else if (v == QSysInfo::WV_2000)
+                qDebug() << "Windows 2000";
+        else if (v == QSysInfo::WV_XP)
+                qDebug() << "Windows XP";
+        else if (v == QSysInfo::WV_2003)
+                qDebug() << "Windows Server 2003";
+        else if (v == QSysInfo::WV_VISTA)
+                qDebug() << "Windows Vista";
+        else if (v == QSysInfo::WV_WINDOWS7)
+                qDebug() << "Windows 7";
+        else if (v == QSysInfo::WV_NT_based)
+                qDebug() << "Windows NT based";
+        else
+            qDebug() << "Unknown Windows version";
+    #elif defined Q_OS_MAC
+        QSysInfo::MacVersion v = QSysInfo::MacintoshVersion;
+        if (v == QSysInfo::MV_10_3)
+            qDebug() << "OS X 10.3";
+        else if (v == QSysInfo::MV_10_4)
+            qDebug() << "OS X 10.4";
+        else if (v == QSysInfo::MV_10_5)
+            qDebug() << "OS X 10.5";
+        else if(v == QSysInfo::MV_10_6)
+            qDebug() << "OS X 10.6";
+        else
+            qDebug() << "Unknown OS X version";
+    #elif defined Q_OS_UNIX
+        struct utsname *buf = (struct utsname *) malloc(sizeof(struct utsname));
+        if (uname(buf) == 0)
+        {
+            qDebug() << buf->sysname
+                     << " "
+                     << buf->release
+                     << " "
+                     << buf->version
+                     << " "
+                     << buf->machine;
+            free(buf);
+        }
+        else
+        {
+            qDebug() << "Unknown UNIX platform: uname failed";
+        }
+    #elif define Q_OS_ANDROID
+        qDebug() << "Android";
+    #else
+        qDebug() << "Unknown platform";
+    #endif
+    qDebug() << "--------------------------------";
+}
+
 void openLog(void)
 {
-    QString fileName = QString("%1%2%3%4/entomologist.log")
+    QString fileName = QString("%1%2%3%4entomologist.log")
                        .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
                        .arg(QDir::separator())
                        .arg("entomologist")

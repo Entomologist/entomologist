@@ -46,7 +46,9 @@ SOURCES += main.cpp \
     qjson/json_parser.cc \
     trackers/Trac.cpp \
     Utilities.cpp \
-    qtmain_android.cpp
+    qtmain_android.cpp \
+    ErrorHandler.cpp \
+    ErrorReport.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -86,14 +88,17 @@ HEADERS += MainWindow.h \
     qjson/qobjecthelper.h \
     qjson/qjson_export.h \
     trackers/Trac.h \
-    Utilities.hpp
+    Utilities.hpp \
+    ErrorHandler.h \
+    ErrorReport.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
     UploadDialog.ui \
     Preferences.ui \
     About.ui \
-    ChangelogWindow.ui
+    ChangelogWindow.ui \
+    ErrorReport.ui
 RESOURCES += resources.qrc
 QMAKE_EXTRA_TARGETS += distfile
 DISTFILE_MAKEDIR = .tmp/entomologist-$$VERSION
