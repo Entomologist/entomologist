@@ -98,8 +98,9 @@ SqlWriter::insertBugs(QList<QMap<QString, QString> > bugList)
             emit failure(commentDeleteQuery.lastError().text());
             break;
         }
-
-        if (parameterMap["bug_state"] == "open")
+        // If a bug has been closed since we last sync'd, we don't want
+        // to insert it again
+        if (parameterMap["bug_state"] != "closed")
         {
             bugInsertQuery.bindValue(":tracker_id", parameterMap["tracker_id"]);
             bugInsertQuery.bindValue(":bug_id", parameterMap["bug_id"]);

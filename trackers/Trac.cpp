@@ -71,20 +71,13 @@ Trac::sync()
 {
     qDebug() << "Syncing CCs...";
     QVariantList args;
-    QString query;
+    QString closed = "";
     if (mLastSync.date().year() == 1970)
-    {
-        query = QString("cc=%1&max=0&modified=%2..")
-                        .arg(mUsername)
-                        .arg(mLastSync.toString("yyyy-MM-dd"));
-    }
-    else
-    {
-        query = QString("status!=\"closed\"&cc=%1&max=0&modified=%2..")
-                        .arg(mUsername)
-                        .arg(mLastSync.toString("yyyy-MM-dd"));
-
-    }
+        closed = "status!=closed&";
+    QString query = QString("%1cc=%2&max=0&modified=%3..")
+                    .arg(closed)
+                    .arg(mUsername)
+                    .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
     pClient->call("ticket.query", args, this, SLOT(ccRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -255,19 +248,13 @@ Trac::ccRpcResponse(QVariant &arg)
     }
     QString query;
     QVariantList args;
+    QString closed = "";
     if (mLastSync.date().year() == 1970)
-    {
-        query = QString("cc=%1&max=0&modified=%2..")
-                        .arg(mUsername)
-                        .arg(mLastSync.toString("yyyy-MM-dd"));
-    }
-    else
-    {
-        query = QString("status!=\"closed\"&cc=%1&max=0&modified=%2..")
-                        .arg(mUsername)
-                        .arg(mLastSync.toString("yyyy-MM-dd"));
-
-    }
+        closed = "status!=closed&";
+    QString query = QString("%1reporter=%2&max=0&modified=%3..")
+                    .arg(closed)
+                    .arg(mUsername)
+                    .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
     pClient->call("ticket.query", args, this, SLOT(reporterRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -282,19 +269,13 @@ Trac::reporterRpcResponse(QVariant &arg)
     }
     QString query;
     QVariantList args;
+    QString closed = "";
     if (mLastSync.date().year() == 1970)
-    {
-        query = QString("cc=%1&max=0&modified=%2..")
-                        .arg(mUsername)
-                        .arg(mLastSync.toString("yyyy-MM-dd"));
-    }
-    else
-    {
-        query = QString("status!=\"closed\"&cc=%1&max=0&modified=%2..")
-                        .arg(mUsername)
-                        .arg(mLastSync.toString("yyyy-MM-dd"));
-
-    }
+        closed = "status!=closed&";
+    QString query = QString("%1owner=%2&max=0&modified=%3..")
+                    .arg(closed)
+                    .arg(mUsername)
+                    .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
     pClient->call("ticket.query", args, this, SLOT(ownerRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }

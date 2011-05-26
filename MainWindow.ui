@@ -207,8 +207,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>633</width>
-          <height>200</height>
+          <width>617</width>
+          <height>185</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -331,8 +331,13 @@
          <rect>
           <x>0</x>
           <y>0</y>
+<<<<<<< HEAD
           <width>627</width>
           <height>161</height>
+=======
+          <width>600</width>
+          <height>214</height>
+>>>>>>> ks
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -440,6 +445,9 @@
              <property name="text">
               <string>New Comment</string>
              </property>
+             <property name="shortcut">
+              <string>Ctrl+Shift+C</string>
+             </property>
             </widget>
            </item>
           </layout>
@@ -467,7 +475,7 @@
      <x>0</x>
      <y>0</y>
      <width>641</width>
-     <height>20</height>
+     <height>22</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_Help">
@@ -482,6 +490,7 @@
      <string>&amp;File</string>
     </property>
     <addaction name="action_Add_Tracker"/>
+    <addaction name="action_Refresh_Tracker"/>
     <addaction name="action_Preferences"/>
     <addaction name="action_Work_Offline"/>
     <addaction name="separator"/>
@@ -547,6 +556,9 @@
    <property name="text">
     <string>&amp;Add Tracker</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
   </action>
   <action name="action_Preferences">
    <property name="text">
@@ -569,12 +581,21 @@
     <string>Ctrl+Q</string>
    </property>
   </action>
+<<<<<<< HEAD
   <action name="actionClosed_Bugs">
    <property name="checkable">
     <bool>true</bool>
    </property>
    <property name="text">
     <string>Closed Bugs</string>
+=======
+  <action name="action_Refresh_Tracker">
+   <property name="text">
+    <string>Refresh Tracker</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
+>>>>>>> ks
    </property>
   </action>
  </widget>
