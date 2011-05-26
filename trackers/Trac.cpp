@@ -246,7 +246,6 @@ Trac::ccRpcResponse(QVariant &arg)
     {
         mBugMap.insert(bugs.at(i), "CC");
     }
-    QString query;
     QVariantList args;
     QString closed = "";
     if (mLastSync.date().year() == 1970)
@@ -267,7 +266,6 @@ Trac::reporterRpcResponse(QVariant &arg)
     {
         mBugMap.insert(bugs.at(i), "Reported");
     }
-    QString query;
     QVariantList args;
     QString closed = "";
     if (mLastSync.date().year() == 1970)
