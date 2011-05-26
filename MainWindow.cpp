@@ -65,7 +65,6 @@
 // TODOs:
 // - URL handing needs to be improved
 // - Autoscrolling in the details frame when a comment is added doesn't work right
-// - Retrieve resolved bugs as well?
 // - Pressing cancel during tracker detection should actually cancel
 // - Bug resolution - hardcode for bugzilla 3.4. 3.6 should be listable with the Bug.fields call
 // - Move the SQL out of MainWindow and into the SqlBugModel
@@ -73,6 +72,8 @@
 // - 'Bug TODO list' maybe
 // - Highlight new bugs
 // - QtDBUS on linux for network insertion integration
+// - Consider orphaned bug changes - when a bug is closed, but there is
+//   something in the shadow tables.
 
 // Bugzilla backends cache all comments on sync
 // When a backend does not provide enough functionality to

@@ -186,12 +186,18 @@ Bugzilla::getUserBugs()
 {
     if (mVersion == "3.2")
     {
+        QString closed = "";
+        if (mLastSync.date().year() != 1970)
+            closed = "&bug_status=CLOSED&bug_status=RESOLVED";
+
         QString url = mUrl + QString("/buglist.cgi?query_format=advanced"
                                      "&bug_status=NEW&bug_status=ASSIGNED"
+                                     "%1"
                                      "&bug_status=REOPENED&bug_status=NEEDINFO&bug_status=UNCONFIRMED"
-                                     "&chfieldfrom=%1"
+                                     "&chfieldfrom=%2"
                                      "&emailassigned_to1=1"
-                                     "&emailtype1=substring&email1=%2&ctype=csv")
+                                     "&emailtype1=substring&email1=%3&ctype=csv")
+                                    .arg(closed)
                                     .arg(mLastSync.toString("yyyy-MM-dd"))
                                     .arg(mEmail);
         QNetworkRequest req = QNetworkRequest(QUrl(url));
@@ -205,7 +211,8 @@ Bugzilla::getUserBugs()
         QVariantMap params;
         usernameArgs << mUsername << mEmail;
         params["assigned_to"] = usernameArgs;
-        params["resolution"] = ""; // Only show open bugs
+        if (mLastSync.date().year() == 1970)
+            params["resolution"] = ""; // Only show open bugs
         params["last_change_time"] = mLastSync.addDays(-1).toString("yyyy-MM-ddThh:mm:ss");
         args << params;
         qDebug() << params;
@@ -218,12 +225,18 @@ Bugzilla::getReportedBugs()
 {
     if (mVersion == "3.2")
     {
+        QString closed = "";
+        if (mLastSync.date().year() != 1970)
+            closed = "&bug_status=CLOSED&bug_status=RESOLVED";
+
         QString url = mUrl + QString("/buglist.cgi?query_format=advanced"
                                      "&bug_status=NEW&bug_status=ASSIGNED"
+                                     "%1"
                                      "&bug_status=REOPENED&bug_status=NEEDINFO&bug_status=UNCONFIRMED"
-                                     "&chfieldfrom=%1"
+                                     "&chfieldfrom=%2"
                                      "&emailreporter1=1"
-                                     "&emailtype1=substring&email1=%2&ctype=csv")
+                                     "&emailtype1=substring&email1=%3&ctype=csv")
+                                    .arg(closed)
                                     .arg(mLastSync.toString("yyyy-MM-dd"))
                                     .arg(mEmail);
         QNetworkRequest req = QNetworkRequest(QUrl(url));
@@ -240,7 +253,8 @@ Bugzilla::getReportedBugs()
             params["reporter"] = usernameArgs;
         else
             params["creator"] = usernameArgs;
-        params["resolution"] = ""; // Only show open bugs
+        if (mLastSync.date().year() == 1970)
+            params["resolution"] = ""; // Only show open bugs
         params["last_change_time"] = mLastSync.addDays(-1).toString("yyyy-MM-ddThh:mm:ss");
         args << params;
         pClient->call("Bug.search", args, this, SLOT(reportedRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
@@ -250,10 +264,16 @@ Bugzilla::getReportedBugs()
 void
 Bugzilla::getCCs()
 {
+    QString closed = "";
+    if (mLastSync.date().year() != 1970)
+        closed = "&bug_status=CLOSED&bug_status=RESOLVED";
+
     QString url = mUrl + QString("/buglist.cgi?emailcc1=1&emailtype1=substring"
+                                 "%1"
                                  "&query_format=advanced&bug_status=NEW&bug_status=ASSIGNED&bug_status=NEEDINFO&bug_status=REOPENED&bug_status=UNCONFIRMED"
-                                 "&chfieldfrom=%1"
-                                 "&email1=%2&ctype=csv")
+                                 "&chfieldfrom=%2"
+                                 "&email1=%3&ctype=csv")
+                          .arg(closed)
                          .arg(mLastSync.toString("yyyy-MM-dd"))
                          .arg(mEmail);
     qDebug() << url;
@@ -586,6 +606,10 @@ void Bugzilla::bugRpcResponse(QVariant &arg)
         newBug["component"] = responseMap.value("component").toString();
         newBug["product"] = responseMap.value("product").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
+        if (responseMap.value("resolution").toString() != "")
+            newBug["bug_state"] = "closed";
+        else
+            newBug["bug_state"] = "open";
         // Bugs from RPC come in in ISO format (YYYY-MM-DDTHH:MM:SS) so convert
         // to an easier to read format
         newBug["last_modified"] = friendlyTime(responseMap.value("last_change_time").toString());
@@ -707,6 +731,9 @@ Bugzilla::userBugListFinished()
         newBug["product"] = responseMap.value("product").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
         newBug["last_modified"] = responseMap.value("last_change_time").toString();
+        if ((newBug["status"].toUpper() == "RESOLVED")
+            ||(newBug["status"].toUpper() == "CLOSED"))
+                newBug["bug_state"] = "closed";
         insertList << newBug;
     }
 
