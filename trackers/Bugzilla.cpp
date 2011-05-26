@@ -606,19 +606,10 @@ void Bugzilla::bugRpcResponse(QVariant &arg)
         newBug["component"] = responseMap.value("component").toString();
         newBug["product"] = responseMap.value("product").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
-<<<<<<< HEAD
-        if ((responseMap.value("status").toString().toUpper() == "CLOSED")
-           ||(responseMap.value("status").toString().toUpper() == "RESOLVED"))
-            newBug["bug_state"] = "1";
-        else
-            newBug["bug_state"] = "0";
-
-=======
         if (responseMap.value("resolution").toString() != "")
             newBug["bug_state"] = "closed";
         else
             newBug["bug_state"] = "open";
->>>>>>> ks
         // Bugs from RPC come in in ISO format (YYYY-MM-DDTHH:MM:SS) so convert
         // to an easier to read format
         newBug["last_modified"] = friendlyTime(responseMap.value("last_change_time").toString());
