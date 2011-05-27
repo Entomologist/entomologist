@@ -6,6 +6,10 @@ QT += network \
     sql \
     xml
 macx:LIBS += -framework
+windows: {
+  DEFINES += QJSON_MAKEDLL
+}
+
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
