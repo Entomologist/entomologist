@@ -42,6 +42,14 @@ QTextStream *outStream;
 int main(int argc, char *argv[])
 {
     QApplication a(argc, argv);
+    if (!singleInstance())
+    {
+        QMessageBox box;
+        box.setText("Another instance of Entomologist is running.");
+        box.exec();
+        exit(1);
+    }
+
     openLog();
     qInstallMsgHandler(logHandler);
 
@@ -56,14 +64,6 @@ int main(int argc, char *argv[])
         qDebug() << "Could not load locale file";
     a.installTranslator(&translator);
     a.setApplicationVersion(APP_VERSION);
-
-    if (!singleInstance())
-    {
-        QMessageBox box;
-        box.setText("Another instance of Entomologist is running.");
-        box.exec();
-        exit(1);
-    }
 
     digForSystemInfo();
     MainWindow w;
