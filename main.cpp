@@ -27,25 +27,27 @@
 #include <QTextStream>
 #include <QSysInfo>
 #include "MainWindow.h"
+#include "qtsingleapplication/qtsingleapplication.h"
 
 #ifdef Q_OS_UNIX
 #include <sys/utsname.h>
 #endif
 
-int singleInstance(void);
 void logHandler(QtMsgType type,
                 const char *msg);
-void openLog(void);
+void makeDirs();
+void openLog();
 void digForSystemInfo();
 QTextStream *outStream;
 
 int main(int argc, char *argv[])
 {
-    QApplication a(argc, argv);
-    if (!singleInstance())
+    QtSingleApplication a(argc, argv);
+    makeDirs();
+    if (a.isRunning())
     {
         QMessageBox box;
-        box.setText("Another instance of Entomologist is running.");
+        box.setText("Another instance of Entomologist is running!");
         box.exec();
         exit(1);
     }
@@ -67,6 +69,7 @@ int main(int argc, char *argv[])
 
     digForSystemInfo();
     MainWindow w;
+    a.setActivationWindow(&w);
     w.show();
     return a.exec();
 }
@@ -161,7 +164,8 @@ void openLog(void)
         outStream = new QTextStream(log);
     }
 }
- void logHandler(QtMsgType type,
+
+void logHandler(QtMsgType type,
                  const char *msg)
  {
      switch (type)
@@ -195,12 +199,9 @@ void openLog(void)
      outStream->flush();
  }
 
-int
-singleInstance(void)
+void
+makeDirs(void)
 {
-    struct flock lock;
-    int fd;
-
     QString path = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
     path.append(QDir::separator()).append("entomologist");
     QDir dir;
@@ -212,19 +213,4 @@ singleInstance(void)
         box.exec();
         exit(1);
     }
-    path.append(QDir::separator()).append("entomologist.lock");
-
-
-    lock.l_type = F_WRLCK;
-    lock.l_whence = SEEK_SET;
-    lock.l_start = 0;
-    lock.l_len = 0;
-
-    if ((fd = open(path.toLocal8Bit(), O_WRONLY|O_CREAT, 0666)) == -1)
-        return 0;
-
-    if (fcntl(fd, F_SETLK, &lock) == -1)
-        return 0;
-
-    return 1;
 }

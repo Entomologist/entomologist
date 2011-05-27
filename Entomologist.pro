@@ -6,9 +6,7 @@ QT += network \
     sql \
     xml
 macx:LIBS += -framework
-windows: {
-  DEFINES += QJSON_MAKEDLL
-}
+windows::DEFINES += QJSON_MAKEDLL
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
@@ -51,7 +49,13 @@ SOURCES += main.cpp \
     Utilities.cpp \
     qtmain_android.cpp \
     ErrorHandler.cpp \
-    ErrorReport.cpp
+    ErrorReport.cpp \
+    qtsingleapplication/qtsinglecoreapplication.cpp \
+    qtsingleapplication/qtsingleapplication.cpp \
+    qtsingleapplication/qtlockedfile_win.cpp \
+    qtsingleapplication/qtlockedfile_unix.cpp \
+    qtsingleapplication/qtlockedfile.cpp \
+    qtsingleapplication/qtlocalpeer.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -93,7 +97,11 @@ HEADERS += MainWindow.h \
     trackers/Trac.h \
     Utilities.hpp \
     ErrorHandler.h \
-    ErrorReport.h
+    ErrorReport.h \
+    qtsingleapplication/qtsinglecoreapplication.h \
+    qtsingleapplication/qtsingleapplication.h \
+    qtsingleapplication/qtlockedfile.h \
+    qtsingleapplication/qtlocalpeer.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
