@@ -168,13 +168,26 @@ Trac::uploadAll()
             actionMap["type"] = q.value(1).toString().remove(QRegExp("<[^>]*>"));
         if (!q.value(2).isNull())
             actionMap["priority"] = q.value(2).toString().remove(QRegExp("<[^>]*>"));
+
         if (!q.value(3).isNull())
         {
             actionMap["action"] = "reassign";
             actionMap["owner"] = q.value(3).toString().remove(QRegExp("<[^>]*>"));
         }
-        if (!q.value(4).isNull())
+        else if (!q.value(4).isNull())
+        {
             actionMap["status"] = q.value(4).toString().remove(QRegExp("<[^>]*>"));
+            if (actionMap["status"] == "accepted")
+            {
+                actionMap["action"] = "accept";
+            }
+            else if (actionMap["status"] == "assigned")
+            {
+                actionMap.remove("action");
+                actionMap["owner"] = mUsername;
+            }
+        }
+
         if (!q.value(5).isNull())
             actionMap["summary"] = q.value(5).toString().remove(QRegExp("<[^>]*>"));
 
