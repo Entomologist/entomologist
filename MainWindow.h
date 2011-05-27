@@ -87,7 +87,7 @@ public slots:
     void backendError(const QString &message);
     void customContextMenuRequested(const QPoint &pos);
     void trackerItemClicked(QListWidgetItem  *item);
-
+    void searchFocusTriggered();
 protected:
     void changeEvent(QEvent *e);
     bool eventFilter(QObject *obj, QEvent *event);
@@ -124,7 +124,6 @@ private:
     QString getChangelog();
     QString autodetectTracker(const QString &url);
     void syncNextTracker();
-
     int mSyncRequests;
     int mSyncPosition;
     bool mUploading;

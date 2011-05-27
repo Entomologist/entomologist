@@ -71,7 +71,11 @@ Trac::sync()
 {
     qDebug() << "Syncing CCs...";
     QVariantList args;
-    QString query = QString("cc=%1&max=0&modified=%2..")
+    QString closed = "";
+    if (mLastSync.date().year() == 1970)
+        closed = "status!=closed&";
+    QString query = QString("%1cc=%2&max=0&modified=%3..")
+                    .arg(closed)
                     .arg(mUsername)
                     .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
@@ -242,9 +246,12 @@ Trac::ccRpcResponse(QVariant &arg)
     {
         mBugMap.insert(bugs.at(i), "CC");
     }
-
     QVariantList args;
-    QString query = QString("reporter=%1&max=0&modified=%2..")
+    QString closed = "";
+    if (mLastSync.date().year() == 1970)
+        closed = "status!=closed&";
+    QString query = QString("%1reporter=%2&max=0&modified=%3..")
+                    .arg(closed)
                     .arg(mUsername)
                     .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
@@ -259,9 +266,12 @@ Trac::reporterRpcResponse(QVariant &arg)
     {
         mBugMap.insert(bugs.at(i), "Reported");
     }
-
     QVariantList args;
-    QString query = QString("owner=%1&max=0&modified=%2..")
+    QString closed = "";
+    if (mLastSync.date().year() == 1970)
+        closed = "status!=closed&";
+    QString query = QString("%1owner=%2&max=0&modified=%3..")
+                    .arg(closed)
                     .arg(mUsername)
                     .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
@@ -361,6 +371,10 @@ Trac::bugDetailsRpcResponse(QVariant &arg)
                 newBug["last_modified"] = bug.value("changetime")
                                              .toDateTime()
                                              .toString("yyyy-MM-dd hh:mm:ss");
+                if (bug.value("status").toString() == "closed")
+                    newBug["bug_state"] = "closed";
+                else
+                    newBug["bug_state"] = "open";
                 insertList << newBug;
             }
         }

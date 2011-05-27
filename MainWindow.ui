@@ -207,8 +207,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>633</width>
-          <height>198</height>
+          <width>617</width>
+          <height>185</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -292,6 +292,24 @@
             <attribute name="verticalHeaderStretchLastSection">
              <bool>false</bool>
             </attribute>
+            <attribute name="verticalHeaderVisible">
+             <bool>false</bool>
+            </attribute>
+            <attribute name="horizontalHeaderStretchLastSection">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="horizontalHeaderCascadingSectionResizes">
+             <bool>true</bool>
+            </attribute>
+            <attribute name="verticalHeaderShowSortIndicator" stdset="0">
+             <bool>false</bool>
+            </attribute>
+            <attribute name="verticalHeaderHighlightSections">
+             <bool>false</bool>
+            </attribute>
+            <attribute name="verticalHeaderStretchLastSection">
+             <bool>false</bool>
+            </attribute>
            </widget>
           </widget>
          </item>
@@ -313,8 +331,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>609</width>
-          <height>163</height>
+          <width>600</width>
+          <height>214</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -422,6 +440,9 @@
              <property name="text">
               <string>New Comment</string>
              </property>
+             <property name="shortcut">
+              <string>Ctrl+Shift+C</string>
+             </property>
             </widget>
            </item>
           </layout>
@@ -449,17 +470,9 @@
      <x>0</x>
      <y>0</y>
      <width>641</width>
-     <height>20</height>
+     <height>22</height>
     </rect>
    </property>
-   <widget class="QMenu" name="menuShow">
-    <property name="title">
-     <string>&amp;Show</string>
-    </property>
-    <addaction name="actionMy_Bugs"/>
-    <addaction name="actionMy_Reports"/>
-    <addaction name="actionMy_CCs"/>
-   </widget>
    <widget class="QMenu" name="menu_Help">
     <property name="title">
      <string>&amp;Help</string>
@@ -472,10 +485,19 @@
      <string>&amp;File</string>
     </property>
     <addaction name="action_Add_Tracker"/>
+    <addaction name="action_Refresh_Tracker"/>
     <addaction name="action_Preferences"/>
     <addaction name="action_Work_Offline"/>
     <addaction name="separator"/>
     <addaction name="action_Quit"/>
+   </widget>
+   <widget class="QMenu" name="menuShow">
+    <property name="title">
+     <string>&amp;Show</string>
+    </property>
+    <addaction name="actionMy_Bugs"/>
+    <addaction name="actionMy_Reports"/>
+    <addaction name="actionMy_CCs"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menuShow"/>
@@ -529,6 +551,9 @@
    <property name="text">
     <string>&amp;Add Tracker</string>
    </property>
+   <property name="shortcut">
+    <string>Ctrl+N</string>
+   </property>
   </action>
   <action name="action_Preferences">
    <property name="text">
@@ -549,6 +574,14 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+Q</string>
+   </property>
+  </action>
+  <action name="action_Refresh_Tracker">
+   <property name="text">
+    <string>Refresh Tracker</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+R</string>
    </property>
   </action>
  </widget>

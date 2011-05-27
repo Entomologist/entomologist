@@ -38,6 +38,8 @@
 #include <QSpacerItem>
 #include <QImageWriter>
 #include <QSystemTrayIcon>
+#include <QShortcut>
+#include <QKeySequence>
 
 #include "About.h"
 #include "ChangelogWindow.h"
@@ -59,12 +61,11 @@
 #include "Utilities.hpp"
 #include "ui_MainWindow.h"
 
-#define DB_VERSION 3
+#define DB_VERSION 4
 
 // TODOs:
 // - URL handing needs to be improved
 // - Autoscrolling in the details frame when a comment is added doesn't work right
-// - Retrieve resolved bugs as well?
 // - Pressing cancel during tracker detection should actually cancel
 // - Bug resolution - hardcode for bugzilla 3.4. 3.6 should be listable with the Bug.fields call
 // - Move the SQL out of MainWindow and into the SqlBugModel
@@ -72,6 +73,8 @@
 // - 'Bug TODO list' maybe
 // - Highlight new bugs
 // - QtDBUS on linux for network insertion integration
+// - Consider orphaned bug changes - when a bug is closed, but there is
+//   something in the shadow tables.
 
 // Bugzilla backends cache all comments on sync
 // When a backend does not provide enough functionality to
@@ -144,9 +147,25 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(resync()));
     setTimer();
 
+    // Keyboard shortcuts for search bar focus / upload changes.
+    QShortcut* searchFocus;
+    QShortcut* uploadChange;
+
+
+
+    searchFocus = new QShortcut(QKeySequence(Qt::META + Qt::Key_Space),this);
+    searchFocus->setContext(Qt::ApplicationShortcut);
+    connect(searchFocus,SIGNAL(activated()),this,SLOT(searchFocusTriggered()));
+
+    uploadChange = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_S),this);
+    uploadChange->setContext(Qt::ApplicationShortcut);
+    connect(uploadChange,SIGNAL(activated()),this,SLOT(upload()));
+
     // Menu actions
     connect(ui->action_Add_Tracker, SIGNAL(triggered()),
             this, SLOT(addTrackerTriggered()));
+    connect(ui->action_Refresh_Tracker,SIGNAL(triggered()),this,SLOT(resync()));
+
     connect(ui->action_About, SIGNAL(triggered()),
             this, SLOT(aboutTriggered()));
     connect(ui->action_Web_Site, SIGNAL(triggered()),
@@ -360,8 +379,7 @@ MainWindow::createTables()
                                               "component TEXT,"
                                               "product TEXT,"
                                               "bug_type TEXT,"
-                                              "last_modified TEXT,"
-                                               "bug_state INTEGER)";
+                                              "last_modified TEXT)";
 
     QString createCommentsSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
                                "tracker_id INTEGER,"
@@ -1095,6 +1113,7 @@ MainWindow::syncTracker(Backend *tracker)
 void
 MainWindow::addTrackerTriggered()
 {
+
     if (!isOnline())
     {
         QMessageBox box;
@@ -1554,10 +1573,12 @@ MainWindow::filterTable()
         showMy = "Assigned";
     else
         showMy = "XXXAssigned";
+
     if (ui->actionMy_CCs->isChecked())
         showCC = "CC";
     else
         showCC = "XXXCC";
+
     if (ui->actionMy_Reports->isChecked())
         showRep = "Reported";
     else
@@ -1929,6 +1950,13 @@ MainWindow::changelogTriggered()
     newWindow->exec();
     delete newWindow;
     filterTable();
+}
+
+
+void
+MainWindow::searchFocusTriggered() {
+
+    ui->searchEdit->setFocus();
 }
 
 // TODO implement this?
