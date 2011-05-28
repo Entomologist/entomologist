@@ -2,6 +2,38 @@ In order to install, you'll need Qt >= 4.4 and QJson
 
 Steps for installation:
 
+Linux:
  $ qmake
  $ make
  % make install
+
+Mac OS X:
+For Mac OS X you'll need to install the QtSDK or QtLibs from the official QtWebsite to compile.
+Packages from Homebrew/Macports won't be as updated or clean as the official ones.
+
+Once you have this installed you should be able to run:
+ $ qmake
+ $ make
+ $ make install
+
+which should then build a .app bundle that you can run for entomologist or add it to your applications folder as you normally would.
+If you want to make it work across multiple instances of Mac OS X without installing Qt on each you can use macdeployqt to add the required libraries/frameworks to the .app bundle so it can run without Qt being installed. 
+
+Windows:
+For Windows the easiest compliation procedure is to use QTCreator and the QTSDK to compile the binary. Once you have the binary compiled you can
+make it run by adding the following .dlls to the same directory as your .exe. If you have multiple instances you'll have to find the right ones that
+Qt used to compile the application which, if you have the QtSDK installed, should be the ones in QtSDK\Desktop\Qt\versionofQt\mingw.
+
+Required dlls:
+ - QtCore4.dll
+ - QtGui4.dll
+ - QtNetwork4.dll
+ - QtXML4.dll
+ - QtSql4.dll
+ - libgcc_s_dw2-1.dll
+ - mingwm10.dll
+
+ You'll also need to put the qsqlite4.dll database driver into a directory called sqldrivers. Once you have done this you can move the directory
+ to where you would like to keep it and the application should run. 
+
+
