@@ -1,4 +1,4 @@
-In order to install, you'll need Qt >= 4.4 and QJson
+In order to install, you'll need Qt >= 4.4.  Launchpad support requires Qt >= 4.7.
 
 Steps for installation:
 
