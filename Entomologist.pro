@@ -5,7 +5,7 @@ unix:isEmpty(PREFIX):PREFIX = /usr
 QT += network \
     sql \
     xml
-macx:LIBS += -framework
+macx:ICON = graphics/entomologist.icns
 windows::DEFINES += QJSON_MAKEDLL
 TARGET = entomologist
 TEMPLATE = app
