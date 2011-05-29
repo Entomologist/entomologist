@@ -62,7 +62,11 @@ int main(int argc, char *argv[])
     a.installTranslator(&qtTranslator);
 
     QTranslator translator;
-    if (!translator.load(QString("entomologist_") + locale, "/usr/share/entomologist"))
+    QString localDir = QString("%1%2share%3entomologist")
+                        .arg(LOCALE_PREFIX)
+                        .arg(QDir::separator())
+                        .arg(QDir::separator());
+    if (!translator.load(QString("entomologist_") + locale, localDir))
         qDebug() << "Could not load locale file";
     a.installTranslator(&translator);
     a.setApplicationVersion(APP_VERSION);
