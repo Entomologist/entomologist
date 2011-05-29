@@ -75,6 +75,8 @@
 // - QtDBUS on linux for network insertion integration
 // - Consider orphaned bug changes - when a bug is closed, but there is
 //   something in the shadow tables.
+// - Right clicking on the tracker in the list failed on Windows.
+//   Check other platforms.
 
 // Bugzilla backends cache all comments on sync
 // When a backend does not provide enough functionality to
@@ -200,8 +202,14 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(trackerListItemChanged(QListWidgetItem*)));
     connect(ui->trackerList, SIGNAL(customContextMenuRequested(QPoint)),
             this, SLOT(customContextMenuRequested(QPoint)));
+
+    // Seems like this doesn't work on Windows?  Or is it due to
+    // Qt 4.7?  It results in the right click failing to bring up
+    // the context menu.
+#ifndef Q_WS_WIN
     connect(ui->trackerList, SIGNAL(itemClicked(QListWidgetItem*)),
             this, SLOT(trackerItemClicked(QListWidgetItem*)));
+#endif
 
     // And finally set up the various other widgets
     connect(ui->newCommentButton, SIGNAL(clicked()),

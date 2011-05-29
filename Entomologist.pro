@@ -6,7 +6,8 @@ QT += network \
     sql \
     xml
 macx:ICON = graphics/entomologist.icns
-windows::DEFINES += QJSON_MAKEDLL
+win32:DEFINES += QJSON_MAKEDLL
+win32:RC_FILE = Entomologist.rc
 QMAKE_INFO_PLIST = Entomologist.plist
 TARGET = entomologist
 TEMPLATE = app

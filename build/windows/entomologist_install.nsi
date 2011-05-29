@@ -50,7 +50,10 @@ Section "entomologist (required)"
   File "QtXml4.dll"
   File "mingwm10.dll"
   File "libgcc_s_dw2-1.dll"
-  
+  File "libeay32.dll"
+  File "libssl32.dll"
+  File "ssleay32.dll"
+
   SetOutPath $INSTDIR\sqldrivers
   File "qsqlite4.dll"
 

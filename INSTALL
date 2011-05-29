@@ -22,7 +22,7 @@ If you want to make it work across multiple instances of Mac OS X without instal
 Windows:
 For Windows the easiest compliation procedure is to use QTCreator and the QTSDK to compile the binary. Once you have the binary compiled you can
 make it run by adding the following .dlls to the same directory as your .exe. If you have multiple instances you'll have to find the right ones that
-Qt used to compile the application which, if you have the QtSDK installed, should be the ones in QtSDK\Desktop\Qt\versionofQt\mingw.
+Qt used to compile the application which, if you have the QtSDK installed, should be the ones in QtSDK\Desktop\Qt\versionofQt\mingw/bin.
 
 Required dlls:
  - QtCore4.dll
@@ -32,6 +32,9 @@ Required dlls:
  - QtSql4.dll
  - libgcc_s_dw2-1.dll
  - mingwm10.dll
+ - libeay32.dll
+ - libssl32.dll
+ - ssleay32.dll
 
  You'll also need to put the qsqlite4.dll database driver into a directory called sqldrivers. Once you have done this you can move the directory
  to where you would like to keep it and the application should run. 
