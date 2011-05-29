@@ -1397,9 +1397,9 @@ void
 MainWindow::websiteTriggered()
 {
 #ifdef Q_OS_ANDROID
-    Utilities::openAndroidUrl(QUrl("http://entomologist.sourceforge.net"));
+    Utilities::openAndroidUrl(QUrl("http://www.entomologist-project.org"));
 #else
-    QDesktopServices::openUrl(QUrl("http://entomologist.sourceforge.net"));
+    QDesktopServices::openUrl(QUrl("http://www.entomologist-project.org"));
 #endif
 }
 
