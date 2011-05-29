@@ -11,7 +11,7 @@ QMAKE_INFO_PLIST = Entomologist.plist
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
-VERSION = 0.7
+VERSION = 0.8
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 DEFINES += LOCALE_PREFIX=\\\"$$PREFIX\\\"
 SOURCES += main.cpp \
