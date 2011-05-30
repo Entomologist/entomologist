@@ -14,7 +14,8 @@ TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
 VERSION = 0.8
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
-DEFINES += LOCALE_PREFIX=\\\"$$PREFIX\\\"
+isEmpty(LOCALE_PREFIX):DEFINES += LOCALE_PREFIX=\\\"$$PREFIX\\\"
+
 SOURCES += main.cpp \
     MainWindow.cpp \
     libmaia/maiaXmlRpcServerConnection.cpp \
