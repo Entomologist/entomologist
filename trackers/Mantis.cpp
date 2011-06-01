@@ -309,9 +309,15 @@ Mantis::response()
         QRegExp ex("^([1-9]+.?[1-9]*).*$");
         double version;
         if (ex.indexIn(response.toString()) == -1)
+        {
+            qDebug() << "Mantis version response: invalid (" << response.toString() <<")";
             version = -1;
+        }
         else
+        {
             version = ex.cap(1).toDouble();
+            qDebug() << "Mantis version: " << version;
+        }
 
         emit versionChecked(QString("%1").arg(version));
     }
@@ -324,6 +330,8 @@ Mantis::response()
         {
             response  << array.at(i)["name"].toString();
         }
+
+        qDebug() << "Priorities: " << response;
         emit prioritiesFound(response);
     }
     else if (messageName == "mc_enum_statusResponse")
@@ -335,6 +343,8 @@ Mantis::response()
         {
             response  << array.at(i)["name"].toString();
         }
+
+        qDebug() << "Statuses: " << response;
         emit statusesFound(response);
     }
     else if (messageName == "mc_enum_severitiesResponse")
@@ -346,6 +356,8 @@ Mantis::response()
         {
             response  << array.at(i)["name"].toString();
         }
+
+        qDebug() << "Severities: " << response;
         emit severitiesFound(response);
     }
     else if (messageName == "mc_issue_getResponse")
@@ -437,7 +449,6 @@ Mantis::response()
     }
     else if (messageName == "mc_issue_updateResponse")
     {
-
         mUploadList.remove(mCurrentUploadId);
         QSqlQuery sql;
         sql.exec(QString("DELETE FROM shadow_bugs WHERE bug_id=\'%1\' AND tracker_id=%2").arg(mCurrentUploadId).arg(mId));
@@ -452,6 +463,7 @@ Mantis::response()
     }
     else
     {
+        qDebug() << "Invalid response: " << messageName;
         emit backendError("Something went wrong!");
     }
 }
@@ -468,9 +480,10 @@ Mantis::checkVersion()
 void
 Mantis::checkValidPriorities()
 {
+    qDebug() << "Checking Mantis priorities";
     QtSoapMessage request;
     request.setMethod(QtSoapQName("mc_enum_priorities", "http://futureware.biz/mantisconnect"));
-    request.addMethodArgument("username", "", mUsername );
+    request.addMethodArgument("username", "", mUsername);
     request.addMethodArgument("password", "", mPassword);
     pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
 }
@@ -478,6 +491,7 @@ Mantis::checkValidPriorities()
 void
 Mantis::checkValidSeverities()
 {
+    qDebug() << "Checking Mantis severities";
     QtSoapMessage request;
     request.setMethod(QtSoapQName("mc_enum_severities", "http://futureware.biz/mantisconnect"));
     request.addMethodArgument("username", "", mUsername );
@@ -488,6 +502,7 @@ Mantis::checkValidSeverities()
 void
 Mantis::checkValidStatuses()
 {
+    qDebug() << "Checking Mantis statuses";
     QtSoapMessage request;
     request.setMethod(QtSoapQName("mc_enum_status", "http://futureware.biz/mantisconnect"));
     request.addMethodArgument("username", "", mUsername );
@@ -498,6 +513,7 @@ Mantis::checkValidStatuses()
 void
 Mantis::getComments(const QString &bugId)
 {
+    qDebug() << "Get comments for Mantis bug #" << bugId;
     QtSoapMessage request;
     request.setMethod(QtSoapQName("mc_issue_get", "http://futureware.biz/mantisconnect"));
     request.addMethodArgument("username", "", mUsername );
@@ -514,6 +530,7 @@ Mantis::uploadAll()
         emit bugsUpdated();
         return;
     }
+
     mUploadList.clear();
     mCommentUploadList.clear();
     mUploadingBugs = true;
@@ -632,6 +649,7 @@ void Mantis::loginResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
+        qDebug() << "loginResponse: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -648,6 +666,7 @@ void Mantis::viewResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
+        qDebug() << "viewResponse: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -670,6 +689,7 @@ void Mantis::assignedResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
+        qDebug() << "assignedResponse: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -711,6 +731,7 @@ void Mantis::reportedResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
+        qDebug() << "reportedResponse: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -729,6 +750,7 @@ void Mantis::monitoredResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
+        qDebug() << "monitoredResponse: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -745,6 +767,7 @@ void Mantis::monitoredResponse()
 void
 Mantis::bugsInsertionFinished(QStringList idList)
 {
+    qDebug() << "Mantis: bugs updated";
     updateSync();
     emit bugsUpdated();
 }

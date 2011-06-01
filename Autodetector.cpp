@@ -141,7 +141,7 @@ Autodetector::versionChecked(QString version)
             mantis = NULL;
         }
 
-        qDebug() << "Done detecting";
+        qDebug() << "Done detecting, no trackers found.";
         emit finishedDetecting(mData);
         return;
     }
@@ -150,13 +150,17 @@ Autodetector::versionChecked(QString version)
     if (mDetectionState == NOVELL_CHECK)
     {
         mData["type"] = "NovellBugzilla";
+        qDebug() << "Found: Novell Bugzilla";
     }
     else if (mDetectionState == BUGZILLA_CHECK)
     {
         mData["type"] = "Bugzilla";
+        qDebug() << "Found: Bugzilla";
+
     }
     else if (mDetectionState == MANTIS_CHECK)
     {
+        qDebug() << "Found: Mantis";
         mData["type"] = "Mantis";
         mantis->setUsername(mData["username"]);
         mantis->setPassword(mData["password"]);
@@ -164,9 +168,12 @@ Autodetector::versionChecked(QString version)
     else if (mDetectionState == LAUNCHPAD_CHECK)
     {
         mData["type"] = "Launchpad";
+        qDebug() << "Found: Launchpad";
+
     }
     else if (mDetectionState == TRAC_CHECK)
     {
+        qDebug() << "Found: Trac";
         mData["type"] = "Trac";
         trac->setUsername(mData["username"]);
         trac->setPassword(mData["password"]);
