@@ -58,10 +58,11 @@ public slots:
     void prioritiesFound(QStringList priorities);
     void severitiesFound(QStringList severities);
     void statusesFound(QStringList statuses);
-    void backendError(QString msg);
+    void handleError(QString msg);
 
 signals:
     void finishedDetecting(QMap<QString, QString> data);
+    void backendError(QString msg);
 
 private:
     void checkVersion(Backend *b);

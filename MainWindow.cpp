@@ -88,6 +88,7 @@ MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
     ui(new Ui::MainWindow)
 {
+    pDetectorProgress = NULL;
     mDbUpdated = false;
     // mSyncRequests tracks how many sync requests have been made
     // in order to know when to re-enable the widgets
@@ -1142,7 +1143,8 @@ MainWindow::addTrackerTriggered()
             return;
         }
 
-        pDetectorProgress = new QProgressDialog(tr("Detecting tracker type..."), tr("Cancel"), 0, 0);
+        if (pDetectorProgress == NULL)
+            pDetectorProgress = new QProgressDialog(tr("Detecting tracker type..."), tr("Cancel"), 0, 0);
         pDetectorProgress->setWindowModality(Qt::ApplicationModal);
         pDetectorProgress->setMinimumDuration(0);
         pDetectorProgress->setValue(1);
@@ -1150,6 +1152,8 @@ MainWindow::addTrackerTriggered()
         Autodetector *detector = new Autodetector();
         connect(detector, SIGNAL(finishedDetecting(QMap<QString,QString>)),
                 this, SLOT(finishedDetecting(QMap<QString,QString>)));
+        connect(detector, SIGNAL(backendError(QString)),
+                this, SLOT(backendError(QString)));
         detector->detect(info);
     }
 }
@@ -1684,6 +1688,8 @@ MainWindow::isOnline()
 void
 MainWindow::backendError(const QString &message)
 {
+    if (pDetectorProgress->isVisible())
+        pDetectorProgress->reset();
     ErrorHandler::handleError("An error occurred.", message);
     bugsUpdated();
 }

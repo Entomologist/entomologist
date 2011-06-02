@@ -54,6 +54,8 @@ MaiaXmlRpcClient::MaiaXmlRpcClient(QUrl url, QString userAgent, QObject *parent)
     if(url.userName().length() > 0 ) {
         userName = url.userName();
         password = url.password();
+        url.setUserName("");
+        url.setPassword("");
     }
 
 	setUrl(url);

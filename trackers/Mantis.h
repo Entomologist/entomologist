@@ -26,6 +26,7 @@ public:
     QString autoCacheComments();
 
 public slots:
+    void headFinished();
     void response();
     void loginResponse();
     void viewResponse();

@@ -63,8 +63,7 @@ public slots:
     void changelogRpcResponse(QVariant &arg);
     void rpcError(int error, const QString &message);
     void versionRpcError(int error, const QString &message);
-
-    void networkError(QNetworkReply::NetworkError e);
+    void headFinished();
     void handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
 
 private:

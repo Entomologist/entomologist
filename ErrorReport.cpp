@@ -64,7 +64,10 @@ ErrorReport::submitReport()
     QString summary = QString("Anonymous report from %1").arg(email);
     QVariantList args;
     args << summary;
-    args << ui->debugEdit->toPlainText();
+    QString bugContent = QString("Tracker type: %1\n------\n%2")
+                        .arg(ui->trackerCombo->currentText())
+                        .arg(ui->debugEdit->toPlainText());
+    args << bugContent;
     client->call("ticket.create", args, this, SLOT(submitResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 

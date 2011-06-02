@@ -28,6 +28,8 @@ Trac::Trac(const QString &url,
            QObject *parent) :
     Backend(url)
 {
+    mUsername = username;
+    mPassword = password;
     QUrl myUrl(mUrl + "/login/xmlrpc");
     myUrl.setUserName(username);
     myUrl.setPassword(password);
@@ -99,6 +101,30 @@ Trac::login()
 void
 Trac::checkVersion()
 {
+    QUrl url(mUrl + "/login/xmlrpc");
+    url.setUserName(mUsername);
+    url.setPassword(mPassword);
+
+    QNetworkRequest request = QNetworkRequest(url);
+    QNetworkReply *reply = pManager->head(request);
+    connect(reply, SIGNAL(finished()),
+            this, SLOT(headFinished()));
+}
+
+void
+Trac::headFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        qDebug() << "headFinished: Not a trac instance";
+        reply->deleteLater();
+        emit versionChecked("-1");
+        return;
+    }
+    // Mantis seems to report 301 FOUND for any and all URLs.
+    // That should be caught when the actual version RPC call is done
+    qDebug() << "Found a trac instance?";
     QVariantList args;
     pClient->call("system.getAPIVersion", args, this, SLOT(versionRpcResponse(QVariant&)), this, SLOT(versionRpcError(int, const QString &)));
 }
@@ -439,7 +465,7 @@ Trac::versionRpcResponse(QVariant &arg)
 void Trac::versionRpcError(int error,
                            const QString &message)
 {
-    qDebug()<< "versionRpcError: " << message;
+    qDebug()<< "Trac versionRpcError: " << message;
     emit versionChecked("-1");
 }
 
@@ -463,12 +489,6 @@ Trac::bugsInsertionFinished(QStringList idList)
 {
     updateSync();
     emit bugsUpdated();
-}
-
-void
-Trac::networkError(QNetworkReply::NetworkError e)
-{
-    qDebug() << "Network error: " << e;
 }
 
 void

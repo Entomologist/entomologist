@@ -26,7 +26,7 @@
    <item>
     <widget class="QLabel" name="thankYouLabel">
      <property name="text">
-      <string>Thank you for helping us improve Entomologist by reporting a bug!  If you would like to be notified of your bug report's status, please include your email address.  It will be obscured as an anti-spam measure in our bug tracker.</string>
+      <string>Thank you for helping us improve Entomologist by reporting a bug!  Please include your email address.  It will be obscured as an anti-spam measure in our bug tracker.</string>
      </property>
      <property name="wordWrap">
       <bool>true</bool>
@@ -59,6 +59,62 @@
    </item>
    <item>
     <widget class="QPlainTextEdit" name="debugEdit"/>
+   </item>
+   <item>
+    <layout class="QHBoxLayout" name="horizontalLayout_3">
+     <item>
+      <widget class="QLabel" name="trackerLabel">
+       <property name="text">
+        <string>Tracker type:</string>
+       </property>
+      </widget>
+     </item>
+     <item>
+      <widget class="QComboBox" name="trackerCombo">
+       <property name="sizeAdjustPolicy">
+        <enum>QComboBox::AdjustToContents</enum>
+       </property>
+       <item>
+        <property name="text">
+         <string>Unknown</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Trac</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Mantis</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Bugzilla</string>
+        </property>
+       </item>
+       <item>
+        <property name="text">
+         <string>Launchpad</string>
+        </property>
+       </item>
+      </widget>
+     </item>
+     <item>
+      <spacer name="horizontalSpacer_2">
+       <property name="orientation">
+        <enum>Qt::Horizontal</enum>
+       </property>
+       <property name="sizeHint" stdset="0">
+        <size>
+         <width>40</width>
+         <height>20</height>
+        </size>
+       </property>
+      </spacer>
+     </item>
+    </layout>
    </item>
    <item>
     <layout class="QHBoxLayout" name="horizontalLayout_2">

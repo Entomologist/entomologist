@@ -96,15 +96,16 @@ Autodetector::checkVersion(Backend *b)
     connect(b, SIGNAL(statusesFound(QStringList)),
             this, SLOT(statusesFound(QStringList)));
     connect(b, SIGNAL(backendError(QString)),
-            this, SLOT(backendError(QString)));
+            this, SLOT(handleError(QString)));
     b->checkVersion();
 }
 
 void
-Autodetector::backendError(QString msg)
+Autodetector::handleError(QString msg)
 {
+    qDebug() << "Autodetector::Backend Error: " << msg;
     mData["type"] = "Unknown";
-    emit finishedDetecting(mData);
+    emit backendError(msg);
 }
 
 void
@@ -115,7 +116,7 @@ Autodetector::versionChecked(QString version)
         mData["type"] = "Unknown";
         if (mDetectionState == BUGZILLA_CHECK)
         {
-            delete genericBugzilla;
+            genericBugzilla->deleteLater();
             genericBugzilla = NULL;
             qDebug() << "Checking trac";
             mDetectionState = TRAC_CHECK;
@@ -125,7 +126,7 @@ Autodetector::versionChecked(QString version)
         }
         else if (mDetectionState == TRAC_CHECK)
         {
-            delete trac;
+            trac->deleteLater();
             trac = NULL;
             qDebug() << "Checking mantis";
             mDetectionState = MANTIS_CHECK;
@@ -137,7 +138,7 @@ Autodetector::versionChecked(QString version)
         else if (mDetectionState == MANTIS_CHECK)
         {
             qDebug() << "Mantis said no, too";
-            delete mantis;
+            mantis->deleteLater();
             mantis = NULL;
         }
 

@@ -295,13 +295,17 @@ Mantis::response()
 
     if (resp.isFault())
     {
+        qDebug() << "SOAP fault: " << resp.faultString().toString();
+        qDebug() << resp.faultDetail().toString();
         emit bugsUpdated();
         emit backendError(QString("%1: %2").arg(resp.faultString().toString()).arg(resp.faultDetail().toString()));
         return;
     }
+
     const QtSoapType &message = resp.method();
     const QtSoapType &response = resp.returnValue();
     QString messageName = message.name().name();
+    qDebug() << "SOAP message: " << messageName;
 
     if (messageName == "mc_versionResponse")
     {
@@ -471,7 +475,27 @@ Mantis::response()
 void
 Mantis::checkVersion()
 {
-    qDebug() << "Checking Mantis version";
+    QUrl url(mUrl + "/api/soap/mantisconnect.php");
+    qDebug() << "Checking Mantis version at " << url;
+
+    QNetworkRequest request = QNetworkRequest(url);
+    QNetworkReply *reply = pManager->head(request);
+    connect(reply, SIGNAL(finished()),
+            this, SLOT(headFinished()));
+}
+
+void
+Mantis::headFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        qDebug() << "headFinished: Not a Mantis instance";
+        reply->deleteLater();
+        emit versionChecked("-1");
+        return;
+    }
+
     QtSoapMessage request;
     request.setMethod(QtSoapQName("mc_version", "http://futureware.biz/mantisconnect"));
     pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
