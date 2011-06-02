@@ -27,6 +27,7 @@
 #include <QTextStream>
 #include <QSysInfo>
 #include "MainWindow.h"
+#include "ErrorHandler.h"
 #include "qtsingleapplication/qtsingleapplication.h"
 
 #ifdef Q_OS_UNIX
@@ -83,6 +84,7 @@ void
 digForSystemInfo(void)
 {
     qDebug() << "--------------------------------";
+    qDebug() << "Entomologist version: " << APP_VERSION;
     qDebug() << "Compiled Qt version: " << QT_VERSION_STR;
     qDebug() << "Runtime Qt version: " << qVersion();
     #ifdef Q_OS_WIN32
@@ -198,7 +200,8 @@ void logHandler(QtMsgType type,
                       << msg
                       << "\n";
             outStream->flush();
-            abort();
+            ErrorHandler::handleError("A fatal application error occurred.  I must exit.", msg);
+            abort(); // Abort to trigger a stack trace on OS X
      }
      outStream->flush();
  }
