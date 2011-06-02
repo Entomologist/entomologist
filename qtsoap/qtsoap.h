@@ -592,7 +592,8 @@ Q_SIGNALS:
 
 private Q_SLOTS:
     void readResponse(QNetworkReply *reply);
-
+    void handleSslErrors(QNetworkReply *reply,
+                         const QList<QSslError> &errors);
 private:
     QNetworkAccessManager networkMgr;
     QPointer<QNetworkReply> networkRep;

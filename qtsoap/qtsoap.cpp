@@ -3099,6 +3099,8 @@ QtSoapHttpTransport::QtSoapHttpTransport(QObject *parent)
 {
     connect(&networkMgr, SIGNAL(finished(QNetworkReply *)),
             SLOT(readResponse(QNetworkReply *)));
+    connect(&networkMgr, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)),
+            this, SLOT(handleSslErrors(QNetworkReply*,QList<QSslError>)));
 }
 
 /*!
@@ -3151,6 +3153,7 @@ void QtSoapHttpTransport::submitRequest(QtSoapMessage &request, const QString &p
     QNetworkRequest networkReq;
     networkReq.setHeader(QNetworkRequest::ContentTypeHeader, QLatin1String("text/xml;charset=utf-8"));
     networkReq.setRawHeader("SOAPAction", soapAction.toAscii());
+
     url.setPath(path);
     networkReq.setUrl(url);
 
@@ -3198,6 +3201,12 @@ QNetworkReply *QtSoapHttpTransport::networkReply()
 /*!
 
 */
+void
+QtSoapHttpTransport::handleSslErrors(QNetworkReply *reply,
+                         const QList<QSslError> &errors)
+{
+    reply->ignoreSslErrors();
+}
 
 void QtSoapHttpTransport::readResponse(QNetworkReply *reply)
 {
