@@ -137,6 +137,7 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
     QVector<QString> bug;
 
     QString entry;
+    QString tmpBugId;
     QString colEntry;
     int colId = -1,
         colProduct = -1,
@@ -185,51 +186,60 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
             entry = bug.at(colId);
         else
             break;
+        qDebug() << "CSV line: " << list.at(i);
 
         qDebug() << "CSV Found " << entry;
         newBug["id"]  = entry.remove(removeLeadingZeros);
-
+        tmpBugId = entry;
+        qDebug() << "Product";
         if (colProduct)
             entry = bug.at(colProduct);
         else
             entry = "";
         newBug["product"] = entry.remove(reg);
+        qDebug() << "Assigned to";
 
         if (colAssignedTo)
             entry = bug.at(colAssignedTo);
         else
             entry = "";
         newBug["assigned_to"] = entry.remove(reg);
+        qDebug() << "Priority";
 
         if (colPriority)
             entry = bug.at(colPriority);
         else
             entry = "";
         newBug["priority"] = entry.remove(reg);
+        qDebug() << "Severity";
 
         if (colSeverity)
             entry = bug.at(colSeverity);
         else
             entry = "";
         newBug["severity"] = entry.remove(reg);
+        qDebug() << "Component";
 
         if (colComponent)
             entry = bug.at(colComponent);
         else
             entry = "";
         newBug["component"] = entry.remove(reg);
+        qDebug() << "Last Modified";
 
         if (colLastModified)
             entry = bug.at(colLastModified);
         else
             entry = "1970-01-01";
         newBug["last_modified"] = entry.remove(reg);
+        qDebug() << "Summary";
 
         if (colSummary)
             entry = bug.at(colSummary);
         else
             entry = "";
         newBug["summary"] = entry.remove(reg);
+        qDebug() << "Status";
 
         if (colStatus)
             entry = bug.at(colStatus);
@@ -238,8 +248,9 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
         newBug["status"] = entry.remove(reg);
 
         newBug["bug_type"] = bugType;
-        mBugs[bug.at(0)] = newBug;
+        mBugs[tmpBugId] = newBug;
     }
+    qDebug() << "Handle CSV finished";
 }
 
 QVector<QString>
