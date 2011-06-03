@@ -58,8 +58,14 @@ int main(int argc, char *argv[])
 
     QString locale = QLocale::system().name();
     QTranslator qtTranslator;
-    if (!qtTranslator.load("qt_" + locale, QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
-        qDebug() << "Could not load system locale: " << "qt_" + locale;
+    QString qtLocaleString = "qt_" + locale;
+    if (!qtTranslator.load(qtLocaleString, QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
+    {
+        qDebug() << "Could not load system locale: "
+                 << qtLocaleString
+                 << " from "
+                 << QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+    }
     a.installTranslator(&qtTranslator);
 
     QTranslator translator;
@@ -67,8 +73,15 @@ int main(int argc, char *argv[])
                         .arg(LOCALE_PREFIX)
                         .arg(QDir::separator())
                         .arg(QDir::separator());
-    if (!translator.load(QString("entomologist_") + locale, localDir))
-        qDebug() << "Could not load locale file";
+    if (!qtTranslator.load(qtLocaleString, QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
+    {
+        qDebug() << "Could not load Entomologist locale file: "
+                 << qtLocaleString
+                 << " from "
+                 << QLibraryInfo::location(QLibraryInfo::TranslationsPath);
+        if (!translator.load(QString("entomologist_") + locale, localDir))
+            qDebug() << "Could not load Entomologist locale file :-(";
+    }
     a.installTranslator(&translator);
     a.setApplicationVersion(APP_VERSION);
 
