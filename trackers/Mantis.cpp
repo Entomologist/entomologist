@@ -24,6 +24,7 @@
 #include <QSqlTableModel>
 #include <QVariantMap>
 #include "Mantis.h"
+#include "Translator.h"
 
 // The Mantis SOAP API for 1.1 and 1.2 doesn't allow us to safely
 // list all bugs, so we use the API to get the version and the
@@ -135,7 +136,7 @@ void
 Mantis::handleCSV(const QString &csv, const QString &bugType)
 {
     QVector<QString> bug;
-
+    qDebug() << "Handle CSV: " << csv;
     QString entry;
     QString tmpBugId;
     QString colEntry;
@@ -149,33 +150,66 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
         colSummary = -1,
         colStatus = -1;
     QRegExp reg("^\"|\"$");
+    QString translatedEntry = "";
     QRegExp removeLeadingZeros("^0+");
     QStringList list = csv.split("\n", QString::SkipEmptyParts);
+    qDebug() << list;
 
     // The first line is the column descriptions, so parse them
     // and map them to what we want
+    Translator t;
+    t.openDatabase();
     bug = parseCSVLine(list.at(0));
     for (int i = 0; i < bug.size(); ++i)
     {
-        colEntry = bug.at(i).toLower().remove(reg);
-        if (colEntry == "id")
+//        colEntry = bug.at(i).toLower().remove(reg);
+        colEntry = bug.at(i);
+        qDebug() << "colEntry(1): " << colEntry;
+        colEntry = colEntry.remove(reg);
+        qDebug() << "colEntry(2): " << colEntry;
+        translatedEntry = t.translate(colEntry.toUtf8());
+        qDebug() << "translatedEntry: " << translatedEntry;
+        if (translatedEntry == "id")
             colId = i;
-        else if (colEntry == "project")
+        else if (translatedEntry == "project")
             colProduct = i;
-        else if (colEntry == "category")
+        else if (translatedEntry == "category")
             colComponent = i;
-        else if (colEntry == "assigned to")
+        else if (translatedEntry == "assigned_to")
             colAssignedTo = i;
-        else if (colEntry == "priority")
+        else if (translatedEntry == "priority")
             colPriority = i;
-        else if (colEntry == "severity")
+        else if (translatedEntry == "severity")
             colSeverity = i;
-        else if (colEntry == "updated")
+        else if (translatedEntry == "updated")
             colLastModified = i;
-        else if (colEntry == "summary")
+        else if (translatedEntry == "summary")
             colSummary = i;
-        else if (colEntry == "status")
+        else if (translatedEntry == "status")
             colStatus = i;
+    }
+    t.closeDatabase();
+
+    if ((colProduct == -1)
+        || (colComponent == -1)
+        || (colAssignedTo == -1)
+        || (colPriority == -1)
+        || (colSeverity == -1)
+        || (colLastModified  == -1)
+        || (colSummary == -1)
+        || (colStatus == -1))
+    {
+        qDebug() << "Missing a column somewhere...:";
+        qDebug() << QString("%1, %2, %3, %4, %5, %6, %7, %8")
+                    .arg(colId)
+                    .arg(colProduct)
+                    .arg(colAssignedTo)
+                    .arg(colPriority)
+                    .arg(colSeverity)
+                    .arg(colComponent)
+                    .arg(colLastModified)
+                    .arg(colStatus);
+        return;
     }
 
     for (int i = 1; i < list.size(); ++i)
@@ -186,60 +220,52 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
             entry = bug.at(colId);
         else
             break;
-        qDebug() << "CSV line: " << list.at(i);
 
         qDebug() << "CSV Found " << entry;
         newBug["id"]  = entry.remove(removeLeadingZeros);
         tmpBugId = entry;
-        qDebug() << "Product";
+
         if (colProduct)
             entry = bug.at(colProduct);
         else
             entry = "";
         newBug["product"] = entry.remove(reg);
-        qDebug() << "Assigned to";
 
         if (colAssignedTo)
             entry = bug.at(colAssignedTo);
         else
             entry = "";
         newBug["assigned_to"] = entry.remove(reg);
-        qDebug() << "Priority";
 
         if (colPriority)
             entry = bug.at(colPriority);
         else
             entry = "";
         newBug["priority"] = entry.remove(reg);
-        qDebug() << "Severity";
 
         if (colSeverity)
             entry = bug.at(colSeverity);
         else
             entry = "";
         newBug["severity"] = entry.remove(reg);
-        qDebug() << "Component";
 
         if (colComponent)
             entry = bug.at(colComponent);
         else
             entry = "";
         newBug["component"] = entry.remove(reg);
-        qDebug() << "Last Modified";
 
         if (colLastModified)
             entry = bug.at(colLastModified);
         else
             entry = "1970-01-01";
         newBug["last_modified"] = entry.remove(reg);
-        qDebug() << "Summary";
 
         if (colSummary)
             entry = bug.at(colSummary);
         else
             entry = "";
         newBug["summary"] = entry.remove(reg);
-        qDebug() << "Status";
 
         if (colStatus)
             entry = bug.at(colStatus);
@@ -732,6 +758,7 @@ void Mantis::assignedResponse()
     }
     QString rep = reply->readAll();
     reply->deleteLater();
+    qDebug() << rep;
     handleCSV(rep, "Assigned");
 
     QList< QMap<QString,QString> > insertList;

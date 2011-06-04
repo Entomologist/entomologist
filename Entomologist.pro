@@ -14,9 +14,8 @@ TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
 VERSION = 0.8
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
-isEmpty(LOCALE_PREFIX):LOCALE_PREFIX=$$PREFIX
+isEmpty(LOCALE_PREFIX):LOCALE_PREFIX = $$PREFIX
 DEFINES += LOCALE_PREFIX=\\\"$$LOCALE_PREFIX\\\"
-
 SOURCES += main.cpp \
     MainWindow.cpp \
     libmaia/maiaXmlRpcServerConnection.cpp \
@@ -60,7 +59,8 @@ SOURCES += main.cpp \
     qtsingleapplication/qtlockedfile_win.cpp \
     qtsingleapplication/qtlockedfile_unix.cpp \
     qtsingleapplication/qtlockedfile.cpp \
-    qtsingleapplication/qtlocalpeer.cpp
+    qtsingleapplication/qtlocalpeer.cpp \
+    Translator.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -106,7 +106,8 @@ HEADERS += MainWindow.h \
     qtsingleapplication/qtsinglecoreapplication.h \
     qtsingleapplication/qtsingleapplication.h \
     qtsingleapplication/qtlockedfile.h \
-    qtsingleapplication/qtlocalpeer.h
+    qtsingleapplication/qtlocalpeer.h \
+    Translator.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \

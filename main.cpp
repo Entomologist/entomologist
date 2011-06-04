@@ -172,7 +172,7 @@ void openLog(void)
                        .arg(QDir::separator());
     qDebug() << "Logging to " << fileName;
     QFile *log = new QFile(fileName);
-    if (log->open(QIODevice::WriteOnly | QIODevice::Truncate | QIODevice::Text))
+    if (log->open(QIODevice::WriteOnly | QIODevice::Truncate))
     { 
         outStream = new QTextStream(log);
     }
@@ -182,6 +182,8 @@ void openLog(void)
         log->open(stderr, QIODevice::WriteOnly);
         outStream = new QTextStream(log);
     }
+
+
 }
 
 void logHandler(QtMsgType type,

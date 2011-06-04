@@ -154,8 +154,6 @@ MainWindow::MainWindow(QWidget *parent) :
     QShortcut* searchFocus;
     QShortcut* uploadChange;
 
-
-
     searchFocus = new QShortcut(QKeySequence(Qt::META + Qt::Key_Space),this);
     searchFocus->setContext(Qt::ApplicationShortcut);
     connect(searchFocus,SIGNAL(activated()),this,SLOT(searchFocusTriggered()));
