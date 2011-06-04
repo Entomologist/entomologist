@@ -48,6 +48,13 @@ Translator::openDatabase()
     QString dbName = "entomologist.translations.db";
     QString path = "";
     QString separator = QDir::separator();
+    mDatabase = QSqlDatabase::database("translations");
+    if (mDatabase.isValid())
+    {
+        mDatabase.open();
+        return;
+    }
+
     mDatabase = QSqlDatabase::addDatabase("QSQLITE", "translations");
     if (!mDatabase.isValid())
     {
@@ -106,12 +113,12 @@ Translator::closeDatabase()
 {
     if (mDatabase.isOpen())
         mDatabase.close();
+
 }
 
 QString
 Translator::translate(const QString &str)
 {
-    qDebug() << "Translate: " << str;
     if (!mDatabase.isOpen())
     {
         qDebug() << "Translations DB is not open";
@@ -119,35 +126,24 @@ Translator::translate(const QString &str)
     }
 
     QSqlQuery q(mDatabase);
-    QString query = QString("SELECT entomologist FROM translations WHERE local=\'%1' LIMIT 1;")
-                    .arg(str);
-/*
-    qDebug() << "Prepare";
     if (!q.prepare("SELECT entomologist FROM translations WHERE local=:local LIMIT 1"))
     {
         qDebug() << "Translator::translate: Could not prepare.";
         return "unknown";
     }
 
-    qDebug() << "Bind";
     q.bindValue(":local", str);
-    */
-    qDebug() << query;
-    if (!q.exec(query))
+    if (!q.exec())
     {
-        qDebug() << "Translator::translate: Could not exec query: " << q.lastQuery() << ":" << q.lastError().text();
         return "unknown";
     }
 
-    qDebug() << "Next...";
     if (!q.next())
     {
-        qDebug() << "Translator::translate: q.next failed for " << q.lastQuery() << ":" << q.lastError().text();
         return "unknown";
     }
 
     QString ret = "unknown";
-    qDebug() << "SQL result: " << q.value(0).toString();
     ret = q.value(0).toString();
     q.finish();
     return (ret);

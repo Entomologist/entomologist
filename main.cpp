@@ -194,25 +194,25 @@ void logHandler(QtMsgType type,
         case QtDebugMsg:
             *outStream << QTime::currentTime().toString().toAscii().data()
                       << " DEBUG: "
-                      << msg
+                      << QString::fromUtf8(msg)
                       << "\n";
             break;
         case QtCriticalMsg:
             *outStream << QTime::currentTime().toString().toAscii().data()
                       << " CRITICAL: "
-                      << msg
+                      << QString::fromUtf8(msg)
                       << "\n";
             break;
         case QtWarningMsg:
             *outStream << QTime::currentTime().toString().toAscii().data()
                       << " WARNING: "
-                      << msg
+                      << QString::fromUtf8(msg)
                       << "\n";
             break;
         case QtFatalMsg:
             *outStream << QTime::currentTime().toString().toAscii().data()
                       << " FATAL: "
-                      << msg
+                      << QString::fromUtf8(msg)
                       << "\n";
             outStream->flush();
             ErrorHandler::handleError("A fatal application error occurred.  I must exit.", msg);

@@ -91,7 +91,8 @@ Mantis::setView()
     else
         queryType = "user_monitor[]=0&reporter_id[]=0&handler_id[]=-1";
     QString url = mUrl + "/view_all_set.php?f=3";
-    // I'm not sure why I missed this in 0.4, but Mantis's date range
+
+    // I'm not sure why I missed this earlier, but Mantis's date range
     // filter doesn't actually filter on modified times, so we'll
     // have to download all bugs on each sync.
     QString query = QString("type=1&page_number=1&view_type=simple&%1&hide_status[]=80")
@@ -136,7 +137,6 @@ void
 Mantis::handleCSV(const QString &csv, const QString &bugType)
 {
     QVector<QString> bug;
-    qDebug() << "Handle CSV: " << csv;
     QString entry;
     QString tmpBugId;
     QString colEntry;
@@ -153,7 +153,6 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
     QString translatedEntry = "";
     QRegExp removeLeadingZeros("^0+");
     QStringList list = csv.split("\n", QString::SkipEmptyParts);
-    qDebug() << list;
 
     // The first line is the column descriptions, so parse them
     // and map them to what we want
@@ -162,13 +161,9 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
     bug = parseCSVLine(list.at(0));
     for (int i = 0; i < bug.size(); ++i)
     {
-//        colEntry = bug.at(i).toLower().remove(reg);
         colEntry = bug.at(i);
-        qDebug() << "colEntry(1): " << colEntry;
         colEntry = colEntry.remove(reg);
-        qDebug() << "colEntry(2): " << colEntry;
-        translatedEntry = t.translate(colEntry.toUtf8());
-        qDebug() << "translatedEntry: " << translatedEntry;
+        translatedEntry = t.translate(colEntry);
         if (translatedEntry == "id")
             colId = i;
         else if (translatedEntry == "project")
@@ -221,7 +216,6 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
         else
             break;
 
-        qDebug() << "CSV Found " << entry;
         newBug["id"]  = entry.remove(removeLeadingZeros);
         tmpBugId = entry;
 
@@ -756,10 +750,9 @@ void Mantis::assignedResponse()
 
         return;
     }
-    QString rep = reply->readAll();
+    QString rep = QString::fromUtf8(reply->readAll());
     reply->deleteLater();
-    qDebug() << rep;
-    handleCSV(rep, "Assigned");
+    handleCSV(QString(rep), "Assigned");
 
     QList< QMap<QString,QString> > insertList;
     QVariantMap responseMap;
@@ -800,7 +793,7 @@ void Mantis::reportedResponse()
         return;
     }
 
-    QString rep = reply->readAll();
+    QString rep = QString::fromUtf8(reply->readAll());
     reply->deleteLater();
     handleCSV(rep, "Reported");
     mViewType = ASSIGNED;
@@ -819,7 +812,7 @@ void Mantis::monitoredResponse()
         return;
     }
 
-    QString rep = reply->readAll();
+    QString rep = QString::fromUtf8(reply->readAll());
     reply->deleteLater();
     handleCSV(rep, "CC");
     mViewType = REPORTED;
