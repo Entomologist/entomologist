@@ -26,6 +26,7 @@
 #include <fcntl.h>
 #include <QTextStream>
 #include <QSysInfo>
+#include <QSslSocket>
 #include "MainWindow.h"
 #include "ErrorHandler.h"
 #include "qtsingleapplication/qtsingleapplication.h"
@@ -100,6 +101,15 @@ digForSystemInfo(void)
     qDebug() << "Entomologist version: " << APP_VERSION;
     qDebug() << "Compiled Qt version: " << QT_VERSION_STR;
     qDebug() << "Runtime Qt version: " << qVersion();
+    if (QSslSocket::supportsSsl())
+    {
+        qDebug() << "SSL is supported";
+    }
+    else
+    {
+        qDebug() << "SSL is NOT supported";
+    }
+
     #ifdef Q_OS_WIN32
         QSysInfo::WinVersion v = QSysInfo::WindowsVersion;
         if (v == QSysInfo::WV_95)
