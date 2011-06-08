@@ -28,6 +28,7 @@
 #include <QVariant>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QCoreApplication>
 #include <QDir>
 #include <QLibraryInfo>
 
@@ -55,27 +56,14 @@ Translator::openDatabase()
         return;
     }
 
-    mDatabase = QSqlDatabase::addDatabase("QSQLITE", "translations");
-    if (!mDatabase.isValid())
-    {
-        qDebug() << "Couldn't create the database connection";
-        exit(1);
-    }
-
     // First see if the file is in the same directory
     // as the application.
     path = QString("%1%2%3")
            .arg(QDir::currentPath())
            .arg(separator)
            .arg(dbName);
-
-    qDebug() << "Looking for column translations in " << path;
-    if (QFile::exists(path))
-    {
-        mDatabase.setDatabaseName(path);
-        if (mDatabase.open())
-            return;
-    }
+    if (loadFile(path))
+        return;
 
     // No?  Let's check $PREFIX/entomologist
     path = QString ("%1%2entomologist%3%4")
@@ -83,29 +71,45 @@ Translator::openDatabase()
            .arg(separator)
            .arg(separator)
            .arg(dbName);
-
-    qDebug() << "Looking for column translations in " << path;
-    if (QFile::exists(path))
-    {
-        mDatabase.setDatabaseName(path);
-        if (mDatabase.open())
-            return;
-    }
+    if (loadFile(path))
+        return;
 
     // Still not there?  Maybe in the translations directory
     path = QString("%1%2%3")
            .arg(QLibraryInfo::location(QLibraryInfo::TranslationsPath))
            .arg(separator)
            .arg(dbName);
+    if (loadFile(path))
+        return;
+
+    path = QString("%1%2%3")
+            .arg(QCoreApplication::applicationDirPath())
+            .arg(separator)
+            .arg(dbName);
+    if (loadFile(path))
+        return;
+
+    qDebug() << "Could not open column translation database";
+}
+
+bool
+Translator::loadFile(const QString &path)
+{
     qDebug() << "Looking for column translations in " << path;
     if (QFile::exists(path))
     {
+        mDatabase = QSqlDatabase::addDatabase("QSQLITE", "translations");
+        if (!mDatabase.isValid())
+        {
+            qDebug() << "Couldn't create the database connection";
+            exit(1);
+        }
         mDatabase.setDatabaseName(path);
         if (mDatabase.open())
-            return;
+            return true;
     }
 
-    qDebug() << "Could not open column translation database";
+    return false;
 }
 
 void
