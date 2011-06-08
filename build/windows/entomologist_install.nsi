@@ -4,8 +4,10 @@
 ;  an Uninstall script.
 ;--------------------------------
 
+!include "MUI2.nsh"
+
 ; The name of the installer
-Name "Entomologist Bug Tracker Installer"
+Name "Entomologist"
 
 ; The file to write
 OutFile "entomologist_install.exe"
@@ -21,20 +23,42 @@ InstallDirRegKey HKLM "Software\entomologist" "Install_Dir"
 RequestExecutionLevel admin
 
 ;--------------------------------
+;Interface Settings
+
+!define MUI_ABORTWARNING
+
+;--------------------------------
+;Pages
+
+!insertmacro MUI_PAGE_COMPONENTS
+!insertmacro MUI_PAGE_DIRECTORY
+!insertmacro MUI_PAGE_INSTFILES
+  
+!insertmacro MUI_UNPAGE_CONFIRM
+!insertmacro MUI_UNPAGE_INSTFILES
+  
+;--------------------------------
+;Languages
+ 
+  !insertmacro MUI_LANGUAGE "English"
+
+
+
+;--------------------------------
 
 ; Pages
 
-Page components
-Page directory
-Page instfiles
+;Page components
+;Page directory
+;Page instfiles
 
-UninstPage uninstConfirm
-UninstPage instfiles
+;UninstPage uninstConfirm
+;UninstPage instfiles
 
 ;--------------------------------
 
 ; The stuff to install
-Section "entomologist (required)"
+Section "Entomologist"
 
   SectionIn RO
   
@@ -53,6 +77,8 @@ Section "entomologist (required)"
   File "libeay32.dll"
   File "libssl32.dll"
   File "ssleay32.dll"
+  File "entomologist.translations.db"
+  File /r translations
 
   SetOutPath $INSTDIR\sqldrivers
   File "qsqlite4.dll"
@@ -97,9 +123,13 @@ Section "Uninstall"
   Delete $INSTDIR\QtSql4.dll
   Delete $INSTDIR\sqldrivers\qsqlite4.dll
   Delete $INSTDIR\mingwm10.dll
+  Delete $INSTDIR\libeay32.dll
+  Delete $INSTDIR\libssl32.dll
+  Delete $INSTDIR\ssleay32.dll
   Delete $INSTDIR\libgcc_s_dw2-1.dll
   Delete $INSTDIR\uninstall.exe
-
+  Delete $INSTDIR\entomologist.translations.db
+  Delete $INSTDIR\translations
   ; Remove shortcuts, if any
   Delete "$SMPROGRAMS\entomologist\*.*"
 

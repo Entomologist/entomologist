@@ -69,6 +69,15 @@ int main(int argc, char *argv[])
                  << " from "
                  << QLibraryInfo::location(QLibraryInfo::TranslationsPath);
     }
+    else
+    {
+        QString localPath = QString("%1%2%3")
+                .arg(QDir::currentPath())
+                .arg(QDir::separator())
+                .arg("translations");
+        if (!qtTranslator.load(qtLocaleString, localPath))
+            qDebug() << "Could not load system locale from " << localPath;
+    }
     a.installTranslator(&qtTranslator);
 
     QTranslator translator;

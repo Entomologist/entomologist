@@ -41,6 +41,7 @@ public:
     ~Translator();
 
     void openDatabase();
+    bool loadFile(const QString &path);
     QString translate(const QString &str);
     void closeDatabase();
 
