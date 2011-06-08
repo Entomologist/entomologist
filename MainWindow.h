@@ -93,6 +93,7 @@ protected:
     bool eventFilter(QObject *obj, QEvent *event);
 
 private:
+    QString cleanupUrl(QString &url);
     void setupDB();
     void openDB();
     void createTables();

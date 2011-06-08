@@ -58,8 +58,10 @@ int main(int argc, char *argv[])
     qInstallMsgHandler(logHandler);
 
     QString locale = QLocale::system().name();
+    qDebug() << "Locale: " << locale;
     QTranslator qtTranslator;
     QString qtLocaleString = "qt_" + locale;
+
     if (!qtTranslator.load(qtLocaleString, QLibraryInfo::location(QLibraryInfo::TranslationsPath)))
     {
         qDebug() << "Could not load system locale: "
@@ -84,6 +86,7 @@ int main(int argc, char *argv[])
             qDebug() << "Could not load Entomologist locale file :-(";
     }
     a.installTranslator(&translator);
+
     a.setApplicationVersion(APP_VERSION);
 
     digForSystemInfo();

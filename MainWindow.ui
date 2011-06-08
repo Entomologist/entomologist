@@ -111,13 +111,22 @@
          </sizepolicy>
         </property>
         <property name="text">
-         <string>Spinner</string>
+         <string/>
+        </property>
+        <property name="textFormat">
+         <enum>Qt::PlainText</enum>
+        </property>
+        <property name="pixmap">
+         <pixmap resource="resources.qrc">:/spinner</pixmap>
         </property>
         <property name="scaledContents">
          <bool>true</bool>
         </property>
         <property name="alignment">
-         <set>Qt::AlignHCenter|Qt::AlignTop</set>
+         <set>Qt::AlignCenter</set>
+        </property>
+        <property name="textInteractionFlags">
+         <set>Qt::NoTextInteraction</set>
         </property>
        </widget>
       </item>
@@ -207,8 +216,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>617</width>
-          <height>185</height>
+          <width>633</width>
+          <height>189</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_2">
@@ -331,8 +340,8 @@
          <rect>
           <x>0</x>
           <y>0</y>
-          <width>600</width>
-          <height>214</height>
+          <width>609</width>
+          <height>161</height>
          </rect>
         </property>
         <layout class="QVBoxLayout" name="verticalLayout_3">
@@ -470,7 +479,7 @@
      <x>0</x>
      <y>0</y>
      <width>641</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_Help">

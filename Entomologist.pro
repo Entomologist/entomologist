@@ -51,7 +51,7 @@ SOURCES += main.cpp \
     qjson/json_parser.cc \
     trackers/Trac.cpp \
     Utilities.cpp \
-    qtmain_android.cpp \
+#    qtmain_android.cpp \
     ErrorHandler.cpp \
     ErrorReport.cpp \
     qtsingleapplication/qtsinglecoreapplication.cpp \

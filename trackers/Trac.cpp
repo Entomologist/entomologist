@@ -30,7 +30,7 @@ Trac::Trac(const QString &url,
 {
     mUsername = username;
     mPassword = password;
-    QUrl myUrl(mUrl + "/login/xmlrpc");
+    QUrl myUrl(url + "/login/xmlrpc");
     myUrl.setUserName(username);
     myUrl.setPassword(password);
     pClient = new MaiaXmlRpcClient(myUrl, "Entomologist");
@@ -102,10 +102,14 @@ void
 Trac::checkVersion()
 {
     QUrl url(mUrl + "/login/xmlrpc");
-    url.setUserName(mUsername);
-    url.setPassword(mPassword);
+    qDebug() << "Check version for " << url;
+    QString concatenated = mUsername + ":" + mPassword;
+    QByteArray data = concatenated.toLocal8Bit().toBase64();
+    QString headerData = "Basic " + data;
 
     QNetworkRequest request = QNetworkRequest(url);
+    request.setRawHeader("Authorization", headerData.toLocal8Bit());
+
     QNetworkReply *reply = pManager->head(request);
     connect(reply, SIGNAL(finished()),
             this, SLOT(headFinished()));
@@ -117,7 +121,7 @@ Trac::headFinished()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "headFinished: Not a trac instance";
+        qDebug() << "headFinished: Not a trac instance: " << reply->errorString();
         reply->deleteLater();
         emit versionChecked("-1");
         return;
@@ -450,9 +454,11 @@ Trac::versionRpcResponse(QVariant &arg)
 
     // Minor doesn't matter
     int minor = list.at(2).toInt();
+    qDebug() << list;
     if ((epoch == 0) || (major != 1))
     {
-        version = "-1";
+        emit backendError("The version of Trac is too low.  Trac 0.12 or higher is required.");
+        return;
     }
     else
     {

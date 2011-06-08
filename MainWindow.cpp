@@ -918,6 +918,7 @@ void
 MainWindow::startAnimation()
 {
     ui->spinnerLabel->show();
+    pSpinnerMovie->start();
     ui->syncingLabel->show();
     ui->menuShow->setEnabled(false);
     ui->action_Add_Tracker->setEnabled(false);
@@ -933,7 +934,6 @@ MainWindow::startAnimation()
     ui->detailsScrollArea->setEnabled(false);
     ui->splitter->setEnabled(false);
     ui->splitter_2->setEnabled(false);
-    pSpinnerMovie->start();
 }
 
 void
@@ -1133,6 +1133,7 @@ MainWindow::addTrackerTriggered()
     if (t.exec() == QDialog::Accepted)
     {
         QMap<QString, QString> info = t.data();
+
         if (trackerNameExists(info["name"]))
         {
             QMessageBox box;
@@ -1141,6 +1142,8 @@ MainWindow::addTrackerTriggered()
             return;
         }
 
+        QString cleanUrl = cleanupUrl(info["url"]);
+        info["url"] = cleanUrl;
         if (pDetectorProgress == NULL)
             pDetectorProgress = new QProgressDialog(tr("Detecting tracker type..."), tr("Cancel"), 0, 0);
         pDetectorProgress->setWindowModality(Qt::ApplicationModal);
@@ -1154,6 +1157,32 @@ MainWindow::addTrackerTriggered()
                 this, SLOT(backendError(QString)));
         detector->detect(info);
     }
+}
+
+QString
+MainWindow::cleanupUrl(QString &url)
+{
+    QString cleanUrl = url;
+    if (!cleanUrl.startsWith("http://") &&
+        !cleanUrl.startsWith("https://"))
+    {
+        cleanUrl = url.prepend("https://");
+    }
+
+    QUrl tmp(cleanUrl);
+    // First remove any extra slashes
+    QString path = tmp.path();
+    path = QDir::cleanPath(path);
+
+    // Remove a trailing slash
+    if (path.right(1) == "/")
+        path.remove(path.size() - 1, 1);
+    path.remove(QRegExp("/login/xmlrpc$"));
+    path.remove(QRegExp("/xmlrpc.cgi$"));
+
+    tmp.setPath(path);
+    cleanUrl = tmp.toString();
+    return(cleanUrl);
 }
 
 // Signal called after the autodetector is finished

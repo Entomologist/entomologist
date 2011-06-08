@@ -41,11 +41,6 @@ Backend::Backend(const QString &url)
             this, SIGNAL(backendError(QString)));
     pSqlWriter->start();
 
-    if (!mUrl.startsWith("http://") &&
-        !mUrl.startsWith("https://"))
-    {
-        mUrl = mUrl.prepend("https://");
-    }
 }
 
 Backend::~Backend()

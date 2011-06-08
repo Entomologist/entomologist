@@ -38,6 +38,7 @@
 ****************************************************************************/
 
 #include "qtsoap.h"
+#include <QSslConfiguration>
 #include <QtCore/QSet>
 #include <QtNetwork/QNetworkRequest>
 #include <QtNetwork/QNetworkReply>
@@ -3097,6 +3098,7 @@ QString QtSoapTypeFactory::errorString() const
 QtSoapHttpTransport::QtSoapHttpTransport(QObject *parent)
     : QObject(parent), networkMgr(this)
 {
+
     connect(&networkMgr, SIGNAL(finished(QNetworkReply *)),
             SLOT(readResponse(QNetworkReply *)));
     connect(&networkMgr, SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)),
@@ -3151,8 +3153,17 @@ void QtSoapHttpTransport::setAction(const QString &action)
 void QtSoapHttpTransport::submitRequest(QtSoapMessage &request, const QString &path)
 {
     QNetworkRequest networkReq;
+    QSslConfiguration config = networkReq.sslConfiguration();
+    config.setProtocol(QSsl::AnyProtocol);
+    config.setPeerVerifyMode(QSslSocket::VerifyNone);
+    networkReq.setSslConfiguration(config);
+
     networkReq.setHeader(QNetworkRequest::ContentTypeHeader, QLatin1String("text/xml;charset=utf-8"));
     networkReq.setRawHeader("SOAPAction", soapAction.toAscii());
+    // We saw an instance with a German-language Mantis install not working with German-language
+    // clients.  Overriding this header to accept any language (rather than, say "de_DE,en,*" fixes
+    // the problem
+    networkReq.setRawHeader("Accept-Language", "*");
 
     url.setPath(path);
     networkReq.setUrl(url);
@@ -3219,7 +3230,6 @@ void QtSoapHttpTransport::readResponse(QNetworkReply *reply)
     case QNetworkReply::UnknownContentError:
         {
             soapResponse.setContent(reply->readAll());
-
             int httpStatus = reply->attribute(QNetworkRequest::HttpStatusCodeAttribute).toInt();
             if (httpStatus != 200 && httpStatus != 100) {
                 if (soapResponse.faultCode() == QtSoapMessage::Other)

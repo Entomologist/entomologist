@@ -22,12 +22,14 @@
  */
 
 #include <QMessageBox>
+#include <QDebug>
 #include "ErrorHandler.h"
 #include "ErrorReport.h"
 
 void
 ErrorHandler::handleError(const QString &message, const QString &details)
 {
+    qDebug() << "handleError: " << message;
     QMessageBox box;
     box.setText(message);
     if (details.size() > 0)
