@@ -25,8 +25,6 @@
 #include "Utilities.hpp"
 #ifdef Q_OS_ANDROID
 #include <jni.h>
-extern JavaVM *m_javaVM;
-extern jobject objptr;
 #endif
 
 void
@@ -34,6 +32,7 @@ Utilities::openAndroidUrl(QUrl url)
 {
 #ifdef Q_OS_ANDROID
     JNIEnv *env;
+    JavaVM* m_javaVM = QPlatformNativeInterface::nativeResourceForWidget("JavaVM",0);
 
     if (m_javaVM->AttachCurrentThread(&env, NULL)<0)
     {
