@@ -47,6 +47,7 @@ Utilities::openAndroidUrl(QUrl url)
                                             "openBrowser", "(Ljava/lang/String;)V");
         jstring path = env->NewStringUTF(url.toString().toLocal8Bit().constData());
         env->CallVoidMethod(applicationClass, openBrowserId, path);
+        env->DeleteLocalRef(path);
     }
     m_javaVM->DetachCurrentThread();
 #endif
