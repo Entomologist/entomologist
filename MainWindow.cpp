@@ -59,6 +59,7 @@
 #include "Autodetector.h"
 #include "ErrorHandler.h"
 #include "Utilities.hpp"
+#include "MonitorDialog.h"
 #include "ui_MainWindow.h"
 
 #define DB_VERSION 4
@@ -181,6 +182,8 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(showActionTriggered()));
     connect(ui->actionMy_Reports, SIGNAL(triggered()),
             this, SLOT(showActionTriggered()));
+    connect(ui->actionEdit_Monitored_Components, SIGNAL(triggered()),
+            this, SLOT(showEditMonitoredComponents()));
     connect(ui->action_Work_Offline, SIGNAL(triggered()),
             this, SLOT(workOfflineTriggered()));
     connect(ui->bugTable, SIGNAL(customContextMenuRequested(QPoint)),
@@ -1448,6 +1451,13 @@ MainWindow::aboutTriggered()
 {
     About aboutBox;
     aboutBox.exec();
+}
+
+void
+MainWindow::showEditMonitoredComponents()
+{
+    MonitorDialog d;
+    d.exec();
 }
 
 // File->Preferences

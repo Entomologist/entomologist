@@ -507,6 +507,9 @@
     <addaction name="actionMy_Bugs"/>
     <addaction name="actionMy_Reports"/>
     <addaction name="actionMy_CCs"/>
+    <addaction name="actionMonitored_Components"/>
+    <addaction name="separator"/>
+    <addaction name="actionEdit_Monitored_Components"/>
    </widget>
    <addaction name="menu_File"/>
    <addaction name="menuShow"/>
@@ -591,6 +594,19 @@
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
+   </property>
+  </action>
+  <action name="actionMonitored_Components">
+   <property name="checkable">
+    <bool>true</bool>
+   </property>
+   <property name="text">
+    <string>Monitored Components</string>
+   </property>
+  </action>
+  <action name="actionEdit_Monitored_Components">
+   <property name="text">
+    <string>Edit Monitored Components</string>
    </property>
   </action>
  </widget>

@@ -50,8 +50,7 @@ SOURCES += main.cpp \
     qjson/qobjecthelper.cpp \
     qjson/json_parser.cc \
     trackers/Trac.cpp \
-    Utilities.cpp \
-#    qtmain_android.cpp \
+    Utilities.cpp \ # qtmain_android.cpp \
     ErrorHandler.cpp \
     ErrorReport.cpp \
     qtsingleapplication/qtsinglecoreapplication.cpp \
@@ -60,7 +59,8 @@ SOURCES += main.cpp \
     qtsingleapplication/qtlockedfile_unix.cpp \
     qtsingleapplication/qtlockedfile.cpp \
     qtsingleapplication/qtlocalpeer.cpp \
-    Translator.cpp
+    Translator.cpp \
+    MonitorDialog.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -107,7 +107,8 @@ HEADERS += MainWindow.h \
     qtsingleapplication/qtsingleapplication.h \
     qtsingleapplication/qtlockedfile.h \
     qtsingleapplication/qtlocalpeer.h \
-    Translator.h
+    Translator.h \
+    MonitorDialog.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
@@ -115,7 +116,8 @@ FORMS += MainWindow.ui \
     Preferences.ui \
     About.ui \
     ChangelogWindow.ui \
-    ErrorReport.ui
+    ErrorReport.ui \
+    MonitorDialog.ui
 RESOURCES += resources.qrc
 QMAKE_EXTRA_TARGETS += distfile
 DISTFILE_MAKEDIR = .tmp/entomologist-$$VERSION
