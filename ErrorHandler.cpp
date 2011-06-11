@@ -34,14 +34,19 @@ ErrorHandler::handleError(const QString &message, const QString &details)
     box.setText(message);
     if (details.size() > 0)
         box.setDetailedText(details);
+#ifndef Q_OS_ANDROID
     box.addButton("Report", QMessageBox::ActionRole);
+#endif
     box.addButton(QMessageBox::Ok);
     box.setIcon(QMessageBox::Critical);
     box.exec();
 
+#ifndef Q_OS_ANDROID
     if (box.buttonRole(box.clickedButton()) == QMessageBox::ActionRole)
     {
         ErrorReport report;
         report.exec();
     }
+#endif
+
 }
