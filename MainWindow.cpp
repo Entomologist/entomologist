@@ -62,7 +62,7 @@
 #include "MonitorDialog.h"
 #include "ui_MainWindow.h"
 
-#define DB_VERSION 4
+#define DB_VERSION 5
 
 // TODOs:
 // - URL handing needs to be improved
@@ -376,6 +376,7 @@ MainWindow::createTables()
                                                       "valid_priorities TEXT,"
                                                       "valid_severities TEXT,"
                                                       "valid_statuses TEXT,"
+                                                      "monitored_components TEXT,"
                                                       "auto_cache_comments INTEGER)";
 
     QString createBugSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"

@@ -154,6 +154,14 @@ Trac::checkValidStatuses()
     pClient->call("ticket.status.getAll", args, this, SLOT(statusRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
+void
+Trac::checkValidComponents()
+{
+    QVariantList args;
+    pClient->call("ticket.component.getAll", args, this, SLOT(componentRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+}
+
+
 // This works for trac API 1.1.2, but "in the future" they may require
 // that the action map come with a _ts timestamp listing the *last* time the
 // bug updated (so we would need to make get calls for each updated bug).
@@ -431,6 +439,13 @@ Trac::statusRpcResponse(QVariant &arg)
 {
     QStringList response = arg.toStringList();
     emit statusesFound(response);
+}
+
+void
+Trac::componentRpcResponse(QVariant &arg)
+{
+    QStringList response = arg.toStringList();
+    emit componentsFound(response);
 }
 
 void

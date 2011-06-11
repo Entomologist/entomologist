@@ -496,6 +496,40 @@ Mantis::response()
         sql.exec(QString("DELETE FROM shadow_comments WHERE bug_id=\'%1\' AND tracker_id=%2").arg(map.value("bug_id").toString()).arg(mId));
         getNextCommentUpload();
     }
+    else if (messageName == "mc_projects_get_user_accessibleResponse")
+    {
+        QtSoapArray &array = (QtSoapArray &) resp.returnValue();
+        QString name, id;
+
+        for (int i = 0; i < array.count(); ++i)
+        {
+            name = array.at(i)["name"].toString();
+            id = array.at(i)["id"].toString();
+            mProjectList  << QString("%1:%2").arg(id).arg(name);
+        }
+        getCategories();
+    }
+    else if (messageName == "mc_project_get_categoriesResponse")
+    {
+        QtSoapArray &array = (QtSoapArray &) resp.returnValue();
+        QString currentProject = mProjectList.takeAt(0);
+        QString name = currentProject.section(':', 1);
+        QString item = "";
+        qDebug() << "Current project:" << currentProject;
+        qDebug() << "Project: " << name;
+        for (int i = 0; i < array.count(); ++i)
+        {
+            if (array.at(i).isValid())
+            {
+                item = array.at(i).toString();
+                if (!item.isEmpty())
+                    mCategoriesList  << QString("%1:%2")
+                                        .arg(name)
+                                        .arg(item);
+            }
+        }
+        getCategories();
+    }
     else
     {
         qDebug() << "Invalid response: " << messageName;
@@ -552,6 +586,40 @@ Mantis::checkValidSeverities()
     request.addMethodArgument("username", "", mUsername );
     request.addMethodArgument("password", "", mPassword);
     pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+}
+
+void
+Mantis::checkValidComponents()
+{
+    qDebug() << "Checking Mantis components";
+    QtSoapMessage request;
+    request.setMethod(QtSoapQName("mc_projects_get_user_accessible", "http://futureware.biz/mantisconnect"));
+    request.addMethodArgument("username", "", mUsername );
+    request.addMethodArgument("password", "", mPassword);
+    pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+}
+
+void
+Mantis::getCategories()
+{
+    qDebug() << "In getCategories";
+    if (mProjectList.isEmpty())
+    {
+        qDebug() << "Finished with the project list: " << mCategoriesList;
+        emit componentsFound(mCategoriesList);
+        return;
+    }
+
+    QString project = mProjectList.at(0);
+    QString id = project.section(':', 0,0);
+    qDebug() << "Getting mantis categories for " << id;
+    QtSoapMessage request;
+    request.setMethod(QtSoapQName("mc_project_get_categories", "http://futureware.biz/mantisconnect"));
+    request.addMethodArgument("username", "", mUsername );
+    request.addMethodArgument("password", "", mPassword);
+    request.addMethodArgument("project_id","", id.toInt());
+    pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+
 }
 
 void

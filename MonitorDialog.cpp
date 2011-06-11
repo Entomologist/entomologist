@@ -25,6 +25,11 @@
 #include <QListWidgetItem>
 #include <QDebug>
 
+#include "trackers/Backend.h"
+#include "trackers/Bugzilla.h"
+#include "trackers/Mantis.h"
+#include "trackers/Trac.h"
+
 #include "ErrorHandler.h"
 #include "MonitorDialog.h"
 #include "ui_MonitorDialog.h"
@@ -33,22 +38,20 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
     QDialog(parent),
     ui(new Ui::MonitorDialog)
 {
-    QList<int> splitterSizes;
-    splitterSizes << 100;
-    splitterSizes << 400;
-
+    mRequests = 0;
     ui->setupUi(this);
-    ui->splitter->setSizes(splitterSizes);
     pSpinnerMovie = new QMovie(this);
     pSpinnerMovie->setFileName(":/spinner");
     pSpinnerMovie->setScaledSize(QSize(48,48));
     ui->spinnerLabel->setMovie(pSpinnerMovie);
-    pSpinnerMovie->stop();
-    ui->spinnerLabel->hide();
-    ui->loadingLabel->hide();
+    pSpinnerMovie->start();
+    ui->spinnerLabel->show();
+    ui->loadingLabel->show();
+    ui->treeWidget->setEnabled(false);
 
+    QList <QMap<QString, QString> > trackerList;
     QSqlQuery query;
-    query.exec("SELECT type, name, url, username, password, version FROM trackers");
+    query.exec("SELECT type, name, url, username, password, version, id FROM trackers");
     while (query.next())
     {
         QMap<QString, QString> tracker;
@@ -58,25 +61,122 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
         tracker["username"] = query.value(3).toString();
         tracker["password"] = query.value(4).toString();
         tracker["version"] = query.value(5).toString();
-        mTrackerMap[tracker["name"]] = tracker;
-        ui->trackerListWidget->addItem(tracker["name"]);
+        tracker["id"] = query.value(6).toString();
+        trackerList << tracker;
     }
 
-    connect(ui->trackerListWidget, SIGNAL(itemClicked(QListWidgetItem*)),
-            this, SLOT(trackerActivated(QListWidgetItem*)));
-}
-
-void
-MonitorDialog::trackerActivated (QListWidgetItem *item)
-{
-    QMap<QString, QString> tracker = mTrackerMap[item->text()];
-    qDebug() << "Activating " << item->text();
-    qDebug() << "With url: " << tracker["url"];
+    for (int i = 0; i < trackerList.size(); ++i)
+    {
+        QMap<QString, QString> t;
+        t = trackerList.at(i);
+        if (t["type"] == "Bugzilla")
+        {
+            setupBackend(new Bugzilla(t["url"]), t);
+        }
+        else if (t["type"] == "Trac")
+        {
+            setupBackend(new Trac(t["url"], t["username"], t["password"], this), t);
+        }
+        else if (t["type"] == "Mantis")
+        {
+            setupBackend(new Mantis(t["url"]), t);
+        }
+    }
 }
 
 MonitorDialog::~MonitorDialog()
 {
     delete ui;
+}
+void
+MonitorDialog::setupBackend(Backend *b, QMap<QString, QString> tracker)
+{
+    b->setId(tracker["id"]);
+    b->setName(tracker["name"]);
+    b->setUrl(tracker["url"]);
+    b->setUsername(tracker["username"]);
+    b->setPassword(tracker["password"]);
+    b->setVersion(tracker["version"]);
+    b->setParent(this);
+    connect(b, SIGNAL(componentsFound(QStringList)),
+            this, SLOT(componentFound(QStringList)));
+    connect(b, SIGNAL(backendError(QString)),
+            this, SLOT(backendError(QString)));
+    mRequests++;
+    b->checkValidComponents();
+}
+
+void
+MonitorDialog::componentFound(QStringList components)
+{
+    qDebug() << "Components have been found: " << components;
+    Backend *backend = qobject_cast<Backend*>(sender());
+    QString type = backend->type();
+    int i = 0;
+    QTreeWidgetItem *trackerItem;
+    QTreeWidgetItem *productItem, *componentItem;
+
+    ui->treeWidget->setUpdatesEnabled(false);
+    trackerItem = new QTreeWidgetItem(ui->treeWidget);
+    trackerItem->setText(0, backend->name());
+
+    if ((type == "Bugzilla") || (type == "Mantis"))
+    {
+        QMap<QString, QTreeWidgetItem *> productMap;
+
+        // Bugzilla and mantis components come back as Product:Component
+        // (for Bugzilla) or Project:Category (for Mantis)
+        for (i = 0; i < components.size(); ++i)
+        {
+            QString product = components.at(i).section(':', 0, 0);
+            QString component = components.at(i).section(':', 1,-1);
+            productItem = productMap.value(product, NULL);
+            if (productItem == NULL)
+            {
+                productItem = new QTreeWidgetItem(trackerItem);
+                productItem->setText(0, product);
+                productMap[product] = productItem;
+            }
+            componentItem = new QTreeWidgetItem(productItem);
+            componentItem->setText(0, component);
+            componentItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+            componentItem->setCheckState(0, Qt::Unchecked);
+            componentItem->setData(0, Qt::UserRole, product);
+        }
+    }
+    else
+    {
+        for (i = 0; i < components.size(); ++i)
+        {
+            componentItem = new QTreeWidgetItem(trackerItem);
+            componentItem->setText(0, components.at(i));
+            componentItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsSelectable|Qt::ItemIsEnabled);
+            componentItem->setCheckState(0, Qt::Unchecked);
+        }
+    }
+    ui->treeWidget->addTopLevelItem(trackerItem);
+    ui->treeWidget->setUpdatesEnabled(true);
+    checkRequests();
+    backend->deleteLater();
+}
+
+void
+MonitorDialog::backendError(const QString &msg)
+{
+    checkRequests();
+}
+
+void
+MonitorDialog::checkRequests()
+{
+    mRequests--;
+    if (mRequests <= 0)
+    {
+        pSpinnerMovie->stop();
+        ui->spinnerLabel->hide();
+        ui->loadingLabel->hide();
+        ui->treeWidget->setEnabled(true);
+    }
 }
 
 void MonitorDialog::changeEvent(QEvent *e)

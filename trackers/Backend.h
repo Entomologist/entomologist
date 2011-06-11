@@ -59,6 +59,7 @@ public:
     void setEmail(const QString &email) { mEmail = email; }
     QString email() { return mEmail; }
 
+
     void setValidSeverities(QStringList list) { mValidSeverities = list; }
     QStringList validSeverities() { return mValidSeverities; }
 
@@ -71,6 +72,7 @@ public:
     QString version() { return mVersion; }
 
     void setLastSync(const QString &dateTime);
+    virtual QString type() { return "Unknown"; }
     // The top level sync call
     virtual void sync() {}
 
@@ -86,6 +88,7 @@ public:
     virtual void checkValidPriorities() {}
     virtual void checkValidSeverities() {}
     virtual void checkValidStatuses() {}
+    virtual void checkValidComponents() {}
 
     // Tells the backend to upload everything
     virtual void uploadAll() {}
@@ -109,6 +112,7 @@ signals:
     void prioritiesFound(QStringList priorities);
     void severitiesFound(QStringList severities);
     void statusesFound(QStringList statuses);
+    void componentsFound(QStringList components);
     void backendError(const QString &message);
     void sqlQuery(QMap<QString, QString> map);
 

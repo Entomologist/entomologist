@@ -3,8 +3,11 @@
 
 #include <QDialog>
 #include <QMap>
+
 class QMovie;
 class QListWidgetItem;
+class QTreeWidgetItem;
+class Backend;
 
 namespace Ui {
     class MonitorDialog;
@@ -17,15 +20,19 @@ public:
     ~MonitorDialog();
 
 public slots:
-    void trackerActivated(QListWidgetItem  *item);
+    void componentFound(QStringList components);
+    void backendError(const QString &msg);
 
 protected:
     void changeEvent(QEvent *e);
 
 private:
+    void setupBackend(Backend *b, QMap<QString, QString> tracker);
+    void checkRequests();
     Ui::MonitorDialog *ui;
     QMovie *pSpinnerMovie;
-    QMap<QString, QMap<QString, QString> > mTrackerMap;
+    QMap<QString, QTreeWidgetItem *> mTreeMap;
+    int mRequests;
 };
 
 #endif // MONITORDIALOG_H

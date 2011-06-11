@@ -488,6 +488,34 @@ Bugzilla::checkValidStatuses()
     pClient->call("Bug.legal_values", args, this, SLOT(statusResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
 }
 
+void
+Bugzilla::checkValidComponents()
+{
+    // For Bugzilla 3.2 and 3.4, we'll need to
+    // parse the output of query.cgi?format=advanced,
+    // looking for prods[] and cpts[] arrays.
+    // For 3.6+ we can use the fields call with the
+    // "names: component" parameter.
+    if ((mVersion == "3.2") || (mVersion == "3.4"))
+    {
+        QString url = mUrl + "/query.cgi?format=advanced";
+        QNetworkRequest req = QNetworkRequest(QUrl(url));
+        QNetworkReply *rep = pManager->get(req);
+        connect(rep, SIGNAL(finished()),
+                this, SLOT(componentHtmlDownloaded()));
+    }
+    else
+    {
+        QVariantList args;
+        QVariantList statusArgs;
+        statusArgs << "component";
+        QVariantMap params;
+        params["names"] = statusArgs;
+        args << params;
+        pClient->call("Bug.fields", args, this, SLOT(componentsResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
+    }
+}
+
 ////////////////////////////////////////
 // XMLRPC result handlers
 ///////////////////////////////////////
@@ -673,6 +701,47 @@ Bugzilla::severityResponse(QVariant &arg)
     QStringList response;
     response = arg.toMap().value("values").toStringList();
     emit severitiesFound(response);
+}
+
+void
+Bugzilla::componentsResponse(QVariant &arg)
+{
+    QString component;
+    QStringList response;
+
+    qDebug() << "componentsResponse: ";
+    QVariantList v = arg.toMap().value("fields").toList();
+    QVariantList values = v.at(0).toMap().value("values").toList();
+    for (int i = 0; i < values.size(); ++i)
+    {
+        QVariantMap val = values.at(i).toMap();
+        component = val.value("name").toString();
+        QVariantList products = val.value("visibility_values").toList();
+        for (int j = 0; j < products.size(); ++j)
+        {
+            response << QString("%1:%2").arg(products.at(j).toString()).arg(component);
+        }
+    }
+    emit componentsFound(response);
+}
+// In order to get the components for 3.2 and 3.4,
+// we have to parse javascript
+void
+Bugzilla::componentHtmlDownloaded()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        emit backendError(reply->errorString());
+        reply->close();
+        return;
+    }
+    QString html = reply->readAll();
+    QStringList response;
+    response << "Product:Test 1";
+    response << "Product:Test 2";
+    response << "Product2:Test 1";
+    emit componentsFound(response);
 }
 
 ///////////////////////////////////////////

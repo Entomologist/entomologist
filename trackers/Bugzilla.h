@@ -44,7 +44,10 @@ public:
     void checkValidPriorities();
     void checkValidSeverities();
     void checkValidStatuses();
+    void checkValidComponents();
+    QString type() { return "Bugzilla"; }
     void uploadAll();
+
     QString buildBugUrl(const QString &id);
     QString autoCacheComments() { return "1"; }
 
@@ -57,6 +60,7 @@ public slots:
     void commentXMLFinished();
     void reportedBugListFinished();
     void userBugListFinished();
+    void componentHtmlDownloaded();
 
     void versionRpcResponse(QVariant &arg);
     void loginRpcResponse(QVariant &arg);
@@ -68,6 +72,7 @@ public slots:
     void versionError(int error, const QString &message);
     void priorityResponse(QVariant &arg);
     void severityResponse(QVariant &arg);
+    void componentsResponse(QVariant &arg);
     void addCommentResponse(QVariant &arg);
 
     void statusResponse(QVariant &arg);

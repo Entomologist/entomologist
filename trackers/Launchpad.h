@@ -18,6 +18,8 @@ public:
     void checkValidPriorities();
     void checkValidSeverities();
     void checkValidStatuses();
+    QString type() { return "Launchpad"; }
+
     void uploadAll();
     QString buildBugUrl(const QString &id);
     QString autoCacheComments() {return "0";}

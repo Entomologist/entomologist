@@ -40,6 +40,9 @@ public:
     void getComments(const QString &bugId);
     void checkValidSeverities();
     void checkValidStatuses();
+    void checkValidComponents();
+    QString type() { return "Trac"; }
+
     void uploadAll();
     void setUsername(const QString &username);
     void setPassword(const QString &password);
@@ -54,6 +57,7 @@ public slots:
     void versionRpcResponse(QVariant &arg);
     void priorityRpcResponse(QVariant &arg);
     void severityRpcResponse(QVariant &arg);
+    void componentRpcResponse(QVariant &arg);
     void statusRpcResponse(QVariant &arg);
     void typeRpcResponse(QVariant &arg);
     void ccRpcResponse(QVariant &arg);

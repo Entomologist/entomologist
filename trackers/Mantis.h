@@ -21,6 +21,10 @@ public:
     void checkValidPriorities();
     void checkValidSeverities();
     void checkValidStatuses();
+    void checkValidComponents();
+
+    QString type() { return "Mantis"; }
+
     void uploadAll();
     QString buildBugUrl(const QString &id);
     QString autoCacheComments();
@@ -47,6 +51,7 @@ private:
     void getAssigned();
     void getReported();
     void getMonitored();
+    void getCategories();
     void addNotes();
     void getNextUpload();
     void getNextCommentUpload();
@@ -58,6 +63,8 @@ private:
     void setView();
     viewType mViewType;
     QVariantMap mBugs;
+    QStringList mCategoriesList;
+    QStringList mProjectList;
     QtSoapHttpTransport *pMantis;
     bool mUploadingBugs;
 };
