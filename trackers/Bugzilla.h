@@ -45,6 +45,8 @@ public:
     void checkValidSeverities();
     void checkValidStatuses();
     void checkValidComponents();
+    void checkValidComponentsForProducts(const QString &product);
+
     QString type() { return "Bugzilla"; }
     void uploadAll();
 
@@ -60,7 +62,6 @@ public slots:
     void commentXMLFinished();
     void reportedBugListFinished();
     void userBugListFinished();
-    void componentHtmlDownloaded();
 
     void versionRpcResponse(QVariant &arg);
     void loginRpcResponse(QVariant &arg);
@@ -73,6 +74,9 @@ public slots:
     void priorityResponse(QVariant &arg);
     void severityResponse(QVariant &arg);
     void componentsResponse(QVariant &arg);
+    void productsResponse(QVariant &arg);
+    void productComponentResponse(QVariant &arg);
+    void productNamesResponse(QVariant &arg);
     void addCommentResponse(QVariant &arg);
 
     void statusResponse(QVariant &arg);
@@ -87,6 +91,8 @@ protected:
     void doUploading();
     void parseBuglistCSV(const QString &csv, const QString &bugType);
     QMap<QString, QString> getShadowValues(const QString &id);
+    QVariantMap mProductMap;
+    QString mCurrentProduct;
     QVariantMap mBugs;
     QString mBugzillaId;
     QList< QMap<QString, QString> > mPostQueue;

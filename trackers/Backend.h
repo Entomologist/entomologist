@@ -25,6 +25,7 @@
 #define BACKEND_H
 
 #include <QObject>
+#include <QMetaType>
 #include <QSslConfiguration>
 #include <QStringList>
 #include <QNetworkReply>
@@ -89,6 +90,7 @@ public:
     virtual void checkValidSeverities() {}
     virtual void checkValidStatuses() {}
     virtual void checkValidComponents() {}
+    virtual void checkValidComponentsForProducts(const QString &product) {}
 
     // Tells the backend to upload everything
     virtual void uploadAll() {}
@@ -145,6 +147,8 @@ protected:
     int mUpdateCount;
     SqlWriterThread *pSqlWriter;
 };
+
+Q_DECLARE_METATYPE(Backend*)
 
 
 

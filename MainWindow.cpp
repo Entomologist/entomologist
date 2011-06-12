@@ -78,6 +78,7 @@
 //   something in the shadow tables.
 // - Right clicking on the tracker in the list failed on Windows.
 //   Check other platforms.
+// - Bugzilla 3.2/3.4 component fetching could really be refactored
 
 // Bugzilla backends cache all comments on sync
 // When a backend does not provide enough functionality to

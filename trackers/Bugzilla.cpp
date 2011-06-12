@@ -498,11 +498,8 @@ Bugzilla::checkValidComponents()
     // "names: component" parameter.
     if ((mVersion == "3.2") || (mVersion == "3.4"))
     {
-        QString url = mUrl + "/query.cgi?format=advanced";
-        QNetworkRequest req = QNetworkRequest(QUrl(url));
-        QNetworkReply *rep = pManager->get(req);
-        connect(rep, SIGNAL(finished()),
-                this, SLOT(componentHtmlDownloaded()));
+        QVariantList args;
+        pClient->call("Product.get_selectable_products", args, this, SLOT(productsResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
     else
     {
@@ -513,6 +510,22 @@ Bugzilla::checkValidComponents()
         params["names"] = statusArgs;
         args << params;
         pClient->call("Bug.fields", args, this, SLOT(componentsResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
+    }
+}
+
+void
+Bugzilla::checkValidComponentsForProducts(const QString &product)
+{
+    int id = mProductMap.value(product, -1).toInt();
+    if (id)
+    {
+        QVariantList args;
+        mCurrentProduct = product;
+        QVariantMap params;
+        params["field"] = "component";
+        params["product_id"] = id;
+        args << params;
+        pClient->call("Bug.legal_values", args, this, SLOT(productComponentResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
 }
 
@@ -724,23 +737,42 @@ Bugzilla::componentsResponse(QVariant &arg)
     }
     emit componentsFound(response);
 }
-// In order to get the components for 3.2 and 3.4,
-// we have to parse javascript
+
 void
-Bugzilla::componentHtmlDownloaded()
+Bugzilla::productsResponse(QVariant &arg)
 {
-    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
-    if (reply->error())
-    {
-        emit backendError(reply->errorString());
-        reply->close();
-        return;
-    }
-    QString html = reply->readAll();
+    QVariantList idList = arg.toMap().value("ids").toList();
+    QVariantList args;
+    QVariantMap params;
+    params["ids"] = idList;
+    args << params;
+    pClient->call("Product.get", args, this, SLOT(productNamesResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
+}
+
+void
+Bugzilla::productNamesResponse(QVariant &arg)
+{
     QStringList response;
-    response << "Product:Test 1";
-    response << "Product:Test 2";
-    response << "Product2:Test 1";
+    QVariantList productList = arg.toMap().value("products").toList();
+    for (int i = 0; i < productList.size(); ++i)
+    {
+        QVariantMap m = productList.at(i).toMap();
+        QString name = m.value("name").toString();
+        mProductMap[name] = m.value("id").toString();
+        response << QString("%1:No data cached").arg(name);
+    }
+    emit componentsFound(response);
+}
+
+void
+Bugzilla::productComponentResponse(QVariant &arg)
+{
+    QVariantList vals = arg.toMap().value("values").toList();
+    QStringList response;
+    for (int i = 0; i < vals.size(); ++i)
+    {
+        response << QString("%1:%2").arg(mCurrentProduct).arg(vals.at(i).toString());
+    }
     emit componentsFound(response);
 }
 
