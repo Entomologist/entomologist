@@ -31,6 +31,7 @@ public slots:
     void itemExpanded(QTreeWidgetItem *item);
     void componentFound(QStringList components);
     void backendError(const QString &msg);
+    void okClicked();
 
 protected:
     void changeEvent(QEvent *e);
@@ -39,8 +40,11 @@ private:
     void startSync();
     void setupBackend(Backend *b, QMap<QString, QString> tracker);
     void checkRequests();
+    void findCheckedChildren(QTreeWidgetItem *item);
+    void insertMonitorList(const QString &trackerName, const QStringList &components);
     QMap<QString, QTreeWidgetItem *> mProductMap;
-
+    QMap<QString, QStringList> mComponentMap;
+    int mComponentCount;
     Ui::MonitorDialog *ui;
     QMovie *pSpinnerMovie;
     QMap<QString, QTreeWidgetItem *> mTreeMap;

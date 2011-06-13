@@ -22,8 +22,10 @@
 
 #include <QMovie>
 #include <QSqlQuery>
+#include <QSqlError>
 #include <QListWidgetItem>
 #include <QDebug>
+#include <QMessageBox>
 
 #include "trackers/Backend.h"
 #include "trackers/Bugzilla.h"
@@ -39,7 +41,10 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
     ui(new Ui::MonitorDialog)
 {
     mRequests = 0;
+    mComponentCount = 0;
     ui->setupUi(this);
+    ui->okButton->setIcon(style()->standardIcon(QStyle::SP_DialogOkButton));
+    ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
     pSpinnerMovie = new QMovie(this);
     pSpinnerMovie->setFileName(":/spinner");
     pSpinnerMovie->setScaledSize(QSize(48,48));
@@ -48,7 +53,7 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
 
     QList <QMap<QString, QString> > trackerList;
     QSqlQuery query;
-    query.exec("SELECT type, name, url, username, password, version, id FROM trackers");
+    query.exec("SELECT type, name, url, username, password, version, id, monitored_components FROM trackers");
     while (query.next())
     {
         QMap<QString, QString> tracker;
@@ -59,6 +64,9 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
         tracker["password"] = query.value(4).toString();
         tracker["version"] = query.value(5).toString();
         tracker["id"] = query.value(6).toString();
+        QString monitorList = query.value(7).toString();
+        QStringList componentList = monitorList.split(",");
+        mComponentMap[tracker["name"]] = componentList;
         trackerList << tracker;
     }
 
@@ -82,12 +90,98 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
 
     connect(ui->treeWidget, SIGNAL(itemExpanded(QTreeWidgetItem*)),
             this, SLOT(itemExpanded(QTreeWidgetItem*)));
+    connect(ui->okButton, SIGNAL(clicked()),
+            this, SLOT(okClicked()));
+    connect(ui->cancelButton, SIGNAL(clicked()),
+            this, SLOT(reject()));
 }
 
 MonitorDialog::~MonitorDialog()
 {
     delete ui;
 }
+
+void
+MonitorDialog::okClicked()
+{
+    mComponentMap.clear();
+    findCheckedChildren(ui->treeWidget->invisibleRootItem());
+    QString text;
+    if (mComponentCount > 0)
+        text = QString(tr("Are you sure you want to monitor %n component(s)?", "", mComponentCount));
+    else
+        text = QString(tr("Are you sure you don't want to monitor any components?"));
+
+    QMessageBox msgBox;
+    msgBox.setIcon(QMessageBox::Warning);
+    msgBox.setText(text);
+    if (mComponentCount > 0)
+        msgBox.setInformativeText("This may result in a <b>very</b> large list of bugs.");
+    msgBox.setStandardButtons(QMessageBox::Yes | QMessageBox::No);
+    msgBox.setDefaultButton(QMessageBox::No);
+    if (msgBox.exec() == QMessageBox::Yes)
+    {
+        QMapIterator<QString, QStringList> i(mComponentMap);
+        while (i.hasNext())
+        {
+            i.next();
+            insertMonitorList(i.key(), i.value());
+        }
+        accept();
+    }
+    else
+    {
+        mComponentCount = 0;
+    }
+}
+
+void
+MonitorDialog::insertMonitorList(const QString &trackerName,
+                                 const QStringList &components)
+{
+    QString componentList = components.join(",");
+    QSqlQuery q;
+    q.prepare("UPDATE trackers SET monitored_components = :componentList WHERE name = :name");
+    q.bindValue(":componentList", componentList);
+    q.bindValue(":name", trackerName);
+    if (!q.exec())
+    {
+        qDebug() << "insertTracker failed: " << q.lastError().text();
+        ErrorHandler::handleError("Could not update the monitored components list!", q.lastError().text());
+    }
+}
+
+// Iterate through the tree and see if any of the items are checked off
+void
+MonitorDialog::findCheckedChildren(QTreeWidgetItem *item)
+{
+    if (item->checkState(0) == Qt::Checked)
+    {
+        QStringList q;
+        Backend *b = item->data(0, MONITOR_NODE_TRACKER).value<Backend*>();
+        if (mComponentMap.contains(b->name()))
+        {
+                q = mComponentMap.value(b->name());
+        }
+
+        mComponentCount++;
+        if (!item->data(0, MONITOR_NODE_PARENT).isNull())
+            q << QString("%1:%2")
+                         .arg(item->data(0, MONITOR_NODE_PARENT).toString())
+                         .arg(item->text(0));
+        else
+            q << item->text(0);
+        mComponentMap.insert(b->name(), q);
+    }
+    else
+    {
+        for (int i = 0; i < item->childCount(); ++i)
+        {
+            findCheckedChildren(item->child(i));
+        }
+    }
+}
+
 void
 MonitorDialog::setupBackend(Backend *b, QMap<QString, QString> tracker)
 {
@@ -168,6 +262,8 @@ MonitorDialog::componentFound(QStringList components)
             componentItem->setData(0, MONITOR_NODE_PARENT, product);
             componentItem->setData(0, MONITOR_NODE_TRACKER, backendVariant);
             componentItem->setData(0, MONITOR_NODE_IS_PRODUCT, 0);
+            if (mComponentMap.value(backend->name()).contains(components.at(i)))
+                componentItem->setCheckState(0, Qt::Checked);
 
         }
     }
@@ -181,8 +277,12 @@ MonitorDialog::componentFound(QStringList components)
             componentItem->setCheckState(0, Qt::Unchecked);
             componentItem->setData(0, MONITOR_NODE_TRACKER, backendVariant);
             componentItem->setData(0, MONITOR_NODE_IS_PRODUCT, 0);
+            if (mComponentMap.value(backend->name()).contains(components.at(i)))
+                componentItem->setCheckState(0, Qt::Checked);
+
         }
     }
+
     ui->treeWidget->addTopLevelItem(trackerItem);
     ui->treeWidget->setUpdatesEnabled(true);
     checkRequests();
