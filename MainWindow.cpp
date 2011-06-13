@@ -117,6 +117,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionMy_Bugs->setChecked(settings.value("show-my-bugs", true).toBool());
     ui->actionMy_Reports->setChecked(settings.value("show-my-reports", true).toBool());
     ui->actionMy_CCs->setChecked(settings.value("show-my-ccs", true).toBool());
+    ui->actionMonitored_Components->setChecked(settings.value("show-my-monitored", true).toBool());
     ui->action_Work_Offline->setChecked(settings.value("work-offline", false).toBool());
 
     // We want context menus on right clicks in the tracker list,
@@ -182,6 +183,8 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->actionMy_CCs, SIGNAL(triggered()),
             this, SLOT(showActionTriggered()));
     connect(ui->actionMy_Reports, SIGNAL(triggered()),
+            this, SLOT(showActionTriggered()));
+    connect(ui->actionMonitored_Components, SIGNAL(triggered()),
             this, SLOT(showActionTriggered()));
     connect(ui->actionEdit_Monitored_Components, SIGNAL(triggered()),
             this, SLOT(showEditMonitoredComponents()));
@@ -264,18 +267,20 @@ MainWindow::hasPendingChanges()
     return false;
 }
 
-bool
+// sqlite starts autoincrementing primary keys at 1,
+// so it's safe to use this function as both a boolean check and an
+// ID lookup
+int
 MainWindow::trackerNameExists(const QString &name)
 {
-    bool ret = false;
+    int ret = 0;
     QSqlQuery q;
-    q.prepare("SELECT COUNT(id) FROM trackers WHERE name = :name");
+    q.prepare("SELECT id FROM trackers WHERE name = :name");
     q.bindValue(":name", name);
     if (q.exec())
     {
         q.next();
-        if (q.value(0).toInt() > 0)
-            ret = true;
+        ret = q.value(0).toInt();
     }
     return ret;
 }
@@ -466,7 +471,9 @@ MainWindow::checkDatabaseVersion()
         return;
 
     QList< QMap<QString, QString> > trackerList;
-    query.exec("SELECT type, name, url, username, password, version, valid_priorities, valid_severities, valid_statuses, auto_cache_comments FROM trackers");
+    query.exec("SELECT type, name, url, username, password,"
+               "version, valid_priorities, valid_severities,"
+               "valid_statuses, auto_cache_comments, monitored_components FROM trackers");
     while (query.next())
     {
         QMap<QString, QString> tracker;
@@ -480,6 +487,7 @@ MainWindow::checkDatabaseVersion()
         tracker["valid_severities"] = query.value(7).toString();
         tracker["valid_statuses"] = query.value(8).toString();
         tracker["auto_cache_comments"] = query.value(9).toString();
+        tracker["monitored_components"] = query.value(10).toString();
         tracker["last_sync"] = "1970-01-01T12:13:14";
         trackerList << tracker;
     }
@@ -499,8 +507,8 @@ int
 MainWindow::insertTracker(QMap<QString, QString> tracker)
 {
     QSqlQuery q;
-    q.prepare("INSERT INTO trackers (type, name, url, username, password, last_sync, version, valid_priorities, valid_severities, valid_statuses, auto_cache_comments) "
-              "VALUES (:type, :name, :url, :username, :password, :last_sync, :version, :valid_priorities, :valid_severities, :valid_statuses, :auto_cache_comments)");
+    q.prepare("INSERT INTO trackers (type, name, url, username, password, last_sync, version, valid_priorities, valid_severities, valid_statuses, monitored_components, auto_cache_comments) "
+              "VALUES (:type, :name, :url, :username, :password, :last_sync, :version, :valid_priorities, :valid_severities, :valid_statuses, :monitored_components, :auto_cache_comments)");
 
     q.bindValue(":type", tracker["type"]);
     q.bindValue(":name", tracker["name"]);
@@ -512,6 +520,7 @@ MainWindow::insertTracker(QMap<QString, QString> tracker)
     q.bindValue(":valid_priorities", tracker["valid_priorities"]);
     q.bindValue(":valid_severities", tracker["valid_severities"]);
     q.bindValue(":valid_statuses", tracker["valid_statuses"]);
+    q.bindValue(":monitored_components", tracker["monitored_components"]);
     q.bindValue(":auto_cache_comments", tracker["auto_cache_comments"]);
     if (!q.exec())
     {
@@ -712,7 +721,8 @@ MainWindow::loadTrackers()
         info["valid_priorities"] = record.value(8).toString();
         info["valid_severities"] = record.value(9).toString();
         info["valid_statuses"] = record.value(10).toString();
-        info["auto_cache_comments"] = record.value(11).toString();
+        info["monitored_components"] = record.value(11).toString();
+        info["auto_cache_comments"] = record.value(12).toString();
         addTracker(info);
     }
 }
@@ -771,6 +781,7 @@ MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
     newBug->setValidPriorities(info["valid_priorities"].split(","));
     newBug->setValidSeverities(info["valid_severities"].split(","));
     newBug->setValidStatuses(info["valid_statuses"].split(","));
+    newBug->setMonitorComponents(info["monitored_components"].split(","));
     connect(newBug, SIGNAL(bugsUpdated()),
             this, SLOT(bugsUpdated()));
     connect(newBug, SIGNAL(backendError(QString)),
@@ -1459,7 +1470,31 @@ void
 MainWindow::showEditMonitoredComponents()
 {
     MonitorDialog d;
-    d.exec();
+    // When the user modifies the monitored components,
+    // we want to update the affected trackers, and then
+    // we need to set the last sync time to 1970 in order
+    // to fetch the appropriate components.
+    if (d.exec() == QDialog::Accepted)
+    {
+        qDebug() << "Going to do a sync";
+        QSqlQuery q("SELECT name, monitored_components FROM trackers WHERE monitored_components !=\"\"");
+        while (q.next())
+        {
+            QString id = QString::number(trackerNameExists(q.value(0).toString()));
+            qDebug() << "Looking up backend for ID " << id;
+
+            Backend *b = mBackendMap.value(id, NULL);
+            if (b != NULL)
+            {
+                qDebug() << "Setting monitor components and resyncing";
+                b->setMonitorComponents(q.value(1).toString().split(","));
+                b->setLastSync("1970-01-01T12:13:14");
+                mSyncPosition = mBackendList.size();
+                syncTracker(b);
+            }
+        }
+
+    }
 }
 
 // File->Preferences
@@ -1604,6 +1639,7 @@ MainWindow::showActionTriggered()
     settings.setValue("show-my-bugs", ui->actionMy_Bugs->isChecked());
     settings.setValue("show-my-reports", ui->actionMy_Reports->isChecked());
     settings.setValue("show-my-ccs", ui->actionMy_CCs->isChecked());
+    settings.setValue("show-my-monitored", ui->actionMonitored_Components->isChecked());
     filterTable();
 }
 
@@ -1619,7 +1655,7 @@ MainWindow::workOfflineTriggered()
 void
 MainWindow::filterTable()
 {
-    QString showMy, showRep, showCC;
+    QString showMy, showRep, showCC, showMonitored;
     if (ui->actionMy_Bugs->isChecked())
         showMy = "Assigned";
     else
@@ -1635,10 +1671,16 @@ MainWindow::filterTable()
     else
         showRep = "XXXReported";
 
-    mWhereQuery = QString("WHERE (bugs.bug_type=\'%1\' OR bugs.bug_type=\'%2\' OR bugs.bug_type=\'%3\')")
+    if (ui->actionMonitored_Components->isChecked())
+        showMonitored = "Monitored";
+    else
+        showMonitored = "XXXMonitored";
+
+    mWhereQuery = QString("WHERE (bugs.bug_type=\'%1\' OR bugs.bug_type=\'%2\' OR bugs.bug_type=\'%3\' OR bugs.bug_type=\'%4')")
                           .arg(showMy)
                           .arg(showRep)
-                          .arg(showCC);
+                          .arg(showCC)
+                          .arg(showMonitored);
     mActiveQuery = mBaseQuery + " " +  mWhereQuery + mTrackerQuery + mSortQuery;
     pBugModel->setQuery(mActiveQuery);
     //qDebug() << pBugModel->query().lastQuery();

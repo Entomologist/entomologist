@@ -119,7 +119,7 @@ private:
     void loadDetails(long long id);
     bool hasPendingChanges();
     bool hasShadowBug();
-    bool trackerNameExists(const QString &name);
+    int trackerNameExists(const QString &name);
     void toggleButtons();
     void filterTable();
     void setTimer();

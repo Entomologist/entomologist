@@ -72,6 +72,9 @@ public:
     void setVersion(const QString &version) { mVersion = version; }
     QString version() { return mVersion; }
 
+    void setMonitorComponents(const QStringList components) { mMonitorComponents = components; }
+    QStringList monitorComponents() { return mMonitorComponents; }
+
     void setLastSync(const QString &dateTime);
     virtual QString type() { return "Unknown"; }
     // The top level sync call
@@ -140,6 +143,7 @@ protected:
     QStringList mValidSeverities;
     QStringList mValidPriorities;
     QStringList mValidStatuses;
+    QStringList mMonitorComponents;
     QNetworkAccessManager *pManager;
     QNetworkCookieJar *pCookieJar;
     bool mLoggedIn;

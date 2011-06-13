@@ -71,17 +71,33 @@ Trac::~Trac()
 void
 Trac::sync()
 {
-    qDebug() << "Syncing CCs...";
+    qDebug() << "Syncing monitored components...";
+
+    if (mMonitorComponents.size() == 0)
+    {
+        QStringList none;
+        QVariant empty(none);
+        qDebug() << "No monitored components for this Trac instance";
+        monitoredComponentsRpcResponse(empty);
+    }
+
     QVariantList args;
     QString closed = "";
     if (mLastSync.date().year() == 1970)
         closed = "status!=closed&";
-    QString query = QString("%1cc=%2&max=0&modified=%3..")
+
+    QString monitorString;
+    for (int i = 0; i < mMonitorComponents.size(); ++i)
+    {
+        monitorString += QString("component=%1&").arg(mMonitorComponents.at(i));
+    }
+    QString query = QString("%1%2max=0&modified=%3..")
                     .arg(closed)
-                    .arg(mUsername)
+                    .arg(monitorString)
                     .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
-    pClient->call("ticket.query", args, this, SLOT(ccRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+    qDebug() << args;
+    pClient->call("ticket.query", args, this, SLOT(monitoredComponentsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
 void
@@ -287,6 +303,28 @@ Trac::severityRpcResponse(QVariant &arg)
     mSeverities = arg.toStringList();
     QVariantList args;
     pClient->call("ticket.type.getAll", args, this, SLOT(typeRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+}
+
+void
+Trac::monitoredComponentsRpcResponse(QVariant &arg)
+{
+    QStringList bugs = arg.toStringList();
+    for (int i = 0; i < bugs.size(); ++i)
+    {
+        mBugMap.insert(bugs.at(i), "Monitored");
+    }
+
+    qDebug() << "Syncing CCs";
+    QVariantList args;
+    QString closed = "";
+    if (mLastSync.date().year() == 1970)
+        closed = "status!=closed&";
+    QString query = QString("%1cc=%2&max=0&modified=%3..")
+                    .arg(closed)
+                    .arg(mUsername)
+                    .arg(mLastSync.toString("yyyy-MM-dd"));
+    args << query;
+    pClient->call("ticket.query", args, this, SLOT(ccRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
 void

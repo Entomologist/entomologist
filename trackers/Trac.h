@@ -63,6 +63,7 @@ public slots:
     void ccRpcResponse(QVariant &arg);
     void reporterRpcResponse(QVariant &arg);
     void ownerRpcResponse(QVariant &arg);
+    void monitoredComponentsRpcResponse(QVariant &arg);
     void bugDetailsRpcResponse(QVariant &arg);
     void changelogRpcResponse(QVariant &arg);
     void rpcError(int error, const QString &message);
