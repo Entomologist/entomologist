@@ -21,6 +21,8 @@
  *
  */
 
+#include <QMessageBox>
+
 #include "NewTracker.h"
 #include "ui_NewTracker.h"
 
@@ -30,10 +32,17 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
 {
     ui->setupUi(this);
     ui->hintLabel->setText("");
+    ui->saveButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+    ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+
     connect(ui->urlEdit, SIGNAL(lostFocus()),
             this, SLOT(serverFocusOut()));
     connect(ui->urlEdit, SIGNAL(textChanged(QString)),
             this, SLOT(hostTextChanged(QString)));
+    connect(ui->cancelButton, SIGNAL(clicked()),
+            this, SIGNAL(rejected()));
+    connect(ui->saveButton, SIGNAL(clicked()),
+            this, SLOT(okClicked()));
     ui->urlEdit->setPlaceholderText(tr("For example: bugzilla.novell.com or bugs.example.com/bugtracker/"));
     if (edit)
     {
@@ -45,6 +54,31 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
 NewTracker::~NewTracker()
 {
     delete ui;
+}
+
+void
+NewTracker::okClicked()
+{
+    QString text = "";
+    if (ui->nameEdit->text().isEmpty())
+        text = "You must assign a name for your tracker.";
+    if (ui->urlEdit->isEmpty())
+        text = "I need a URL in order to proceed.";
+    if (ui->userEdit->text().isEmpty())
+        text = "I need a username in order to proceed.";
+
+    if (!text.isEmpty())
+    {
+        QMessageBox msgBox;
+        msgBox.setIcon(QMessageBox::Critical);
+        msgBox.setText(text);
+        msgBox.setStandardButtons(QMessageBox::Ok);
+        msgBox.exec();
+    }
+    else
+    {
+        accept();
+    }
 }
 
 void

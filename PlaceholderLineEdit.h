@@ -32,6 +32,7 @@ class PlaceholderLineEdit : public QLineEdit
 public:
     PlaceholderLineEdit(QWidget *parent = 0);
     void setPlaceholderText(const QString &placeholder);
+    bool isEmpty();
 
 signals:
     void lostFocus();

@@ -36,6 +36,15 @@ PlaceholderLineEdit::PlaceholderLineEdit(QWidget *parent) :
     setPlaceholder();
 }
 
+bool
+PlaceholderLineEdit::isEmpty()
+{
+    bool ret = false;
+    if (text() == mPlaceholderText)
+        ret = true;
+    return ret;
+}
+
 void
 PlaceholderLineEdit::focusInEvent(QFocusEvent *e)
 {
@@ -68,6 +77,7 @@ PlaceholderLineEdit::unsetPlaceholder()
     clear();
     setStyleSheet("color: black");
 }
+
 void PlaceholderLineEdit::setPlaceholderText(const QString &placeholder)
 {
     mPlaceholderText = placeholder;
