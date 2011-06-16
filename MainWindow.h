@@ -18,6 +18,7 @@
  *  you may find current contact information at www.novell.com
  *
  *  Author: Matt Barringer <mbarringer@suse.de>
+ *  Author: David Williams <redache@googlemail.com>
  *
  */
 
