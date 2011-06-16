@@ -29,6 +29,8 @@
 #include <QThread>
 #include <QSystemTrayIcon>
 #include <QSslError>
+#include <QTableView>
+
 namespace Ui {
     class MainWindow;
 }
@@ -55,6 +57,7 @@ public:
    void closeEvent(QCloseEvent *event);
 
 public slots:
+    void populateCurrentTab(int currentTab);
     void quitEvent();
     void handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors);
@@ -96,6 +99,8 @@ protected:
 
 private:
     QString cleanupUrl(QString &url);
+    void populateStats();
+    void compareTabName(QString compareItem);
     void setupDB();
     void openDB();
     void createTables();
@@ -148,6 +153,10 @@ private:
     QSystemTrayIcon *pTrayIcon;
     QMenu *pTrayIconMenu;
     Ui::MainWindow *ui;
+    QList<QTableView*> trackerTabsList;
+    int mStartup;
+    int workingTab;
+
 };
 
 #endif // MAINWINDOW_H

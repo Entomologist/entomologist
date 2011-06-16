@@ -32,6 +32,7 @@ Q_OBJECT
 public:
     SqlBugModel(QObject *parent = 0);
     QVariant data(const QModelIndex &item, int role) const;
+    QString getIcon(QString tracker);
 };
 
 #endif // SQLBUGMODEL_H

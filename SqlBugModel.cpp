@@ -54,3 +54,16 @@ SqlBugModel::data(const QModelIndex &item,
      }
      return value;
 }
+
+QString
+SqlBugModel::getIcon(QString tracker)
+{
+    QString iconPath = QString ("%1%2%3%4%5.png")
+                                .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
+                                .arg(QDir::separator())
+                                .arg("entomologist")
+                                .arg(QDir::separator())
+                                .arg(tracker);
+
+    return iconPath;
+}

@@ -123,11 +123,9 @@ MainWindow::MainWindow(QWidget *parent) :
     // We want context menus on right clicks in the tracker list,
     // and we want to ignore the scroll wheel in certain combo boxes
     ui->trackerList->setContextMenuPolicy(Qt::CustomContextMenu);
-    ui->bugTable->setContextMenuPolicy(Qt::CustomContextMenu);
     ui->priorityCombo->installEventFilter(this);
     ui->severityCombo->installEventFilter(this);
     ui->statusCombo->installEventFilter(this);
-    ui->splitter->setSizes(splitterSizes);
 
     // Set the default network status
     pStatusIcon = new QLabel();
@@ -190,8 +188,7 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(showEditMonitoredComponents()));
     connect(ui->action_Work_Offline, SIGNAL(triggered()),
             this, SLOT(workOfflineTriggered()));
-    connect(ui->bugTable, SIGNAL(customContextMenuRequested(QPoint)),
-            this, SLOT(tableViewContextMenu(QPoint)));
+
     // Set up the search button
     connect(ui->searchButton, SIGNAL(clicked()),
             this, SLOT(searchTriggered()));
@@ -199,9 +196,7 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(searchTriggered()));
     connect(ui->changelogButton, SIGNAL(clicked()),
             this, SLOT(changelogTriggered()));
-    // Bug list sorting
-    connect(ui->bugTable->horizontalHeader(), SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
-            this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
+
 
     // Handle certain events in the tracker list
     connect(ui->trackerList, SIGNAL(itemChanged(QListWidgetItem*)),
@@ -209,13 +204,23 @@ MainWindow::MainWindow(QWidget *parent) :
     connect(ui->trackerList, SIGNAL(customContextMenuRequested(QPoint)),
             this, SLOT(customContextMenuRequested(QPoint)));
 
+    // Signal for a Tab Change so switch the bugTable contents to that tab
+    ui->trackerTab->removeTab(0);
+    ui->trackerTab->removeTab(0);
+    connect(ui->trackerTab,SIGNAL(currentChanged(int)),this,SLOT(populateCurrentTab(int)));
+    // Append initial "All" table to the table list.
+    QTableView* table = new QTableView;
+    trackerTabsList.append(table);
+    ui->trackerTab->addTab(table,"All");
+
+    mStartup = 0;
     // Seems like this doesn't work on Windows?  Or is it due to
     // Qt 4.7?  It results in the right click failing to bring up
     // the context menu.
 #ifndef Q_WS_WIN
     connect(ui->trackerList, SIGNAL(itemClicked(QListWidgetItem*)),
             this, SLOT(trackerItemClicked(QListWidgetItem*)));
-#endif
+#endif d
 
     // And finally set up the various other widgets
     connect(ui->newCommentButton, SIGNAL(clicked()),
@@ -333,24 +338,6 @@ MainWindow::setupDB()
         checkDatabaseVersion();
     }
 
-    pBugModel = new SqlBugModel;
-    filterTable();
-    SqlBugDelegate *delegate = new SqlBugDelegate();
-
-    ui->bugTable->setItemDelegate(delegate);
-    ui->bugTable->setModel(pBugModel);
-    pBugModel->setHeaderData(2, Qt::Horizontal, tr("Tracker"));
-    pBugModel->setHeaderData(3, Qt::Horizontal, tr("Bug ID"));
-    pBugModel->setHeaderData(4, Qt::Horizontal, tr("Last Modified"));
-    pBugModel->setHeaderData(5, Qt::Horizontal, tr("Severity"));
-    pBugModel->setHeaderData(6, Qt::Horizontal, tr("Priority"));
-    pBugModel->setHeaderData(7, Qt::Horizontal, tr("Assignee"));
-    pBugModel->setHeaderData(8, Qt::Horizontal, tr("Status"));
-    pBugModel->setHeaderData(9, Qt::Horizontal, tr("Summary"));
-    ui->bugTable->hideColumn(0); // Hide the internal row id
-    ui->bugTable->hideColumn(1); // Hide the tracker id
-    connect(ui->bugTable, SIGNAL(doubleClicked(QModelIndex)),
-            this, SLOT(bugClicked(QModelIndex)));
 }
 
 void
@@ -725,6 +712,10 @@ MainWindow::loadTrackers()
         info["auto_cache_comments"] = record.value(12).toString();
         addTracker(info);
     }
+    // Populate the "All" Tab after loading the trackers.
+    mStartup = 1;
+    populateCurrentTab(0);
+
 }
 
 // This adds trackers to the database (when called from the New Tracker window)
@@ -799,7 +790,13 @@ MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
         autosync = true;
     }
 
-    addTrackerToList(newBug, autosync);
+    QTableView* tabBugTable = new QTableView;
+    trackerTabsList.append(tabBugTable);
+    ui->trackerTab->addTab(tabBugTable,newBug->name());
+    addTrackerToList(newBug,true);
+    mStartup = 1;
+    populateCurrentTab(trackerTabsList.indexOf(trackerTabsList.last()));
+
 }
 
 // Adds a tracker to the tracker list on the left
@@ -945,11 +942,16 @@ MainWindow::startAnimation()
     ui->refreshButton->setEnabled(false);
     ui->searchEdit->setEnabled(false);
     ui->searchButton->setEnabled(false);
-    ui->bugTable->setEnabled(false);
     ui->trackerList->setEnabled(false);
     ui->detailsScrollArea->setEnabled(false);
-    ui->splitter->setEnabled(false);
     ui->splitter_2->setEnabled(false);
+
+    for(int i = 0; i < trackerTabsList.length(); i++)
+    {
+        trackerTabsList.at(i)->setEnabled(false);
+
+    }
+     pSpinnerMovie->start();
 }
 
 void
@@ -965,11 +967,16 @@ MainWindow::stopAnimation()
     ui->syncingLabel->hide();
     ui->searchEdit->setEnabled(true);
     ui->searchButton->setEnabled(true);
-    ui->bugTable->setEnabled(true);
     ui->trackerList->setEnabled(true);
     ui->detailsScrollArea->setEnabled(true);
-    ui->splitter->setEnabled(true);
     ui->splitter_2->setEnabled(true);
+
+    for(int i = 0; i < trackerTabsList.length(); i++)
+    {
+        trackerTabsList.at(i)->setEnabled(true);
+
+    }
+
     toggleButtons();
 }
 
@@ -1676,14 +1683,19 @@ MainWindow::filterTable()
     else
         showMonitored = "XXXMonitored";
 
-    mWhereQuery = QString("WHERE (bugs.bug_type=\'%1\' OR bugs.bug_type=\'%2\' OR bugs.bug_type=\'%3\' OR bugs.bug_type=\'%4')")
+    QString tempQuery = QString("WHERE (bugs.bug_type=\'%1\' OR bugs.bug_type=\'%2\' OR bugs.bug_type=\'%3\' OR bugs.bug_type=\'%4')")
                           .arg(showMy)
                           .arg(showRep)
                           .arg(showCC)
                           .arg(showMonitored);
-    mActiveQuery = mBaseQuery + " " +  mWhereQuery + mTrackerQuery + mSortQuery;
-    pBugModel->setQuery(mActiveQuery);
-    //qDebug() << pBugModel->query().lastQuery();
+
+    if(ui->trackerTab->currentIndex() == 0)
+        mActiveQuery = mBaseQuery + " " + mTrackerQuery + mSortQuery;
+    else
+        mActiveQuery = mBaseQuery + " " + tempQuery +" AND" + mWhereQuery + mTrackerQuery + mSortQuery;
+
+        pBugModel->setQuery(mActiveQuery);
+//    qDebug() << pBugModel->query().lastQuery();
 }
 
 // Triggered when a user ticks boxes in the tracker list
@@ -1708,6 +1720,7 @@ MainWindow::trackerListItemChanged(QListWidgetItem  *item)
     {
         mTrackerQuery = " AND (" +  list.join(" OR ") + ")";
         filterTable();
+        populateCurrentTab(0);
     }
     else
     {
@@ -1796,7 +1809,8 @@ MainWindow::customContextMenuRequested(const QPoint &pos)
     QAction *resyncAction = contextMenu.addAction(tr("Resync"));
     QAction *a = contextMenu.exec(QCursor::pos());
     Backend *b = mBackendMap[id];
-
+    QString trackerName = b->name();
+    compareTabName(trackerName);
     if (a == editAction)
     {
         NewTracker t(this, true);
@@ -1804,6 +1818,7 @@ MainWindow::customContextMenuRequested(const QPoint &pos)
         t.setHost(b->url());
         t.setUsername(b->username());
         t.setPassword(b->password());
+
         if (t.exec() == QDialog::Accepted)
             updateTracker(id, t.data());
     }
@@ -1868,6 +1883,10 @@ MainWindow::updateTracker(const QString &id, QMap<QString, QString> data)
     b->setName(data["name"]);
     b->setUsername(data["username"]);
     b->setPassword(data["password"]);
+
+    QString trackerName = b->name();
+    ui->trackerTab->setTabText(workingTab,trackerName);
+
     filterTable();
 }
 
@@ -1912,6 +1931,7 @@ MainWindow::deleteTracker(const QString &id)
     mBackendMap.remove(id);
     delete b;
 
+
     QString query = "DELETE FROM trackers WHERE id=:tracker_id";
     QSqlQuery sql;
     sql.prepare(query);
@@ -1937,8 +1957,10 @@ MainWindow::deleteTracker(const QString &id)
     sql.prepare(query);
     sql.bindValue(":tracker_id", id);
     sql.exec();
-
+    ui->trackerTab->removeTab(workingTab);
+    trackerTabsList.removeAt(workingTab);
     pBugModel->setQuery(mActiveQuery);
+
 }
 
 void
@@ -2000,7 +2022,9 @@ MainWindow::trayActivated(QSystemTrayIcon::ActivationReason reason)
 void
 MainWindow::tableViewContextMenu(const QPoint &p)
 {
-    QModelIndex i = ui->bugTable->indexAt(p);
+    int currentTab = ui->trackerTab->currentIndex();
+    QTableView *table = trackerTabsList.at(currentTab);
+    QModelIndex i = table->indexAt(p);
     QString tracker_id = i.sibling(i.row(), 1).data().toString();
     QString bug = i.sibling(i.row(), 3).data().toString();
     QMenu contextMenu(tr("Bug Menu"), this);
@@ -2048,10 +2072,124 @@ MainWindow::changelogTriggered()
 }
 
 
+// Changes the application focus to the search bar.
 void
 MainWindow::searchFocusTriggered() {
 
     ui->searchEdit->setFocus();
+}
+
+// Populates the Currently Hilighted tab with the bug data for that tab.
+void
+MainWindow::populateCurrentTab(int currentTab) {
+
+    QTableView *table = trackerTabsList.at(currentTab);
+
+    table->setSortingEnabled(true);
+    table->setGridStyle(Qt::PenStyle(Qt::DotLine));
+    pBugModel = new SqlBugModel;
+    int compare = QString::compare(ui->trackerTab->tabText(currentTab),"All");
+    if(compare != 0)
+    {
+
+        mWhereQuery= QString(" bugs.tracker_id IN"
+                       " (SELECT trackers.id FROM trackers WHERE trackers.name = \"%1\")"
+                       ). arg(ui->trackerTab->tabText(currentTab));
+                       mActiveQuery = mBaseQuery + " WHERE" + mWhereQuery+ mTrackerQuery + mSortQuery;
+                       qDebug() << mActiveQuery;
+                       pBugModel->setQuery(mActiveQuery);
+                       ui->trackstatsFrame->hide(); // Hide the stats frame
+
+    }
+    else
+    {
+        ui->trackstatsFrame->show();
+        populateStats();
+    }
+    filterTable();
+    SqlBugDelegate *delegate = new SqlBugDelegate();
+    table->setItemDelegate(delegate);
+    table->setModel(pBugModel);
+
+    pBugModel->setHeaderData(2, Qt::Horizontal, tr("Tracker"));
+    pBugModel->setHeaderData(3, Qt::Horizontal, tr("Bug ID"));
+    pBugModel->setHeaderData(4, Qt::Horizontal, tr("Last Modified"));
+    pBugModel->setHeaderData(5, Qt::Horizontal, tr("Severity"));
+    pBugModel->setHeaderData(6, Qt::Horizontal, tr("Priority"));
+    pBugModel->setHeaderData(7, Qt::Horizontal, tr("Assignee"));
+    pBugModel->setHeaderData(8, Qt::Horizontal, tr("Status"));
+    pBugModel->setHeaderData(9, Qt::Horizontal, tr("Summary"));
+    table->hideColumn(0); // Hide the internal row id
+    table->hideColumn(1); // Hide the tracker id
+    if(compare > 0) table->hideColumn(2); // Hide the tracker name for individual trackers.
+    table->verticalHeader()->hide(); // Hide the Row numbers
+    table->resizeColumnsToContents();
+    table->resizeRowsToContents();
+    table->setAlternatingRowColors(true);
+
+    /* These have been added here to keep signals for the tables in one place
+     * and because populateCurrentTab() will always be called at least once on a TableView
+     */
+
+    // Make sure we don't keep reconnecting signals/setting icons on already instanced tabs.
+    if(mStartup == 1)
+    {
+        // Bug list sorting
+        connect(table->horizontalHeader(), SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
+                this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
+        //Context Menu
+        connect(table, SIGNAL(customContextMenuRequested(QPoint)),
+                this, SLOT(tableViewContextMenu(QPoint)));
+        // Double Click Comments Pane.
+        connect(table, SIGNAL(doubleClicked(QModelIndex)),
+                this, SLOT(bugClicked(QModelIndex)));
+
+        // Set the FavIcon for the Tab
+        QString iconpath = pBugModel->getIcon(ui->trackerTab->tabText(currentTab));
+        ui->trackerTab->setTabIcon(currentTab,QIcon(iconpath));
+        mStartup = 0;
+    }
+
+}
+void
+MainWindow::populateStats() {
+    QString currentAssignedBugs;
+    QSqlQuery bugs;
+    ui->statsList->clear();
+    bugs.exec("SELECT COUNT(id) FROM bugs");
+    bugs.next();
+    currentAssignedBugs = QString("Currently assigned bugs: %1")
+            .arg(bugs.value(0).toString());
+
+    QListWidgetItem *newStat = new QListWidgetItem("Bug Statistics");
+    newStat->setTextAlignment(Qt::AlignHCenter);
+    newStat->setFlags(Qt::ItemIsEnabled);
+    ui->statsList->addItem(newStat);
+
+    // Use a frame to draw the separator between "Bug Statistics" and the list
+    QFrame *f = new QFrame( this );
+    f->setFrameStyle( QFrame::HLine | QFrame::Sunken );
+
+    QListWidgetItem *spacer = new QListWidgetItem("");
+    spacer->setFlags(Qt::NoItemFlags);
+    ui->statsList->addItem(spacer);
+    ui->statsList->setItemWidget(spacer, f);
+
+    newStat = new QListWidgetItem(currentAssignedBugs);
+    newStat->setFlags(Qt::ItemIsEnabled);
+    ui->statsList->addItem(newStat);
+
+}
+
+void
+MainWindow::compareTabName(QString compareItem)
+{
+    for(int i = 0; i < trackerTabsList.length();i++)
+    {
+        if(QString::compare(compareItem,ui->trackerTab->tabText(i)) == 0)
+            workingTab = i;
+    }
+
 }
 
 // TODO implement this?
