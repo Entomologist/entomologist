@@ -1715,8 +1715,9 @@ MainWindow::isOnline()
 void
 MainWindow::backendError(const QString &message)
 {
-    if (pDetectorProgress->isVisible())
-        pDetectorProgress->reset();
+    if (pDetectorProgress != NULL)
+        if (pDetectorProgress->isVisible())
+            pDetectorProgress->reset();
     ErrorHandler::handleError("An error occurred.", message);
     bugsUpdated();
 }
