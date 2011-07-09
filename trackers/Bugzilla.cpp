@@ -552,7 +552,8 @@ Bugzilla::versionRpcResponse(QVariant &arg)
 {
     QString version = arg.toMap().value("version").toString();
     qDebug() << "Bugzilla version response: " << version;
-    version = version.remove(version.lastIndexOf('.'), version.length() + 1);
+    if (version.count('.') > 1)
+        version = version.remove(version.lastIndexOf('.'), version.length() + 1);
     if (version.toFloat() < 3.2)
     {
         qDebug() << "Version is too low: " << version.toFloat();
