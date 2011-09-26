@@ -27,7 +27,6 @@
 
 #include "libmaia/maiaXmlRpcClient.h"
 #include "trackers/NovellBugzilla.h"
-#include "trackers/Launchpad.h"
 //#include "trackers/Google.h"
 #include "trackers/Trac.h"
 #include "trackers/Mantis.h"
@@ -39,7 +38,6 @@ Autodetector::Autodetector()
     novellBugzilla = NULL;
     genericBugzilla = NULL;
     mantis = NULL;
-    launchpad = NULL;
     trac = NULL;
 }
 
@@ -68,12 +66,6 @@ Autodetector::detect(QMap<QString, QString> data)
         mData["type"] = "Google";
         emit finishedDetecting(mData);
     }
-    else if (mUrl.host().toLower().endsWith("launchpad.net"))
-    {
-        mDetectionState = LAUNCHPAD_CHECK;
-        launchpad = new Launchpad(temp);
-        checkVersion(launchpad);
-    }
     else
     {
         mDetectionState = BUGZILLA_CHECK;
@@ -89,12 +81,8 @@ Autodetector::checkVersion(Backend *b)
     qDebug() << "Check version";
     connect(b, SIGNAL(versionChecked(QString)),
             this, SLOT(versionChecked(QString)));
-    connect(b, SIGNAL(severitiesFound(QStringList)),
-            this, SLOT(severitiesFound(QStringList)));
-    connect(b, SIGNAL(prioritiesFound(QStringList)),
-            this, SLOT(prioritiesFound(QStringList)));
-    connect(b, SIGNAL(statusesFound(QStringList)),
-            this, SLOT(statusesFound(QStringList)));
+    connect(b, SIGNAL(fieldsFound()),
+            this, SLOT(fieldsFound()));
     connect(b, SIGNAL(backendError(QString)),
             this, SLOT(handleError(QString)));
     b->checkVersion();
@@ -180,77 +168,5 @@ Autodetector::versionChecked(QString version)
         trac->setPassword(mData["password"]);
     }
 
-    getValidValues();
-}
-
-void
-Autodetector::prioritiesFound(QStringList priorities)
-{
-    if (priorities.size() > 0)
-        mData["valid_priorities"] = priorities.join(",");
-
-    if (novellBugzilla != NULL)
-        novellBugzilla->checkValidStatuses();
-    else if (genericBugzilla != NULL)
-        genericBugzilla->checkValidStatuses();
-    else if (mantis != NULL)
-        mantis->checkValidStatuses();
-    else if (launchpad != NULL)
-        launchpad->checkValidStatuses();
-    else if (trac != NULL)
-        trac->checkValidStatuses();
-}
-
-void
-Autodetector::statusesFound(QStringList statuses)
-{
-    if (statuses.size() > 0)
-        mData["valid_statuses"] = statuses.join(",");
-
-    if (novellBugzilla != NULL)
-        novellBugzilla->checkValidSeverities();
-    else if (genericBugzilla != NULL)
-        genericBugzilla->checkValidSeverities();
-    else if (mantis != NULL)
-        mantis->checkValidSeverities();
-    else if (launchpad != NULL)
-        launchpad->checkValidSeverities();
-    else if (trac != NULL)
-        trac->checkValidSeverities();
-}
-
-void
-Autodetector::severitiesFound(QStringList severities)
-{
-    if (severities.size() > 0)
-        mData["valid_severities"] = severities.join(",");
-
-    if (novellBugzilla != NULL)
-        novellBugzilla->deleteLater();
-    else if (genericBugzilla != NULL)
-        genericBugzilla->deleteLater();
-    else if (mantis != NULL)
-        mantis->deleteLater();
-    else if (launchpad != NULL)
-        launchpad->deleteLater();
-    else if (trac != NULL)
-        trac->deleteLater();
-
     emit finishedDetecting(mData);
-}
-
-void
-Autodetector::getValidValues()
-{
-    if (novellBugzilla != NULL)
-        novellBugzilla->checkValidPriorities();
-    else if (genericBugzilla != NULL)
-        genericBugzilla->checkValidPriorities();
-    else if (mantis != NULL)
-        mantis->checkValidPriorities();
-    else if (launchpad != NULL)
-        launchpad->checkValidPriorities();
-    else if (trac != NULL)
-        trac->checkValidPriorities();
-
 }

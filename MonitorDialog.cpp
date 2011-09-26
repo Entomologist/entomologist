@@ -225,7 +225,7 @@ MonitorDialog::componentFound(QStringList components)
         trackerItem->setData(0, MONITOR_NODE_IS_PRODUCT, 0);
     }
 
-    if ((type == "Bugzilla") || (type == "Mantis"))
+    if ((type == "bugzilla") || (type == "mantis"))
     {
         // Bugzilla and mantis components come back as Product:Component
         // (for Bugzilla) or Project:Category (for Mantis)
@@ -251,7 +251,7 @@ MonitorDialog::componentFound(QStringList components)
             // values in one call, so we hack around that by first getting the product list,
             // and then making the XMLRPC call to get the components when the product
             // node is expanded.
-            if (type == "Bugzilla" && ((version == "3.2") || (version == "3.4")))
+            if (type == "bugzilla" && ((version == "3.2") || (version == "3.4")))
                 if (component == "No data cached")
                     productItem->setData(0, MONITOR_NODE_IS_CACHED, 0);
 
@@ -291,6 +291,7 @@ MonitorDialog::componentFound(QStringList components)
 void
 MonitorDialog::backendError(const QString &msg)
 {
+    Q_UNUSED(msg);
     checkRequests();
 }
 

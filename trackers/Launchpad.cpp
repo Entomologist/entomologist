@@ -33,6 +33,7 @@
 #include "qjson/serializer.h"
 #include "Utilities.hpp"
 #include "Launchpad.h"
+#include "tracker_uis/LaunchpadUI.h"
 
 Launchpad::Launchpad(const QString &url, QObject *parent) :
     Backend(url)
@@ -55,6 +56,14 @@ Launchpad::~Launchpad()
 {
 }
 
+
+BackendUI *
+Launchpad::displayWidget()
+{
+    if (pDisplayWidget == NULL)
+        pDisplayWidget = new LaunchpadUI(mId);
+    return(pDisplayWidget);
+}
 void
 Launchpad::sync()
 {
@@ -222,7 +231,7 @@ Launchpad::bugListFinished()
         insertList << newBug;
     }
 
-    pSqlWriter->insertBugs(insertList);
+    pSqlWriter->insertBugs("launchpad", insertList);
 }
 
 void
@@ -374,7 +383,7 @@ Launchpad::checkVersion()
 }
 
 void
-Launchpad::checkValidPriorities()
+Launchpad::checkFields()
 {
     // Launchpad seems to hardcode these
     QStringList response;
@@ -385,33 +394,45 @@ Launchpad::checkValidPriorities()
              << "Low"
              << "Wishlist"
              << "Undecided";
-    emit prioritiesFound(response);
-}
 
-void
-Launchpad::checkValidSeverities()
-{
-    emit severitiesFound(QStringList());
-}
+    QList<QMap<QString, QString> > fieldList;
+    for (int i = 0; i < response.count(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "priority";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
 
-void
-Launchpad::checkValidStatuses()
-{
-    // Launchpad seems to hardcode these
-    QStringList response;
+    pSqlWriter->multiInsert("fields", fieldList);
+
+    response.clear();
     response << "New"
-            << "Incomplete"
-            << "Opinion"
-            << "Invalid"
-            << "Won't Fix"
-            << "Expired"
-            << "Confirmed"
-            << "Triaged"
-            << "In Progress"
-            << "Fix Committed"
-            << "Fix Released"
-            << "Unknown";
-    emit statusesFound(response);
+             << "Incomplete"
+             << "Opinion"
+             << "Invalid"
+             << "Won't Fix"
+             << "Expired"
+             << "Confirmed"
+             << "Triaged"
+             << "In Progress"
+             << "Fix Committed"
+             << "Fix Released"
+             << "Unknown";
+
+    fieldList.clear();
+    for (int i = 0; i < response.count(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "status";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+    emit fieldsFound();
 }
 
 void

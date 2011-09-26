@@ -12,7 +12,7 @@ QMAKE_INFO_PLIST = Entomologist.plist
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
-VERSION = 0.9
+VERSION = 1.0
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 isEmpty(LOCALE_PREFIX):LOCALE_PREFIX = $$PREFIX
 DEFINES += LOCALE_PREFIX=\\\"$$LOCALE_PREFIX\\\"
@@ -35,13 +35,11 @@ SOURCES += main.cpp \
     Preferences.cpp \
     About.cpp \
     SqlWriterThread.cpp \
-    SqlWriter.cpp \
     PlaceholderLineEdit.cpp \
     qtsoap/qtsoap.cpp \
     trackers/Mantis.cpp \
     ChangelogWindow.cpp \
     ChangelogListDelegate.cpp \
-    trackers/Launchpad.cpp \
     qjson/parserrunnable.cpp \
     qjson/parser.cpp \
     qjson/json_scanner.cpp \
@@ -60,7 +58,34 @@ SOURCES += main.cpp \
     qtsingleapplication/qtlockedfile.cpp \
     qtsingleapplication/qtlocalpeer.cpp \
     Translator.cpp \
-    MonitorDialog.cpp
+    MonitorDialog.cpp \
+    tracker_uis/BugzillaUI.cpp \
+    tracker_uis/TracUI.cpp \
+    tracker_uis/MantisUI.cpp \
+    SqlUtilities.cpp \
+    tracker_uis/BackendUI.cpp \
+    NewCommentsDialog.cpp \
+    tracker_uis/TracDetails.cpp \
+    TrackerTabWidget.cpp \
+    tracker_uis/MantisDetails.cpp \
+    tracker_uis/BugzillaDetails.cpp \
+    ClickableText.cpp \
+    tracker_uis/BackendDetails.cpp \
+    SearchTab.cpp \
+    SqlSearchModel.cpp \
+    ToDoListView.cpp \
+    ToDoListServiceAdd.cpp \
+    ToDoListPreferences.cpp \
+    ToDoListExport.cpp \
+    ToDoList.cpp \
+    ToDoItem.cpp \
+    BugTreeWidget.cpp \
+    BugTreeItemDelegate.cpp \
+    todolistservices/ServicesBackend.cpp \
+    todolistservices/RememberTheMilk.cpp \
+    todolistservices/GoogleCalendar.cpp \
+    todolistservices/GenericWebDav.cpp \
+    TrackerTableView.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -79,13 +104,11 @@ HEADERS += MainWindow.h \
     Preferences.h \
     About.h \
     SqlWriterThread.h \
-    SqlWriter.h \
     PlaceholderLineEdit.h \
     qtsoap/qtsoap.h \
     trackers/Mantis.h \
     ChangelogWindow.h \
     ChangelogListDelegate.h \
-    trackers/Launchpad.h \
     qjson/qjson_debug.h \
     qjson/position.hh \
     qjson/parserrunnable.h \
@@ -108,7 +131,34 @@ HEADERS += MainWindow.h \
     qtsingleapplication/qtlockedfile.h \
     qtsingleapplication/qtlocalpeer.h \
     Translator.h \
-    MonitorDialog.h
+    MonitorDialog.h \
+    tracker_uis/BugzillaUI.h \
+    tracker_uis/TracUI.h \
+    tracker_uis/MantisUI.h \
+    SqlUtilities.h \
+    tracker_uis/BackendUI.h \
+    NewCommentsDialog.h \
+    tracker_uis/TracDetails.h \
+    TrackerTabWidget.h \
+    tracker_uis/MantisDetails.h \
+    tracker_uis/BugzillaDetails.h \
+    ClickableText.h \
+    tracker_uis/BackendDetails.h \
+    SearchTab.h \
+    SqlSearchModel.h \
+    ToDoListView.h \
+    ToDoListServiceAdd.h \
+    ToDoListPreferences.h \
+    ToDoListExport.h \
+    ToDoList.h \
+    ToDoItem.h \
+    BugTreeWidget.h \
+    BugTreeItemDelegate.h \
+    todolistservices/ServicesBackend.h \
+    todolistservices/RememberTheMilk.h \
+    todolistservices/GoogleCalendar.h \
+    todolistservices/GenericWebDav.h \
+    TrackerTableView.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
@@ -117,7 +167,19 @@ FORMS += MainWindow.ui \
     About.ui \
     ChangelogWindow.ui \
     ErrorReport.ui \
-    MonitorDialog.ui
+    MonitorDialog.ui \
+    tracker_uis/bugzillaui.ui \
+    tracker_uis/tracui.ui \
+    tracker_uis/mantisui.ui \
+    NewCommentsDialog.ui \
+    tracker_uis/TracDetails.ui \
+    tracker_uis/MantisDetails.ui \
+    tracker_uis/BugzillaDetails.ui \
+    SearchTab.ui \
+    ToDoListServiceAdd.ui \
+    ToDoListPreferences.ui \
+    ToDoListView.ui \
+    ToDoListExport.ui
 RESOURCES += resources.qrc
 QMAKE_EXTRA_TARGETS += distfile
 DISTFILE_MAKEDIR = .tmp/entomologist-$$VERSION

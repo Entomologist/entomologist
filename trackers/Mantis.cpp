@@ -24,6 +24,8 @@
 #include <QSqlTableModel>
 #include <QVariantMap>
 #include "Mantis.h"
+#include "SqlUtilities.h"
+#include "tracker_uis/MantisUI.h"
 #include "Translator.h"
 
 // The Mantis SOAP API for 1.1 and 1.2 doesn't allow us to safely
@@ -35,6 +37,7 @@
 Mantis::Mantis(const QString &url, QObject *parent) :
     Backend(url)
 {
+    Q_UNUSED(parent);
     mUploadingBugs = false;
     pManager->setCookieJar(pCookieJar);
     connect(pManager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
@@ -60,10 +63,29 @@ Mantis::~Mantis()
 {
 }
 
+BackendUI *
+Mantis::displayWidget()
+{
+    if (pDisplayWidget == NULL)
+        pDisplayWidget = new MantisUI(mId, this);
+    return(pDisplayWidget);
+}
+
 void
 Mantis::sync()
 {
-    login();
+    QString url = mUrl + "/login.php";
+    QString query = QString("username=%1&password=%2&").arg(mUsername).arg(mPassword);
+    QNetworkRequest req = QNetworkRequest(QUrl(url));
+    QNetworkReply *rep = pManager->post(req, query.toAscii());
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(loginSyncResponse()));
+}
+
+void
+Mantis::search(const QString &query)
+{
+    emit searchFinished();
 }
 
 void
@@ -132,7 +154,11 @@ Mantis::getMonitored()
     connect(rep, SIGNAL(finished()),
             this, SLOT(monitoredResponse()));
 }
+void
+Mantis::getSearchedBug(const QString &bugId)
+{
 
+}
 void
 Mantis::handleCSV(const QString &csv, const QString &bugType)
 {
@@ -140,12 +166,17 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
     QString entry;
     QString tmpBugId;
     QString colEntry;
+
     int colId = -1,
-        colProduct = -1,
+        colProject = -1,
         colAssignedTo = -1,
+        colProductVersion = -1,
         colPriority = -1,
+        colOS = -1,
+        colOSVersion = -1,
         colSeverity = -1,
-        colComponent = -1,
+        colCategory = -1,
+        colReproducibility = -1,
         colLastModified = -1,
         colSummary = -1,
         colStatus = -1;
@@ -158,6 +189,7 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
     // and map them to what we want
     Translator t;
     t.openDatabase();
+    qDebug() << list.at(0);
     bug = parseCSVLine(list.at(0));
     for (int i = 0; i < bug.size(); ++i)
     {
@@ -166,12 +198,20 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
         translatedEntry = t.translate(colEntry);
         if (translatedEntry == "id")
             colId = i;
+        if (translatedEntry == "product_version")
+            colProductVersion = i;
         else if (translatedEntry == "project")
-            colProduct = i;
+            colProject = i;
+        else if (translatedEntry == "os")
+            colOS = i;
+        else if (translatedEntry == "os_version")
+            colOSVersion =i;
         else if (translatedEntry == "category")
-            colComponent = i;
+            colCategory = i;
         else if (translatedEntry == "assigned_to")
             colAssignedTo = i;
+        else if (translatedEntry == "reproducibility")
+            colReproducibility = i;
         else if (translatedEntry == "priority")
             colPriority = i;
         else if (translatedEntry == "severity")
@@ -185,25 +225,30 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
     }
     t.closeDatabase();
 
-    if ((colProduct == -1)
-        || (colComponent == -1)
+    if ((colProject == -1)
+        || (colCategory == -1)
         || (colAssignedTo == -1)
         || (colPriority == -1)
         || (colSeverity == -1)
         || (colLastModified  == -1)
         || (colSummary == -1)
-        || (colStatus == -1))
+        || (colStatus == -1)
+        || (colReproducibility == -1)
+        || (colOSVersion == -1)
+        || (colOS == -1)
+        || (colProductVersion == -1))
     {
         qDebug() << "Missing a column somewhere...:";
-        qDebug() << QString("%1, %2, %3, %4, %5, %6, %7, %8")
+        qDebug() << QString("%1, %2, %3, %4, %5, %6, %7, %8, %9")
                     .arg(colId)
-                    .arg(colProduct)
+                    .arg(colProject)
                     .arg(colAssignedTo)
                     .arg(colPriority)
                     .arg(colSeverity)
-                    .arg(colComponent)
+                    .arg(colCategory)
                     .arg(colLastModified)
-                    .arg(colStatus);
+                    .arg(colStatus)
+                    .arg(colReproducibility);
         return;
     }
 
@@ -219,11 +264,17 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
         newBug["id"]  = entry.remove(removeLeadingZeros);
         tmpBugId = entry;
 
-        if (colProduct)
-            entry = bug.at(colProduct);
+        if (colProject)
+            entry = bug.at(colProject);
         else
             entry = "";
-        newBug["product"] = entry.remove(reg);
+        newBug["project"] = entry.remove(reg);
+
+        if (colProductVersion)
+            entry = bug.at(colProductVersion);
+        else
+            entry = "";
+        newBug["product_version"] = entry.remove(reg);
 
         if (colAssignedTo)
             entry = bug.at(colAssignedTo);
@@ -243,11 +294,11 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
             entry = "";
         newBug["severity"] = entry.remove(reg);
 
-        if (colComponent)
-            entry = bug.at(colComponent);
+        if (colCategory)
+            entry = bug.at(colCategory);
         else
             entry = "";
-        newBug["component"] = entry.remove(reg);
+        newBug["category"] = entry.remove(reg);
 
         if (colLastModified)
             entry = bug.at(colLastModified);
@@ -255,6 +306,27 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
             entry = "1970-01-01";
         newBug["last_modified"] = entry.remove(reg);
 
+        if (colReproducibility)
+            entry = bug.at(colReproducibility);
+        else
+            entry = "";
+        newBug["reproducibility"] = entry.remove(reg);
+
+        qDebug() << "col OS";
+        if (colOS)
+            entry = bug.at(colOS);
+        else
+            entry = "";
+        newBug["os"] = entry.remove(reg);
+
+        qDebug() << "col os version";
+        if (colOSVersion)
+            entry = bug.at(colOSVersion);
+        else
+            entry = "";
+        newBug["os_version"] = entry.remove(reg);
+
+        qDebug() <<  "summary";
         if (colSummary)
             entry = bug.at(colSummary);
         else
@@ -359,41 +431,82 @@ Mantis::response()
     else if (messageName == "mc_enum_prioritiesResponse")
     {
         QtSoapArray &array = (QtSoapArray &) resp.returnValue();
-        QStringList response;
-
+        QList<QMap<QString, QString> > fieldList;
         for (int i = 0; i < array.count(); ++i)
         {
-            response  << array.at(i)["name"].toString();
+            QMap<QString, QString> fieldMap;
+            fieldMap["tracker_id"] = mId;
+            fieldMap["field_name"] = "priority";
+            fieldMap["value"] = array.at(i)["name"].toString();
+            fieldList << fieldMap;
         }
 
-        qDebug() << "Priorities: " << response;
-        emit prioritiesFound(response);
+        pSqlWriter->multiInsert("fields", fieldList);
+        checkValidSeverities();
     }
     else if (messageName == "mc_enum_statusResponse")
     {
         QtSoapArray &array = (QtSoapArray &) resp.returnValue();
-        QStringList response;
-
+        QList<QMap<QString, QString> > fieldList;
         for (int i = 0; i < array.count(); ++i)
         {
-            response  << array.at(i)["name"].toString();
+            QMap<QString, QString> fieldMap;
+            fieldMap["tracker_id"] = mId;
+            fieldMap["field_name"] = "status";
+            fieldMap["value"] = array.at(i)["name"].toString();
+            fieldList << fieldMap;
         }
 
-        qDebug() << "Statuses: " << response;
-        emit statusesFound(response);
+        pSqlWriter->multiInsert("fields", fieldList);
+        emit fieldsFound();
     }
     else if (messageName == "mc_enum_severitiesResponse")
     {
         QtSoapArray &array = (QtSoapArray &) resp.returnValue();
-        QStringList response;
-
+        QList<QMap<QString, QString> > fieldList;
         for (int i = 0; i < array.count(); ++i)
         {
-            response  << array.at(i)["name"].toString();
+            QMap<QString, QString> fieldMap;
+            fieldMap["tracker_id"] = mId;
+            fieldMap["field_name"] = "severity";
+            fieldMap["value"] = array.at(i)["name"].toString();
+            fieldList << fieldMap;
         }
 
-        qDebug() << "Severities: " << response;
-        emit severitiesFound(response);
+        pSqlWriter->multiInsert("fields", fieldList);
+        checkValidResolutions();
+    }
+    else if (messageName == "mc_enum_resolutionsResponse")
+    {
+        QtSoapArray &array = (QtSoapArray &) resp.returnValue();
+        QList<QMap<QString, QString> > fieldList;
+        for (int i = 0; i < array.count(); ++i)
+        {
+            QMap<QString, QString> fieldMap;
+            fieldMap["tracker_id"] = mId;
+            fieldMap["field_name"] = "resolution";
+            fieldMap["value"] = array.at(i)["name"].toString();
+            fieldList << fieldMap;
+        }
+
+        pSqlWriter->multiInsert("fields", fieldList);
+        checkValidReproducibilities();
+    }
+    else if (messageName == "mc_enum_reproducibilitiesResponse")
+    {
+        QtSoapArray &array = (QtSoapArray &) resp.returnValue();
+        QList<QMap<QString, QString> > fieldList;
+        for (int i = 0; i < array.count(); ++i)
+        {
+            QMap<QString, QString> fieldMap;
+            fieldMap["tracker_id"] = mId;
+            fieldMap["field_name"] = "reproducibility";
+            fieldMap["value"] = array.at(i)["name"].toString();
+            fieldList << fieldMap;
+        }
+
+        pSqlWriter->multiInsert("fields", fieldList);
+        checkValidStatuses();
     }
     else if (messageName == "mc_issue_getResponse")
     {
@@ -462,6 +575,14 @@ Mantis::response()
             QList<QMap<QString, QString> > list;
             QString bugId = resp.returnValue()["id"].toString();
             QtSoapArray &array = (QtSoapArray &) resp.returnValue()["notes"];
+
+            // First get the bug description and store it separately
+            QMap<QString, QString> val;
+            QMap<QString, QString> params;
+            val["description"] = resp.returnValue()["description"].toString();
+            params["tracker_id"] = mId;
+            params["bug_id"] = bugId;
+            SqlUtilities::simpleUpdate("mantis", val, params);
 
             for (int i = 0; i < array.count(); ++i)
             {
@@ -567,36 +688,50 @@ Mantis::headFinished()
 }
 
 void
+Mantis::checkFields()
+{
+    checkValidPriorities();
+}
+
+void
+Mantis::validFieldCall(const QString &request)
+{
+    qDebug() << "Calling " << request;
+    QtSoapMessage msg;
+    msg.setMethod(QtSoapQName(request, "http://futureware.biz/mantisconnect"));
+    msg.addMethodArgument("username", "", mUsername);
+    msg.addMethodArgument("password", "", mPassword);
+    pMantis->submitRequest(msg, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+}
+
+void
 Mantis::checkValidPriorities()
 {
-    qDebug() << "Checking Mantis priorities";
-    QtSoapMessage request;
-    request.setMethod(QtSoapQName("mc_enum_priorities", "http://futureware.biz/mantisconnect"));
-    request.addMethodArgument("username", "", mUsername);
-    request.addMethodArgument("password", "", mPassword);
-    pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+    validFieldCall("mc_enum_priorities");
 }
 
 void
 Mantis::checkValidSeverities()
 {
-    qDebug() << "Checking Mantis severities";
-    QtSoapMessage request;
-    request.setMethod(QtSoapQName("mc_enum_severities", "http://futureware.biz/mantisconnect"));
-    request.addMethodArgument("username", "", mUsername );
-    request.addMethodArgument("password", "", mPassword);
-    pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+    validFieldCall("mc_enum_severities");
 }
 
 void
 Mantis::checkValidComponents()
 {
-    qDebug() << "Checking Mantis components";
-    QtSoapMessage request;
-    request.setMethod(QtSoapQName("mc_projects_get_user_accessible", "http://futureware.biz/mantisconnect"));
-    request.addMethodArgument("username", "", mUsername );
-    request.addMethodArgument("password", "", mPassword);
-    pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+    validFieldCall("mc_projects_get_user_accessible");
+}
+
+void
+Mantis::checkValidResolutions()
+{
+    validFieldCall("mc_enum_resolutions");
+}
+
+void
+Mantis::checkValidReproducibilities()
+{
+    validFieldCall("mc_enum_reproducibilities");
 }
 
 void
@@ -775,7 +910,18 @@ void Mantis::loginResponse()
         qDebug() << "loginResponse: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
-
+        return;
+    }
+    reply->deleteLater();
+}
+void Mantis::loginSyncResponse()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        qDebug() << "loginResponse: " << reply->errorString();
+        emit backendError(reply->errorString());
+        reply->close();
         return;
     }
     reply->deleteLater();
@@ -835,17 +981,22 @@ void Mantis::assignedResponse()
         newBug["bug_id"] = responseMap.value("id").toString();
         newBug["severity"] = responseMap.value("severity").toString();
         newBug["priority"] = responseMap.value("priority").toString();
+        newBug["project"] = responseMap.value("project").toString();
+        newBug["category"] = responseMap.value("category").toString();
+        newBug["reproducibility"] = responseMap.value("reproducibility").toString();
+        newBug["os"] = responseMap.value("os").toString();
+        newBug["os_version"] = responseMap.value("os_version").toString();
         newBug["assigned_to"] = responseMap.value("assigned_to").toString();
         newBug["status"] = responseMap.value("status").toString();
         newBug["summary"] = responseMap.value("summary").toString();
-        newBug["component"] = responseMap.value("component").toString();
-        newBug["product"] = responseMap.value("product").toString();
+        newBug["product_version"] = responseMap.value("product_version").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
         newBug["last_modified"] = responseMap.value("last_modified").toString();
+
         insertList << newBug;
     }
 
-    pSqlWriter->insertBugs(insertList);
+    pSqlWriter->insertBugs("mantis", insertList);
 }
 
 void Mantis::reportedResponse()
@@ -890,6 +1041,7 @@ void Mantis::monitoredResponse()
 void
 Mantis::bugsInsertionFinished(QStringList idList)
 {
+    Q_UNUSED(idList);
     qDebug() << "Mantis: bugs updated";
     updateSync();
     emit bugsUpdated();
@@ -905,5 +1057,6 @@ void
 Mantis::handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors)
 {
+    Q_UNUSED(errors);
     reply->ignoreSslErrors();
 }

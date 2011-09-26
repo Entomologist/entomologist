@@ -36,7 +36,7 @@
          <string>Refresh</string>
         </property>
         <property name="statusTip">
-         <string>Refresh the bug list</string>
+         <string>Resync all trackers</string>
         </property>
         <property name="text">
          <string>Refresh</string>
@@ -153,35 +153,6 @@
         </property>
        </spacer>
       </item>
-      <item>
-       <widget class="PlaceholderLineEdit" name="searchEdit"/>
-      </item>
-      <item>
-       <widget class="QToolButton" name="searchButton">
-        <property name="toolTip">
-         <string>Search</string>
-        </property>
-        <property name="statusTip">
-         <string>Search across bugs in all selected trackers</string>
-        </property>
-        <property name="text">
-         <string>Search</string>
-        </property>
-        <property name="icon">
-         <iconset resource="resources.qrc">
-          <normaloff>:/search</normaloff>:/search</iconset>
-        </property>
-        <property name="iconSize">
-         <size>
-          <width>32</width>
-          <height>32</height>
-         </size>
-        </property>
-        <property name="toolButtonStyle">
-         <enum>Qt::ToolButtonIconOnly</enum>
-        </property>
-       </widget>
-      </item>
      </layout>
     </item>
     <item>
@@ -199,79 +170,7 @@
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
        </property>
-       <widget class="QFrame" name="trackstatsFrame">
-        <property name="sizePolicy">
-         <sizepolicy hsizetype="MinimumExpanding" vsizetype="MinimumExpanding">
-          <horstretch>0</horstretch>
-          <verstretch>0</verstretch>
-         </sizepolicy>
-        </property>
-        <property name="frameShape">
-         <enum>QFrame::StyledPanel</enum>
-        </property>
-        <property name="frameShadow">
-         <enum>QFrame::Raised</enum>
-        </property>
-        <property name="lineWidth">
-         <number>1</number>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_2">
-         <property name="sizeConstraint">
-          <enum>QLayout::SetMinAndMaxSize</enum>
-         </property>
-         <property name="leftMargin">
-          <number>4</number>
-         </property>
-         <property name="topMargin">
-          <number>1</number>
-         </property>
-         <property name="rightMargin">
-          <number>4</number>
-         </property>
-         <property name="bottomMargin">
-          <number>6</number>
-         </property>
-         <item>
-          <widget class="QListWidget" name="statsList">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <widget class="QListWidget" name="trackerList">
-           <property name="sizePolicy">
-            <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
-             <horstretch>0</horstretch>
-             <verstretch>0</verstretch>
-            </sizepolicy>
-           </property>
-           <property name="statusTip">
-            <string>Ticking the boxes changes the tracker selection</string>
-           </property>
-           <property name="editTriggers">
-            <set>QAbstractItemView::NoEditTriggers</set>
-           </property>
-           <property name="showDropIndicator" stdset="0">
-            <bool>false</bool>
-           </property>
-           <property name="alternatingRowColors">
-            <bool>false</bool>
-           </property>
-           <property name="selectionMode">
-            <enum>QAbstractItemView::NoSelection</enum>
-           </property>
-           <property name="selectionBehavior">
-            <enum>QAbstractItemView::SelectRows</enum>
-           </property>
-          </widget>
-         </item>
-        </layout>
-       </widget>
-       <widget class="QTabWidget" name="trackerTab">
+       <widget class="TrackerTabWidget" name="trackerTab">
         <property name="sizePolicy">
          <sizepolicy hsizetype="Expanding" vsizetype="Expanding">
           <horstretch>6</horstretch>
@@ -285,7 +184,7 @@
          <string>trackerTab</string>
         </property>
         <property name="currentIndex">
-         <number>1</number>
+         <number>0</number>
         </property>
         <property name="elideMode">
          <enum>Qt::ElideLeft</enum>
@@ -297,7 +196,7 @@
          <bool>false</bool>
         </property>
         <property name="movable">
-         <bool>false</bool>
+         <bool>true</bool>
         </property>
         <widget class="QWidget" name="widget">
          <attribute name="title">
@@ -311,150 +210,6 @@
         </widget>
        </widget>
       </widget>
-      <widget class="QScrollArea" name="detailsScrollArea">
-       <property name="frameShape">
-        <enum>QFrame::StyledPanel</enum>
-       </property>
-       <property name="frameShadow">
-        <enum>QFrame::Sunken</enum>
-       </property>
-       <property name="widgetResizable">
-        <bool>true</bool>
-       </property>
-       <widget class="QWidget" name="scrollAreaWidgetContents_2">
-        <property name="geometry">
-         <rect>
-          <x>0</x>
-          <y>0</y>
-          <width>690</width>
-          <height>214</height>
-         </rect>
-        </property>
-        <layout class="QVBoxLayout" name="verticalLayout_3">
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_2">
-           <item>
-            <widget class="QLabel" name="bugDetailsLabel">
-             <property name="font">
-              <font>
-               <pointsize>15</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>TextLabel</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer_3">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="QGroupBox" name="groupBox">
-           <property name="title">
-            <string>Bug Settings</string>
-           </property>
-           <layout class="QGridLayout" name="gridLayout_2">
-            <item row="0" column="0">
-             <widget class="QLabel" name="severityLabel">
-              <property name="text">
-               <string>Severity</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="1">
-             <widget class="QLabel" name="priorityLabel">
-              <property name="text">
-               <string>Priority</string>
-              </property>
-             </widget>
-            </item>
-            <item row="0" column="2">
-             <widget class="QLabel" name="statusLabel">
-              <property name="text">
-               <string>Status</string>
-              </property>
-             </widget>
-            </item>
-            <item row="1" column="2">
-             <widget class="QComboBox" name="statusCombo"/>
-            </item>
-            <item row="1" column="1">
-             <widget class="QComboBox" name="priorityCombo"/>
-            </item>
-            <item row="1" column="0">
-             <widget class="QComboBox" name="severityCombo"/>
-            </item>
-           </layout>
-          </widget>
-         </item>
-         <item>
-          <layout class="QHBoxLayout" name="horizontalLayout_3">
-           <item>
-            <widget class="QLabel" name="commentsLabel">
-             <property name="font">
-              <font>
-               <pointsize>15</pointsize>
-               <weight>75</weight>
-               <bold>true</bold>
-              </font>
-             </property>
-             <property name="text">
-              <string>Comments</string>
-             </property>
-            </widget>
-           </item>
-           <item>
-            <spacer name="horizontalSpacer">
-             <property name="orientation">
-              <enum>Qt::Horizontal</enum>
-             </property>
-             <property name="sizeHint" stdset="0">
-              <size>
-               <width>40</width>
-               <height>20</height>
-              </size>
-             </property>
-            </spacer>
-           </item>
-           <item>
-            <widget class="QPushButton" name="newCommentButton">
-             <property name="text">
-              <string>New Comment</string>
-             </property>
-             <property name="shortcut">
-              <string>Ctrl+Shift+C</string>
-             </property>
-            </widget>
-           </item>
-          </layout>
-         </item>
-         <item>
-          <widget class="Line" name="line">
-           <property name="orientation">
-            <enum>Qt::Horizontal</enum>
-           </property>
-          </widget>
-         </item>
-         <item>
-          <layout class="QVBoxLayout" name="commentLayout"/>
-         </item>
-        </layout>
-       </widget>
-      </widget>
      </widget>
     </item>
    </layout>
@@ -465,7 +220,7 @@
      <x>0</x>
      <y>0</y>
      <width>731</width>
-     <height>22</height>
+     <height>20</height>
     </rect>
    </property>
    <widget class="QMenu" name="menu_Help">
@@ -481,6 +236,7 @@
     </property>
     <addaction name="action_Add_Tracker"/>
     <addaction name="action_Refresh_Tracker"/>
+    <addaction name="action_Todo_Lists"/>
     <addaction name="action_Preferences"/>
     <addaction name="action_Work_Offline"/>
     <addaction name="separator"/>
@@ -576,7 +332,7 @@
   </action>
   <action name="action_Refresh_Tracker">
    <property name="text">
-    <string>Refresh Tracker</string>
+    <string>Refresh Trackers</string>
    </property>
    <property name="shortcut">
     <string>Ctrl+R</string>
@@ -595,13 +351,22 @@
     <string>Edit Monitors</string>
    </property>
   </action>
+  <action name="action_Todo_Lists">
+   <property name="text">
+    <string>Todo Lists</string>
+   </property>
+   <property name="shortcut">
+    <string>Ctrl+T</string>
+   </property>
+  </action>
  </widget>
  <layoutdefault spacing="6" margin="11"/>
  <customwidgets>
   <customwidget>
-   <class>PlaceholderLineEdit</class>
-   <extends>QLineEdit</extends>
-   <header>PlaceholderLineEdit.h</header>
+   <class>TrackerTabWidget</class>
+   <extends>QTabWidget</extends>
+   <header>TrackerTabWidget.h</header>
+   <container>1</container>
   </customwidget>
  </customwidgets>
  <resources>

@@ -32,16 +32,19 @@ Q_OBJECT
 public:
     Trac(const QString &url, const QString &username, const QString &password, QObject *parent = 0);
     ~Trac();
+    BackendUI *displayWidget();
 
     void sync();
     void login();
     void checkVersion();
-    void checkValidPriorities();
     void getComments(const QString &bugId);
-    void checkValidSeverities();
-    void checkValidStatuses();
+    void getSearchedBug(const QString &bugId);
+
+    void checkFields();
     void checkValidComponents();
-    QString type() { return "Trac"; }
+    void search(const QString &query);
+
+    QString type() { return "trac"; }
 
     void uploadAll();
     void setUsername(const QString &username);
@@ -53,11 +56,17 @@ public:
 public slots:
     void commentInsertionFinished();
     void bugsInsertionFinished(QStringList idList);
+    void searchedTicketResponse(QVariant &arg);
     void uploadFinished(QVariant &arg);
     void versionRpcResponse(QVariant &arg);
     void priorityRpcResponse(QVariant &arg);
     void severityRpcResponse(QVariant &arg);
+    void versionsRpcResponse(QVariant &arg);
+    void resolutionsRpcResponse(QVariant &arg);
     void componentRpcResponse(QVariant &arg);
+    void milestonesRpcResponse(QVariant &arg);
+    void searchRpcResponse(QVariant &arg);
+    void searchInsertionFinished();
     void statusRpcResponse(QVariant &arg);
     void typeRpcResponse(QVariant &arg);
     void ccRpcResponse(QVariant &arg);
@@ -72,6 +81,12 @@ public slots:
     void handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
 
 private:
+    void checkValidSeverities();
+    void checkValidStatuses();
+    void checkValidVersions();
+    void checkValidResolutions();
+    void checkValidMilestones();
+
     MaiaXmlRpcClient *pClient;
     QMap<QString, QString> mBugMap;
     QStringList mSeverities;

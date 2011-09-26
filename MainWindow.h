@@ -45,10 +45,13 @@ class QNetworkAccessManager;
 class QSpacerItem;
 class QProgressDialog;
 class QTimer;
+class SearchTab;
 class QSqlDatabase;
 class Backend;
 class Autodetector;
 class SqlBugModel;
+class BackendUI;
+class ToDoListView;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -57,54 +60,47 @@ public:
     ~MainWindow();
    void closeEvent(QCloseEvent *event);
 
+signals:
+    void reloadFromDatabase();
+    void setShowOptions(bool showMyBugs,
+                        bool showMyReports,
+                        bool showMyCCs,
+                        bool showMonitored);
 public slots:
-    void populateCurrentTab(int currentTab);
     void quitEvent();
+    void fieldsChecked();
     void handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors);
     void trayActivated(QSystemTrayIcon::ActivationReason reason);
     void addTrackerTriggered();
+    void showMenu(int tabIndex);
     void prefsTriggered();
     void websiteTriggered();
     void aboutTriggered();
     void showActionTriggered();
-    void searchTriggered();
     void changelogTriggered();
     void workOfflineTriggered();
     void showEditMonitoredComponents();
-
-    void trackerListItemChanged(QListWidgetItem  *item);
-    void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
-    void tableViewContextMenu(const QPoint &p);
-
     void iconDownloaded();
     void htmlIconDownloaded();
     void bugsUpdated();
-    void commentsCached();
-    void bugClicked(const QModelIndex &);
+    void filterTable();
     void finishedDetecting(QMap<QString, QString> data);
-    void newCommentClicked();
-    void saveCommentClicked();
     void resync();
+    void showTodoList();
     void upload();
-    void severityChanged(const QString &text);
-    void priorityChanged(const QString &text);
-    void statusChanged(const QString &text);
     void backendError(const QString &message);
-    void customContextMenuRequested(const QPoint &pos);
-    void trackerItemClicked(QListWidgetItem  *item);
     void searchFocusTriggered();
+    void openSearchedBug(const QString &trackerName,
+                         const QString &bugId);
 protected:
     void changeEvent(QEvent *e);
-    bool eventFilter(QObject *obj, QEvent *event);
 
 private:
     QString cleanupUrl(QString &url);
     void populateStats();
-    void compareTabName(QString compareItem);
+    int compareTabName(QString compareItem);
     void setupDB();
-    void openDB();
-    void createTables();
     void checkDatabaseVersion();
     void deleteTracker(const QString &id);
     void updateTracker(const QString &id, QMap<QString, QString> data);
@@ -116,20 +112,15 @@ private:
     void startAnimation();
     void stopAnimation();
     void loadTrackers();
-    void loadComments();
     void addTracker(QMap<QString, QString> info);
     void addTrackerToList(Backend *newTracker, bool sync = false);
     void fetchIcon(const QString &url, const QString &savePath);
     void fetchHTMLIcon(const QString &url, const QString &savePath);
     bool isOnline();
-    void loadDetails(long long id);
-    bool hasPendingChanges();
-    bool hasShadowBug();
     int trackerNameExists(const QString &name);
     void toggleButtons();
-    void filterTable();
     void setTimer();
-    int insertTracker(QMap<QString, QString> tracker);
+
     QString getChangelog();
     QString autodetectTracker(const QString &url);
     void syncNextTracker();
@@ -142,9 +133,7 @@ private:
     bool mDbUpdated;
     Backend *pActiveBackend;
     QString mActiveBugId, mActivePriority, mActiveStatus, mActiveSeverity;
-    QString mBaseQuery, mWhereQuery, mTrackerQuery, mSortQuery, mActiveQuery;
     bool mLoadingDetails;
-    SqlBugModel *pBugModel;
     QMovie *pSpinnerMovie;
     QLabel *pStatusIcon, *pStatusMessage;
     QNetworkAccessManager *pManager;
@@ -153,8 +142,10 @@ private:
     QTimer *pUpdateTimer;
     QSystemTrayIcon *pTrayIcon;
     QMenu *pTrayIconMenu;
+    SearchTab *pSearchTab;
+    ToDoListView *pTodoListView;
     Ui::MainWindow *ui;
-    QList<QTableView*> trackerTabsList;
+    QList<BackendUI*> trackerTabsList;
     int mStartup;
     int workingTab;
 

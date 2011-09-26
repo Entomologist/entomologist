@@ -13,17 +13,26 @@ Q_OBJECT
 public:
     Mantis(const QString &url, QObject *parent = 0);
     ~Mantis();
+    BackendUI *displayWidget();
 
     void sync();
     void login();
     void getComments(const QString &bugId);
+    void getSearchedBug(const QString &bugId);
+
     void checkVersion();
+    void checkFields();
+    void search(const QString &query);
+
     void checkValidPriorities();
     void checkValidSeverities();
     void checkValidStatuses();
+    void checkValidResolutions();
+    void checkValidReproducibilities();
+
     void checkValidComponents();
 
-    QString type() { return "Mantis"; }
+    QString type() { return "mantis"; }
 
     void uploadAll();
     QString buildBugUrl(const QString &id);
@@ -33,6 +42,7 @@ public slots:
     void headFinished();
     void response();
     void loginResponse();
+    void loginSyncResponse();
     void viewResponse();
     void assignedResponse();
     void reportedResponse();
@@ -49,6 +59,7 @@ private:
     };
 
     void getAssigned();
+    void validFieldCall(const QString &request);
     void getReported();
     void getMonitored();
     void getCategories();

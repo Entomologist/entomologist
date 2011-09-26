@@ -27,7 +27,7 @@
 #include <QPainter>
 #include <QDebug>
 #include "SqlBugDelegate.h"
-
+#include "SqlUtilities.h"
 SqlBugDelegate::SqlBugDelegate()
 {
 }
@@ -63,6 +63,8 @@ SqlBugDelegate::paint(QPainter *painter,
     painter->save();
     painter->translate(textRect.topLeft());
     painter->setClipRect(textRect.translated(-textRect.topLeft()));
-    doc.documentLayout()->draw(painter, ctx);
+    // The first column is the bug highlight icon
+    if (index.column() != 1)
+        doc.documentLayout()->draw(painter, ctx);
     painter->restore();
 }

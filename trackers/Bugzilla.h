@@ -37,23 +37,32 @@ public:
 
     Bugzilla(const QString &url);
     ~Bugzilla();
-
+    BackendUI *displayWidget();
     void sync();
     void login();
     void checkVersion();
+    void getComments(const QString &bugId);
+    void getSearchedBug(const QString &bugId);
+
+    void search(const QString &query);
+
     void checkValidPriorities();
     void checkValidSeverities();
     void checkValidStatuses();
     void checkValidComponents();
+    void checkFields();
     void checkValidComponentsForProducts(const QString &product);
 
-    QString type() { return "Bugzilla"; }
+    QString type() { return "bugzilla"; }
     void uploadAll();
 
     QString buildBugUrl(const QString &id);
-    QString autoCacheComments() { return "1"; }
+    QString autoCacheComments() { return "0"; }
 
 public slots:
+    void searchCallFinished();
+    void individualBugFinished();
+    void searchInsertionFinished();
     void idDetailsFinished();
     void itemPostFinished();
     void ccFinished();
@@ -65,6 +74,7 @@ public slots:
 
     void versionRpcResponse(QVariant &arg);
     void loginRpcResponse(QVariant &arg);
+    void loginSyncRpcResponse(QVariant &arg);
     void emailRpcResponse(QVariant &arg);
     void bugRpcResponse(QVariant &arg);
     void reportedRpcResponse(QVariant &arg);
@@ -103,7 +113,6 @@ protected:
     void getUserBugs();
     void getReportedBugs();
     void getCCs();
-    void getComments(QStringList idList);
 };
 
 #endif // BUGZILLA_H

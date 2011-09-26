@@ -28,7 +28,7 @@
 #include <QMap>
 #include <QStringList>
 
-class SqlWriter;
+class SqlUtilities;
 
 class SqlWriterThread : public QThread
 {
@@ -38,10 +38,10 @@ public:
     ~SqlWriterThread();
     void run();
     void clearBugs(const QString &trackerId);
-    void insertBugs(QList<QMap<QString, QString> > bugList);
+    void insertBugs(const QString &table, QList<QMap<QString, QString> > list);
     void insertComments(QList<QMap<QString, QString> > commentList);
     void insertBugComments(QList<QMap<QString, QString> > commentList);
-
+    void multiInsert(const QString &table, QList<QMap<QString, QString> > bugList);
     void updateSync(int id, const QString &timestamp);
     void updateCredentials(int id, const QString &username, const QString &password);
 
@@ -51,14 +51,15 @@ signals:
     void commentFinished();
     void bugsFinished(QStringList idList);
     void deleteBugs(const QString &trackerId);
-    void newBugs(QList<QMap<QString, QString> > bugList);
+    void bugsInsert(const QString &table, QList<QMap<QString, QString> > bugList);
+    void multiRowInsert(const QString &table, QList<QMap<QString, QString> > bugList);
     void newComments(QList<QMap<QString, QString> > commentList);
     void newBugComments(QList<QMap<QString, QString> > commentList);
     void syncDB(int id, const QString &timestamp);
     void saveCredentials(int id, const QString &username, const QString &password);
 
 private:
-    SqlWriter *pWriter;
+    SqlUtilities *pWriter;
 };
 
 #endif // SQLWRITERTHREAD_H

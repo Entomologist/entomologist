@@ -55,9 +55,6 @@ public:
 
 public slots:
     void versionChecked(QString version);
-    void prioritiesFound(QStringList priorities);
-    void severitiesFound(QStringList severities);
-    void statusesFound(QStringList statuses);
     void handleError(QString msg);
 
 signals:
@@ -66,7 +63,6 @@ signals:
 
 private:
     void checkVersion(Backend *b);
-    void getValidValues();
     QMap<QString, QString> mData;
     QUrl mUrl;
     detectionState mDetectionState;

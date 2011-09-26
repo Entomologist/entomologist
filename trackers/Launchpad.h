@@ -10,14 +10,13 @@ Q_OBJECT
 public:
     Launchpad(const QString &url, QObject *parent = 0);
     ~Launchpad();
+    BackendUI *displayWidget();
 
     void sync();
     void login();
     void checkVersion();
     void getComments(const QString &bugId);
-    void checkValidPriorities();
-    void checkValidSeverities();
-    void checkValidStatuses();
+    void checkFields();
     QString type() { return "Launchpad"; }
 
     void uploadAll();

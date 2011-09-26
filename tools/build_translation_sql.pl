@@ -73,6 +73,22 @@ sub parse_file
     {
       print "INSERT INTO translations (local, entomologist) VALUES (\"$1\", \"status\");\n";
     }
+    elsif ($line =~ m/^\$s_reproducibility\s*=\s*\'(.*)\'.*$/)
+    {
+      print "INSERT INTO translations (local, entomologist) VALUES (\"$1\", \"reproducibility\");\n";
+    }
+    elsif ($line =~ m/^\$s_os\s*=\s*\'(.*)\'.*$/)
+    {
+      print "INSERT INTO translations (local, entomologist) VALUES (\"$1\", \"os\");\n";
+    }
+    elsif ($line =~ m/^\$s_os_version\s*=\s*\'(.*)\'.*$/)
+    {
+      print "INSERT INTO translations (local, entomologist) VALUES (\"$1\", \"os_version\");\n";
+    }
+    elsif ($line =~ m/^\$s_product_version\s*=\s*\'(.*)\'.*$/)
+    {
+      print "INSERT INTO translations (local, entomologist) VALUES (\"$1\", \"product_version\");\n";
+    }
     elsif ($line =~ m/^\$s_resolution\s*=\s*\'(.*)\'.*$/)
     {
       print "INSERT INTO translations (local, entomologist) VALUES (\"$1\", \"resolution\");\n";

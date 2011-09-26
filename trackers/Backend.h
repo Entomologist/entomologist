@@ -34,6 +34,7 @@
 #include <QDateTime>
 #include <QSqlQuery>
 
+#include "tracker_uis/BackendUI.h"
 #include "SqlWriterThread.h"
 class Backend : public QObject
 {
@@ -41,6 +42,8 @@ class Backend : public QObject
 public:
     Backend(const QString &url);
     ~Backend();
+
+    virtual BackendUI *displayWidget();
 
     void setId(const QString &id) { mId = id; }
     QString id() { return mId; }
@@ -80,7 +83,8 @@ public:
     // The top level sync call
     virtual void sync() {}
 
-    virtual void getComments(const QString &bugId) {}
+    virtual void getComments(const QString &bugId) { Q_UNUSED(bugId); }
+    virtual void getSearchedBug(const QString &bugId) { Q_UNUSED(bugId); }
 
     // This is used to override login methods (like in Novell Bugzilla)
     virtual void login() {}
@@ -89,18 +93,16 @@ public:
     virtual void checkVersion() {}
 
     // These get the valid values
-    virtual void checkValidPriorities() {}
-    virtual void checkValidSeverities() {}
-    virtual void checkValidStatuses() {}
+    virtual void checkFields() {}
     virtual void checkValidComponents() {}
-    virtual void checkValidComponentsForProducts(const QString &product) {}
+    virtual void checkValidComponentsForProducts(const QString &product) { Q_UNUSED(product); }
 
     // Tells the backend to upload everything
     virtual void uploadAll() {}
 
     // Given a bug ID, create an HTTP url for viewing in a web browser
     // (called by the bug list context menu)
-    virtual QString buildBugUrl(const QString &id) { return(""); }
+    virtual QString buildBugUrl(const QString &id) { Q_UNUSED(id); return(""); }
 
     // If a tracker automatically downloads comments on syncs, it
     // should return "1" here, otherwise "0"
@@ -110,20 +112,22 @@ public:
     // It's used to pop up the system tray notification.
     int latestUpdateCount() { return mUpdateCount; }
 
+    virtual void search(const QString &query) { Q_UNUSED(query); }
+
 signals:
+    void searchFinished();
+    void searchResultFinished(QMap<QString, QString> resultMap);
     void bugsUpdated();
     void commentsCached();
     void versionChecked(QString version);
-    void prioritiesFound(QStringList priorities);
-    void severitiesFound(QStringList severities);
-    void statusesFound(QStringList statuses);
     void componentsFound(QStringList components);
+    void fieldsFound();
     void backendError(const QString &message);
     void sqlQuery(QMap<QString, QString> map);
 
 public slots:
     virtual void commentInsertionFinished() {}
-    virtual void bugsInsertionFinished(QStringList idList) {}
+    virtual void bugsInsertionFinished(QStringList idList) { Q_UNUSED(idList);}
     void sqlError(QString message);
 
 protected:
@@ -131,7 +135,7 @@ protected:
     void saveCredentials();
     bool hasPendingChanges();
     QString friendlyTime(const QString &time);
-
+    BackendUI *pDisplayWidget;
     QDateTime mLastSync;
     QString mId;
     QString mName;

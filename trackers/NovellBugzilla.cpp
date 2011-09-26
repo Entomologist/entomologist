@@ -48,7 +48,14 @@ void
 NovellBugzilla::sync()
 {
     checkingVersion = false;
-    login();
+    qDebug() << "NovellBugzilla::login";
+    QString ichainLogin = "https://bugzilla.novell.com/ICSLogin/auth-up";
+    QByteArray username(QString("username=%1&password=%2").arg(mUsername).arg(mPassword).toLocal8Bit());
+
+    QNetworkRequest request = QNetworkRequest(QUrl(ichainLogin));
+    QNetworkReply *reply = pManager->post(request, username);
+    connect(reply, SIGNAL(finished()),
+            this, SLOT(syncFinished()));
 }
 
 // Novell bugzilla uses a proprietary login system called "ichain".  We
@@ -75,6 +82,7 @@ NovellBugzilla::finished()
     if (reply->error())
     {
         qDebug() << "ERROR: " << reply->errorString();
+        emit backendError(reply->errorString());
         return;
     }
     reply->deleteLater();
@@ -83,4 +91,22 @@ NovellBugzilla::finished()
         Bugzilla::checkVersion();
     else
         Bugzilla::login();
+}
+
+void
+NovellBugzilla::syncFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        qDebug() << "ERROR: " << reply->errorString();
+        emit backendError(reply->errorString());
+        return;
+    }
+    reply->deleteLater();
+
+    if (checkingVersion)
+        Bugzilla::checkVersion();
+    else
+        Bugzilla::sync();
 }

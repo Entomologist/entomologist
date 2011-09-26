@@ -25,11 +25,18 @@
 #define UTILITIES_HPP
 
 class QUrl;
+class QNetworkAccessManager;
 
 class Utilities
 {
 public:
     static void openAndroidUrl(const QUrl url);
+    static bool isOnline(QNetworkAccessManager *manager);
+    static QString quoteString(const QString & src);
+    static QString unquoteString(const QString & src);
+    static QString prettyPrint(const QVariantMap & map);
+    static QString prettyPrint(const QVariantList &array);
+    static QString prettyPrint(const QVariant &var);
 };
 
 #endif // UTILITIES_HPP

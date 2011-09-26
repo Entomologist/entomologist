@@ -38,6 +38,7 @@ public:
 
 public slots:
     void finished();
+    void syncFinished();
 
 private:
     bool checkingVersion;

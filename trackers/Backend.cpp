@@ -26,11 +26,13 @@
 #include <QDateTime>
 
 #include "Backend.h"
+#include "tracker_uis/BackendUI.h"
 #include "SqlWriterThread.h"
 
 Backend::Backend(const QString &url)
     : mUrl(url)
 {
+    pDisplayWidget = NULL;
     mUpdateCount = 0;
     pManager = new QNetworkAccessManager();
     pCookieJar = new QNetworkCookieJar();
@@ -40,13 +42,20 @@ Backend::Backend(const QString &url)
     connect(pSqlWriter, SIGNAL(failure(QString)),
             this, SIGNAL(backendError(QString)));
     pSqlWriter->start();
-
 }
 
 Backend::~Backend()
 {
     delete pSqlWriter;
     delete pManager;
+    if (pDisplayWidget != NULL)
+        delete pDisplayWidget;
+}
+
+BackendUI *
+Backend::displayWidget()
+{
+    return(pDisplayWidget);
 }
 
 void

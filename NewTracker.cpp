@@ -40,7 +40,7 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
     connect(ui->urlEdit, SIGNAL(textChanged(QString)),
             this, SLOT(hostTextChanged(QString)));
     connect(ui->cancelButton, SIGNAL(clicked()),
-            this, SIGNAL(rejected()));
+            this, SLOT(close()));
     connect(ui->saveButton, SIGNAL(clicked()),
             this, SLOT(okClicked()));
     ui->urlEdit->setPlaceholderText(tr("For example: bugzilla.novell.com or bugs.example.com/bugtracker/"));

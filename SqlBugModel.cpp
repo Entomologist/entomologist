@@ -24,46 +24,44 @@
 #include <QColor>
 #include <QDesktopServices>
 #include <QDir>
+#include "SqlUtilities.h"
 #include <QPixmap>
 #include <QDebug>
 
 #include "SqlBugModel.h"
+
+// We just subclass here so we can set custom queries
 
 SqlBugModel::SqlBugModel(QObject *parent)
     : QSqlQueryModel(parent)
 {
 }
 
-// This is necessary to display the icon next to the tracker name in the bug list
 QVariant
 SqlBugModel::data(const QModelIndex &item,
                   int role) const
 {
      QVariant value = QSqlQueryModel::data(item, role);
-     if (role == Qt::DecorationRole && item.column() == 2)
+     if (role == Qt::DecorationRole && item.column() == 1)
      {
-        QString iconPath = QString ("%1%2%3%4%5.png")
-                                    .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
-                                    .arg(QDir::separator())
-                                    .arg("entomologist")
-                                    .arg(QDir::separator())
-                                    .arg(QSqlQueryModel::data(item, Qt::DisplayRole).toString());
-        if (!QFile::exists(iconPath))
-            iconPath = ":/bug";
-        return qVariantFromValue(QPixmap(iconPath));
+        int type = item.sibling(item.row(), 1).data().toInt();
+        if (type == SqlUtilities::HIGHLIGHT_RECENT)
+            return qVariantFromValue(QPixmap(":/new_bug"));
+        else if (type == SqlUtilities::HIGHLIGHT_SEARCH)
+            return qVariantFromValue(QPixmap(":/search_small"));
+        else if (type == SqlUtilities::HIGHLIGHT_TODO)
+            return qVariantFromValue(QPixmap(":/plus_circle"));
      }
+     else if (role == Qt::ToolTipRole && item.column() == 1)
+     {
+        int type = item.sibling(item.row(), 1).data().toInt();
+        if (type == SqlUtilities::HIGHLIGHT_RECENT)
+            return "This bug is recent";
+        else if (type == SqlUtilities::HIGHLIGHT_SEARCH)
+            return "This is a modified bug you found in a search";
+        else if (type == SqlUtilities::HIGHLIGHT_TODO)
+            return "This bug is in a ToDo list";
+     }
+
      return value;
-}
-
-QString
-SqlBugModel::getIcon(QString tracker)
-{
-    QString iconPath = QString ("%1%2%3%4%5.png")
-                                .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
-                                .arg(QDir::separator())
-                                .arg("entomologist")
-                                .arg(QDir::separator())
-                                .arg(tracker);
-
-    return iconPath;
 }

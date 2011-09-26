@@ -40,7 +40,7 @@ bool
 PlaceholderLineEdit::isEmpty()
 {
     bool ret = false;
-    if (text() == mPlaceholderText)
+    if (QLineEdit::text() == mPlaceholderText)
         ret = true;
     return ret;
 }
@@ -48,7 +48,7 @@ PlaceholderLineEdit::isEmpty()
 void
 PlaceholderLineEdit::focusInEvent(QFocusEvent *e)
 {
-    if (text() == mPlaceholderText)
+    if (QLineEdit::text() == mPlaceholderText)
         unsetPlaceholder();
     QLineEdit::focusInEvent(e);
 }
@@ -56,7 +56,7 @@ PlaceholderLineEdit::focusInEvent(QFocusEvent *e)
 void
 PlaceholderLineEdit::focusOutEvent(QFocusEvent *e)
 {
-    if (text() == "")
+    if (QLineEdit::text() == "")
         setPlaceholder();
     QLineEdit::focusOutEvent(e);
     emit lostFocus();
@@ -67,7 +67,7 @@ PlaceholderLineEdit::setPlaceholder()
 {
     setReadOnly(true);
     setStyleSheet("color: grey");
-    setText(mPlaceholderText);
+    QLineEdit::setText(mPlaceholderText);
 }
 
 void
@@ -78,8 +78,25 @@ PlaceholderLineEdit::unsetPlaceholder()
     setStyleSheet("color: black");
 }
 
-void PlaceholderLineEdit::setPlaceholderText(const QString &placeholder)
+QString
+PlaceholderLineEdit::text() const
+{
+    if (QLineEdit::text() == mPlaceholderText)
+        return("");
+    else
+        return(QLineEdit::text());
+}
+
+void
+PlaceholderLineEdit::setText(const QString &string)
+{
+    unsetPlaceholder();
+    QLineEdit::setText(string);
+}
+
+void
+PlaceholderLineEdit::setPlaceholderText(const QString &placeholder)
 {
     mPlaceholderText = placeholder;
-    setText(mPlaceholderText);
+    QLineEdit::setText(mPlaceholderText);
 }

@@ -48,6 +48,16 @@
     </layout>
    </item>
    <item>
+    <widget class="QLabel" name="label">
+     <property name="text">
+      <string>What went wrong?</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QPlainTextEdit" name="whatWentWrong"/>
+   </item>
+   <item>
     <widget class="QLabel" name="infoLabel">
      <property name="text">
       <string>Here is the debug output that will be sent to our server.  Feel free to edit it, or add information:</string>

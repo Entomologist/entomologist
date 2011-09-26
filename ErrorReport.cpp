@@ -51,6 +51,17 @@ ErrorReport::~ErrorReport()
 void
 ErrorReport::submitReport()
 {
+    if (ui->email->text().isEmpty())
+    {
+        QMessageBox box;
+        box.setStandardButtons(QMessageBox::Ok);
+        box.setText("Email Required");
+        box.setInformativeText("Please include an email address.");
+        box.setIcon(QMessageBox::Warning);
+        box.exec();
+        return;
+    }
+
     MaiaXmlRpcClient *client = new MaiaXmlRpcClient(QUrl("https://trac.entomologist-project.org/rpc"), "Entomologist Bug Reporter", this);
     QSslConfiguration config = client->sslConfiguration();
     config.setProtocol(QSsl::AnyProtocol);
@@ -64,8 +75,9 @@ ErrorReport::submitReport()
     QString summary = QString("Anonymous report from %1").arg(email);
     QVariantList args;
     args << summary;
-    QString bugContent = QString("Tracker type: %1\n------\n%2")
+    QString bugContent = QString("Tracker type: %1\n------------What went wrong:\n%2\n------------\n%3")
                         .arg(ui->trackerCombo->currentText())
+                        .arg(ui->whatWentWrong->toPlainText())
                         .arg(ui->debugEdit->toPlainText());
     args << bugContent;
     client->call("ticket.create", args, this, SLOT(submitResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
@@ -87,6 +99,7 @@ void
 ErrorReport::rpcError(int error,
                       const QString &message)
 {
+    Q_UNUSED(error);
     QMessageBox box;
     box.setText("Submission failed!  Please submit manually at <a href=https://trac.entomologist-project.org>trac.entomologist-project.org</a>.");
     box.setIcon(QMessageBox::Critical);

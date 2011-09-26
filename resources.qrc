@@ -9,5 +9,10 @@
         <file alias="bug">graphics/bug.png</file>
         <file alias="logo">graphics/entomologist-32.png</file>
         <file alias="changelog">graphics/changelog.png</file>
+        <file alias="small_arrow_down">graphics/small_arrow_down.png</file>
+        <file alias="small_arrow_right">graphics/small_arrow_right.png</file>
+        <file alias="plus_circle">graphics/plus-circle.png</file>
+        <file alias="new_bug">graphics/new_bug.png</file>
+        <file alias="search_small">graphics/search_small.png</file>
     </qresource>
 </RCC>

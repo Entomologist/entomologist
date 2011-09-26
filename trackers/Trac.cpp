@@ -21,6 +21,9 @@
  */
 
 #include "Trac.h"
+#include "SqlUtilities.h"
+#include "Utilities.hpp"
+#include "tracker_uis/TracUI.h"
 
 Trac::Trac(const QString &url,
            const QString &username,
@@ -49,12 +52,38 @@ Trac::Trac(const QString &url,
             this, SLOT(commentInsertionFinished()));
     connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
             this, SLOT(bugsInsertionFinished(QStringList)));
+    connect(pSqlWriter, SIGNAL(success()),
+            this, SLOT(searchInsertionFinished()));
 }
 
-void Trac::setUsername(const QString &username)
+Trac::~Trac()
+{
+}
+
+BackendUI *
+Trac::displayWidget()
+{
+    if (pDisplayWidget == NULL)
+        pDisplayWidget = new TracUI(mId, this);
+    return(pDisplayWidget);
+}
+
+void
+Trac::setUsername(const QString &username)
 {
     mUsername = username;
     pClient->setUserName(username);
+}
+
+void
+Trac::search(const QString &query)
+{
+    QVariantList args;
+    QVariantList filter;
+    filter << "ticket";
+    args.insert(0, query);
+    args.insert(1, filter);
+    pClient->call("search.performSearch", args, this, SLOT(searchRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
 void
@@ -64,16 +93,12 @@ Trac::setPassword(const QString &password)
     pClient->setPassword(password);
 }
 
-Trac::~Trac()
-{
-}
-
 void
 Trac::sync()
 {
     qDebug() << "Syncing monitored components...";
 
-    if (mMonitorComponents.size() == 0)
+    if (mMonitorComponents.empty())
     {
         QStringList none;
         QVariant empty(none);
@@ -81,6 +106,7 @@ Trac::sync()
         monitoredComponentsRpcResponse(empty);
     }
 
+    SqlUtilities::clearRecentBugs("trac");
     QVariantList args;
     QString closed = "";
     if (mLastSync.date().year() == 1970)
@@ -101,12 +127,31 @@ Trac::sync()
 }
 
 void
+Trac::getSearchedBug(const QString &bugId)
+{
+    qDebug() << "getSearchedBug";
+    QVariantList args;
+    args.append(bugId.toInt());
+    pClient->call("ticket.get",
+                  args,
+                  this,
+                  SLOT(searchedTicketResponse(QVariant&)),
+                  this,
+                  SLOT(rpcError(int,QString)));
+}
+
+void
 Trac::getComments(const QString &bugId)
 {
     QVariantList args;
     args.append(bugId.toInt());
     mActiveCommentId = bugId;
-    pClient->call("ticket.changeLog", args, this, SLOT(changelogRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+    pClient->call("ticket.changeLog",
+                  args,
+                  this,
+                  SLOT(changelogRpcResponse(QVariant&)),
+                  this,
+                  SLOT(rpcError(int, const QString &)));
 }
 
 void
@@ -150,13 +195,6 @@ Trac::headFinished()
 }
 
 void
-Trac::checkValidPriorities()
-{
-    QVariantList args;
-    pClient->call("ticket.priority.getAll", args, this, SLOT(priorityRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
-}
-
-void
 Trac::checkValidSeverities()
 {
     QVariantList args;
@@ -177,6 +215,34 @@ Trac::checkValidComponents()
     pClient->call("ticket.component.getAll", args, this, SLOT(componentRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
+void
+Trac::checkValidVersions()
+{
+    QVariantList args;
+    pClient->call("ticket.version.getAll", args, this, SLOT(versionsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+}
+
+void
+Trac::checkValidResolutions()
+{
+    QVariantList args;
+    pClient->call("ticket.resolution.getAll", args, this, SLOT(resolutionsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+}
+
+void
+Trac::checkValidMilestones()
+{
+    QVariantList args;
+    pClient->call("ticket.milestone.getAll", args, this, SLOT(milestonesRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+
+}
+
+void
+Trac::checkFields()
+{
+    QVariantList args;
+    pClient->call("ticket.priority.getAll", args, this, SLOT(priorityRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+}
 
 // This works for trac API 1.1.2, but "in the future" they may require
 // that the action map come with a _ts timestamp listing the *last* time the
@@ -288,21 +354,42 @@ Trac::uploadFinished(QVariant &arg)
 }
 
 void
-Trac::priorityRpcResponse(QVariant &arg)
+Trac::searchedTicketResponse(QVariant &arg)
 {
-    QStringList response = arg.toStringList();
-    emit prioritiesFound(response);
-}
+   QVariantList bugList = arg.toList();
+   QList< QMap<QString, QString> > insertList;
+   QString bugId = bugList.at(0).toString();
+   QVariantMap bug = bugList.at(3).toMap();
+   QMap<QString, QString> newBug;
 
-void
-Trac::severityRpcResponse(QVariant &arg)
-{
-    // Trac used to just use "severities", but then they renamed it to "type"
-    // but users can still use "severities" if they'd like.  We'll check for both and
-    // merge them together
-    mSeverities = arg.toStringList();
-    QVariantList args;
-    pClient->call("ticket.type.getAll", args, this, SLOT(typeRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+    newBug["tracker_id"] = mId;
+    newBug["bug_id"] = bugId;
+    if (!bug.value("severity").isNull())
+        newBug["severity"] = bug.value("severity").toString();
+    else
+        newBug["severity"] = bug.value("type").toString();
+
+    newBug["priority"] = bug.value("priority").toString();
+    newBug["version"] = bug.value("version").toString();
+    newBug["milestone"] = bug.value("milestone").toString();
+    newBug["assigned_to"] = bug.value("owner").toString();
+    newBug["status"] = bug.value("status").toString();
+    newBug["summary"] = bug.value("summary").toString();
+    newBug["description"] = bug.value("description").toString();
+    newBug["resolution"] = bug.value("resolution").toString();
+    newBug["component"] = bug.value("component").toString();
+    newBug["bug_type"] = "Searched";
+    newBug["highlight_type"] = QString::number(SqlUtilities::HIGHLIGHT_SEARCH);
+    newBug["last_modified"] = bug.value("changetime")
+                                 .toDateTime()
+                                 .toString("yyyy-MM-dd hh:mm:ss");
+    if (bug.value("status").toString() == "closed")
+        newBug["bug_state"] = "closed";
+    else
+        newBug["bug_state"] = "open";
+    insertList << newBug;
+    pSqlWriter->insertBugs("trac", insertList);
+    emit searchResultFinished(newBug);
 }
 
 void
@@ -330,6 +417,7 @@ Trac::monitoredComponentsRpcResponse(QVariant &arg)
 void
 Trac::ccRpcResponse(QVariant &arg)
 {
+    qDebug() << "ccResponse...";
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
     {
@@ -350,6 +438,7 @@ Trac::ccRpcResponse(QVariant &arg)
 void
 Trac::reporterRpcResponse(QVariant &arg)
 {
+    qDebug() << "Reporter response";
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
     {
@@ -370,6 +459,7 @@ Trac::reporterRpcResponse(QVariant &arg)
 void
 Trac::ownerRpcResponse(QVariant &arg)
 {
+    qDebug() << "owner response";
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
     {
@@ -394,6 +484,33 @@ Trac::ownerRpcResponse(QVariant &arg)
 
     args.insert(0, methodList);;
     pClient->call("system.multicall", args, this, SLOT(bugDetailsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+}
+
+void
+Trac::searchRpcResponse(QVariant &arg)
+{
+    QList< QMap<QString,QString> > insertList;
+    QVariantList resultList = arg.toList();
+    for (int i = 0; i < resultList.size(); ++i)
+    {
+        QVariantList result = resultList.at(i).toList();
+        QMap<QString, QString> bug;
+        QStringList split = result.at(0).toString().split('/');
+        qDebug() << "SPLIT: " << result.at(0).toString();
+        bug["tracker_name"] = mName;
+        bug["bug_id"] = split.last();
+        bug["summary"] = result.at(1).toString();
+        insertList << bug;
+    }
+    qDebug() << "multiInsert " << insertList;
+    pSqlWriter->multiInsert("search_results", insertList);
+}
+
+void
+Trac::searchInsertionFinished()
+{
+   qDebug() << "searchInsertionFinished";
+   emit searchFinished();
 }
 
 void
@@ -451,12 +568,18 @@ Trac::bugDetailsRpcResponse(QVariant &arg)
                     newBug["severity"] = bug.value("type").toString();
 
                 newBug["priority"] = bug.value("priority").toString();
+                newBug["version"] = bug.value("version").toString();
+                newBug["milestone"] = bug.value("milestone").toString();
                 newBug["assigned_to"] = bug.value("owner").toString();
                 newBug["status"] = bug.value("status").toString();
                 newBug["summary"] = bug.value("summary").toString();
+                newBug["description"] = bug.value("description").toString();
+                newBug["resolution"] = bug.value("resolution").toString();
                 newBug["component"] = bug.value("component").toString();
-                newBug["product"] = "";
                 newBug["bug_type"] = mBugMap.value(bugId);
+                if (mLastSync.date().year() != 1970)
+                    newBug["highlight_type"] = QString::number(SqlUtilities::HIGHLIGHT_RECENT);
+
                 newBug["last_modified"] = bug.value("changetime")
                                              .toDateTime()
                                              .toString("yyyy-MM-dd hh:mm:ss");
@@ -469,28 +592,160 @@ Trac::bugDetailsRpcResponse(QVariant &arg)
         }
     }
 
-    pSqlWriter->insertBugs(insertList);
+    pSqlWriter->insertBugs("trac", insertList);
+}
+
+void
+Trac::priorityRpcResponse(QVariant &arg)
+{
+    QList<QMap<QString, QString> > fieldList;
+    QStringList response = arg.toStringList();
+    for (int i = 0; i < response.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "priority";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+    checkValidSeverities();
 }
 
 void
 Trac::statusRpcResponse(QVariant &arg)
 {
+    QList<QMap<QString, QString> > fieldList;
     QStringList response = arg.toStringList();
-    emit statusesFound(response);
+    for (int i = 0; i < response.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "status";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+    checkValidMilestones();
+}
+
+void
+Trac::milestonesRpcResponse(QVariant &arg)
+{
+    QList<QMap<QString, QString> > fieldList;
+    QStringList response = arg.toStringList();
+    for (int i = 0; i < response.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "milestone";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+    checkValidResolutions();
+}
+
+void
+Trac::resolutionsRpcResponse(QVariant &arg)
+{
+    QList<QMap<QString, QString> > fieldList;
+    QStringList response = arg.toStringList();
+    for (int i = 0; i < response.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "resolution";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+    checkValidVersions();
+}
+
+void
+Trac::versionsRpcResponse(QVariant &arg)
+{
+    QList<QMap<QString, QString> > fieldList;
+    QStringList response = arg.toStringList();
+    for (int i = 0; i < response.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "version";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+
+    checkValidComponents();
 }
 
 void
 Trac::componentRpcResponse(QVariant &arg)
 {
+    QList<QMap<QString, QString> > fieldList;
     QStringList response = arg.toStringList();
-    emit componentsFound(response);
+    for (int i = 0; i < response.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "component";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+    if (pDisplayWidget != NULL)
+        pDisplayWidget->loadFields();
+    emit fieldsFound();
+}
+
+void
+Trac::severityRpcResponse(QVariant &arg)
+{
+    // Trac used to just use "severities", but then they renamed it to "type"
+    // but users can still use "severities" if they'd like.  We'll check for both and
+    // merge them together
+    mSeverities = arg.toStringList();
+    QList<QMap<QString, QString> > fieldList;
+    QStringList response = arg.toStringList();
+    for (int i = 0; i < mSeverities.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "severity";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+
+    QVariantList args;
+    pClient->call("ticket.type.getAll", args, this, SLOT(typeRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
 void
 Trac::typeRpcResponse(QVariant &arg)
  {
-    mSeverities.append(arg.toStringList());
-    emit severitiesFound(mSeverities);
+    QList<QMap<QString, QString> > fieldList;
+    QStringList response = arg.toStringList();
+    for (int i = 0; i < response.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "severity";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+    checkValidStatuses();
  }
 
 void
@@ -546,6 +801,7 @@ Trac::commentInsertionFinished()
 void
 Trac::bugsInsertionFinished(QStringList idList)
 {
+    qDebug() << "Bug insertion is finished";
     updateSync();
     emit bugsUpdated();
 }
