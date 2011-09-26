@@ -23,12 +23,10 @@
  */
 
 #include <QtSql>
-#include <QScrollBar>
 #include <QCloseEvent>
 #include <QNetworkAccessManager>
 #include <QNetworkRequest>
 #include <QNetworkReply>
-#include <QListWidget>
 #include <QFile>
 #include <QMessageBox>
 #include <QClipboard>
@@ -49,11 +47,10 @@
 #include "CommentFrame.h"
 #include "SqlBugDelegate.h"
 #include "SqlBugModel.h"
+#include "SearchTab.h"
 #include "trackers/Bugzilla.h"
 #include "trackers/NovellBugzilla.h"
-#include "trackers/Launchpad.h"
 #include "trackers/Trac.h"
-//#include "trackers/Google.h"
 #include "trackers/Mantis.h"
 #include "NewTracker.h"
 #include "MainWindow.h"
@@ -61,31 +58,22 @@
 #include "ErrorHandler.h"
 #include "Utilities.hpp"
 #include "MonitorDialog.h"
+#include "SqlUtilities.h"
 #include "ui_MainWindow.h"
+#include "ToDoListView.h"
 
 #define DB_VERSION 5
 
 // TODOs:
 // - URL handing needs to be improved
-// - Autoscrolling in the details frame when a comment is added doesn't work right
 // - Pressing cancel during tracker detection should actually cancel
 // - Bug resolution - hardcode for bugzilla 3.4. 3.6 should be listable with the Bug.fields call
-// - Move the SQL out of MainWindow and into the SqlBugModel
-// - Bookmarking of bugs
-// - 'Bug TODO list' maybe
 // - Highlight new bugs
 // - QtDBUS on linux for network insertion integration
 // - Consider orphaned bug changes - when a bug is closed, but there is
 //   something in the shadow tables.
-// - Right clicking on the tracker in the list failed on Windows.
 //   Check other platforms.
 // - Bugzilla 3.2/3.4 component fetching could really be refactored
-
-// Bugzilla backends cache all comments on sync
-// When a backend does not provide enough functionality to
-// load multiple bug details in a single call, we
-// give the user the ability to cache specific comments, either by
-// right clicking in the bug list, or when they load the details view.
 
 MainWindow::MainWindow(QWidget *parent) :
     QMainWindow(parent),
@@ -93,6 +81,7 @@ MainWindow::MainWindow(QWidget *parent) :
 {
     pDetectorProgress = NULL;
     mDbUpdated = false;
+    pTodoListView = NULL;
     // mSyncRequests tracks how many sync requests have been made
     // in order to know when to re-enable the widgets
     mSyncRequests = 0;
@@ -103,17 +92,12 @@ MainWindow::MainWindow(QWidget *parent) :
     mUploading = false;
     QSettings settings("Entomologist");
 
-    // Resize the splitters, otherwise they'll be 50/50
-    QList<int> splitterSizes;
-    splitterSizes << 100;
-    splitterSizes << 400;
     pManager = new QNetworkAccessManager();
     connect(pManager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
 
     ui->setupUi(this);
     setupTrayIcon();
-    ui->searchEdit->setPlaceholderText(tr("Search summaries and comments"));
     // Setup the "Show" menu and "Work Offline"
     ui->actionMy_Bugs->setChecked(settings.value("show-my-bugs", true).toBool());
     ui->actionMy_Reports->setChecked(settings.value("show-my-reports", true).toBool());
@@ -121,22 +105,12 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->actionMonitored_Components->setChecked(settings.value("show-my-monitored", true).toBool());
     ui->action_Work_Offline->setChecked(settings.value("work-offline", false).toBool());
 
-    // We want context menus on right clicks in the tracker list,
-    // and we want to ignore the scroll wheel in certain combo boxes
-    ui->trackerList->setContextMenuPolicy(Qt::CustomContextMenu);
-    ui->priorityCombo->installEventFilter(this);
-    ui->severityCombo->installEventFilter(this);
-    ui->statusCombo->installEventFilter(this);
-
     // Set the default network status
     pStatusIcon = new QLabel();
     pStatusIcon->setPixmap(QPixmap(":/online"));
     pStatusMessage = new QLabel("");
     ui->statusBar->addPermanentWidget(pStatusMessage);
     ui->statusBar->addPermanentWidget(pStatusIcon);
-
-    // Hide the details area until a bug is double clicked
-    ui->detailsScrollArea->hide();
 
     // We use a spinner animation to show that we're doing things
     pSpinnerMovie = new QMovie(this);
@@ -167,8 +141,10 @@ MainWindow::MainWindow(QWidget *parent) :
     // Menu actions
     connect(ui->action_Add_Tracker, SIGNAL(triggered()),
             this, SLOT(addTrackerTriggered()));
-    connect(ui->action_Refresh_Tracker,SIGNAL(triggered()),this,SLOT(resync()));
-
+    connect(ui->action_Refresh_Tracker,SIGNAL(triggered()),
+            this, SLOT(resync()));
+    connect(ui->action_Todo_Lists, SIGNAL(triggered()),
+            this, SLOT(showTodoList()));
     connect(ui->action_About, SIGNAL(triggered()),
             this, SLOT(aboutTriggered()));
     connect(ui->action_Web_Site, SIGNAL(triggered()),
@@ -191,52 +167,21 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(workOfflineTriggered()));
 
     // Set up the search button
-    connect(ui->searchButton, SIGNAL(clicked()),
-            this, SLOT(searchTriggered()));
-    connect(ui->searchEdit, SIGNAL(returnPressed()),
-            this, SLOT(searchTriggered()));
     connect(ui->changelogButton, SIGNAL(clicked()),
             this, SLOT(changelogTriggered()));
 
-
-    // Handle certain events in the tracker list
-    connect(ui->trackerList, SIGNAL(itemChanged(QListWidgetItem*)),
-            this, SLOT(trackerListItemChanged(QListWidgetItem*)));
-    connect(ui->trackerList, SIGNAL(customContextMenuRequested(QPoint)),
-            this, SLOT(customContextMenuRequested(QPoint)));
-
-    // Signal for a Tab Change so switch the bugTable contents to that tab
+    connect(ui->trackerTab, SIGNAL(showMenu(int)),
+            this, SLOT(showMenu(int)));
     ui->trackerTab->removeTab(0);
     ui->trackerTab->removeTab(0);
-    connect(ui->trackerTab,SIGNAL(currentChanged(int)),this,SLOT(populateCurrentTab(int)));
-    // Append initial "All" table to the table list.
-    QTableView* table = new QTableView;
-    trackerTabsList.append(table);
-    ui->trackerTab->addTab(table,"All");
 
     mStartup = 0;
-    // Seems like this doesn't work on Windows?  Or is it due to
-    // Qt 4.7?  It results in the right click failing to bring up
-    // the context menu.
-#ifndef Q_WS_WIN
-    connect(ui->trackerList, SIGNAL(itemClicked(QListWidgetItem*)),
-            this, SLOT(trackerItemClicked(QListWidgetItem*)));
-#endif d
 
     // And finally set up the various other widgets
-    connect(ui->newCommentButton, SIGNAL(clicked()),
-            this, SLOT(newCommentClicked()));
     connect(ui->refreshButton, SIGNAL(clicked()),
             this, SLOT(resync()));
     connect(ui->uploadButton, SIGNAL(clicked()),
             this, SLOT(upload()));
-    connect(ui->priorityCombo, SIGNAL(currentIndexChanged(QString)),
-            this, SLOT(priorityChanged(QString)));
-    connect(ui->severityCombo, SIGNAL(currentIndexChanged(QString)),
-            this, SLOT(severityChanged(QString)));
-    connect(ui->statusCombo, SIGNAL(currentIndexChanged(QString)),
-            this, SLOT(statusChanged(QString)));
-
     restoreGeometry(settings.value("window-geometry").toByteArray());
 
     // Set the network status bar
@@ -244,7 +189,12 @@ MainWindow::MainWindow(QWidget *parent) :
 
     setupDB();
     toggleButtons();
+    pSearchTab = new SearchTab(this);
+    connect(pSearchTab, SIGNAL(openSearchedBug(QString,QString)),
+            this, SLOT(openSearchedBug(QString,QString)));
     loadTrackers();
+    ui->trackerTab->addTab(pSearchTab, QIcon(":/search"), "Search");
+
     if ((settings.value("startup-sync", false).toBool() == true)
        || (mDbUpdated))
         syncNextTracker();
@@ -255,60 +205,9 @@ MainWindow::~MainWindow()
     delete ui;
 }
 
-// Small SQL utility functions
-bool
-MainWindow::hasPendingChanges()
-{
-    QSqlQuery q;
-    q.exec("SELECT COUNT(id) FROM shadow_bugs");
-    q.next();
-    if (q.value(0).toInt() > 0)
-        return true;
-
-    q.exec("SELECT COUNT(id) FROM shadow_comments");
-    q.next();
-    if (q.value(0).toInt() > 0)
-        return true;
-
-    return false;
-}
-
-// sqlite starts autoincrementing primary keys at 1,
-// so it's safe to use this function as both a boolean check and an
-// ID lookup
-int
-MainWindow::trackerNameExists(const QString &name)
-{
-    int ret = 0;
-    QSqlQuery q;
-    q.prepare("SELECT id FROM trackers WHERE name = :name");
-    q.bindValue(":name", name);
-    if (q.exec())
-    {
-        q.next();
-        ret = q.value(0).toInt();
-    }
-    return ret;
-}
-
-// We have three main tables: trackers, bugs, and comments.
-// Bugs and comments have shadow tables that store modified values,
-// and then we merge the data using an SQL query.
-
 void
 MainWindow::setupDB()
 {
-
-    mBaseQuery = "SELECT bugs.id, bugs.tracker_id, trackers.name, bugs.bug_id, bugs.last_modified,"
-                   "coalesce(shadow_bugs.severity, bugs.severity),"
-                   "coalesce(shadow_bugs.priority, bugs.priority),"
-                   "coalesce(shadow_bugs.assigned_to, bugs.assigned_to),"
-                   "coalesce(shadow_bugs.status, bugs.status),"
-                   "coalesce(shadow_bugs.summary, bugs.summary) "
-                   "from bugs left outer join shadow_bugs ON bugs.bug_id = shadow_bugs.bug_id AND bugs.tracker_id = shadow_bugs.tracker_id "
-                   "join trackers ON bugs.tracker_id = trackers.id";
-
-    mActiveQuery = mBaseQuery;
 
     mDbPath = QString("%1%2%3%4%5")
               .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
@@ -319,378 +218,45 @@ MainWindow::setupDB()
 
     if (!QFile::exists(mDbPath))
     {
-        openDB();
-        QSqlDatabase db = QSqlDatabase::database();
-        qDebug() << "Will create " << mDbPath;
-        if (!db.open())
-        {
-            qDebug() << "Error " << db.lastError().text();
-            ErrorHandler::handleError("Error creating database.", db.lastError().text());
-            exit(1);
-        }
-        createTables();
+        qDebug() << "Creating " << mDbPath;
+        SqlUtilities::openDb(mDbPath);
+        SqlUtilities::createTables(DB_VERSION);
     }
     else
     {
-        openDB();
-        QSqlDatabase db = QSqlDatabase::database();
-
-        db.open();
+        SqlUtilities::openDb(mDbPath);
         checkDatabaseVersion();
-    }
-
-}
-
-void
-MainWindow::openDB()
-{
-    QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
-    if (!db.isValid())
-    {
-        qDebug() << "Couldn't create the database connection";
-        ErrorHandler::handleError("Couldn't create the database.", "");
-        exit(1);
-    }
-
-    db.setDatabaseName(mDbPath);
-}
-
-void
-MainWindow::createTables()
-{
-    QString createMetaSql = "CREATE TABLE entomologist(db_version INT)";
-    QString createTrackerSql = "CREATE TABLE trackers(id INTEGER PRIMARY KEY,"
-                                                      "type TEXT,"
-                                                      "name TEXT,"
-                                                      "url TEXT,"
-                                                      "username TEXT,"
-                                                      "password TEXT,"
-                                                      "last_sync TEXT,"
-                                                      "version TEXT,"
-                                                      "valid_priorities TEXT,"
-                                                      "valid_severities TEXT,"
-                                                      "valid_statuses TEXT,"
-                                                      "monitored_components TEXT,"
-                                                      "auto_cache_comments INTEGER)";
-
-    QString createBugSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
-                                              "tracker_id INTEGER,"
-                                              "bug_id TEXT,"
-                                              "severity TEXT,"
-                                              "priority TEXT,"
-                                              "assigned_to TEXT,"
-                                              "status TEXT,"
-                                              "summary TEXT,"
-                                              "component TEXT,"
-                                              "product TEXT,"
-                                              "bug_type TEXT,"
-                                              "last_modified TEXT)";
-
-    QString createCommentsSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
-                               "tracker_id INTEGER,"
-                               "bug_id INTEGER,"
-                               "comment_id INTEGER,"
-                               "author TEXT,"
-                               "comment TEXT,"
-                               "timestamp TEXT,"
-                               "private INTEGER)";
-
-    qDebug() << "Creating tables";
-    // Create database
-    QSqlDatabase db = QSqlDatabase::database();
-    QSqlQuery query(db);
-    if (!query.exec(createTrackerSql))
-    {
-        qDebug() << "Database error: " << db.lastError().text();
-        ErrorHandler::handleError("Couldn't create the tracker table.", db.lastError().text());
-        exit(1);
-    }
-
-    if (!query.exec(QString(createBugSql).arg("bugs")))
-    {
-        qDebug() << "Database error: " << db.lastError().text();
-        ErrorHandler::handleError("Couldn't create the bugs table.", db.lastError().text());
-        exit(1);
-    }
-
-    if (!query.exec(QString(createBugSql).arg("shadow_bugs")))
-    {
-        qDebug() << "Database error: " << db.lastError().text();
-        ErrorHandler::handleError("Couldn't create the shadow bugs table.", db.lastError().text());
-        exit(1);
-    }
-
-    if (!query.exec(QString(createCommentsSql).arg("comments")))
-    {
-        qDebug() << "Database error: " << db.lastError().text();
-        ErrorHandler::handleError("Couldn't create the comment table.", db.lastError().text());
-        exit(1);
-    }
-
-    if (!query.exec(QString(createCommentsSql).arg("shadow_comments")))
-    {
-        qDebug() << "Database error: " << db.lastError().text();
-        ErrorHandler::handleError("Couldn't create the shadow comment table.", db.lastError().text());
-        exit(1);
-    }
-
-    if (!query.exec(createMetaSql))
-    {
-        qDebug() << "Database error: " << db.lastError().text();
-        ErrorHandler::handleError("Couldn't create the entomologist table.", db.lastError().text());
-        exit(1);
-    }
-
-    if (!query.exec(QString("INSERT INTO entomologist VALUES (\'%1\')").arg(DB_VERSION)))
-    {
-        qDebug() << "Database error: " << db.lastError().text();
-        ErrorHandler::handleError("Couldn't set the database version.", db.lastError().text());
-        exit(1);
     }
 }
 
 void
 MainWindow::checkDatabaseVersion()
 {
-    QSqlQuery query;
-    query.exec("SELECT db_version FROM entomologist");
-    query.next();
-    if (query.value(0).toInt() == DB_VERSION)
+    if (SqlUtilities::dbVersion() == DB_VERSION)
         return;
-
-    QList< QMap<QString, QString> > trackerList;
-    query.exec("SELECT type, name, url, username, password,"
-               "version, valid_priorities, valid_severities,"
-               "valid_statuses, auto_cache_comments, monitored_components FROM trackers");
-    while (query.next())
-    {
-        QMap<QString, QString> tracker;
-        tracker["type"] = query.value(0).toString();
-        tracker["name"] = query.value(1).toString();
-        tracker["url"] = query.value(2).toString();
-        tracker["username"] = query.value(3).toString();
-        tracker["password"] = query.value(4).toString();
-        tracker["version"] = query.value(5).toString();
-        tracker["valid_priorities"] = query.value(6).toString();
-        tracker["valid_severities"] = query.value(7).toString();
-        tracker["valid_statuses"] = query.value(8).toString();
-        tracker["auto_cache_comments"] = query.value(9).toString();
-        tracker["monitored_components"] = query.value(10).toString();
-        tracker["last_sync"] = "1970-01-01T12:13:14";
-        trackerList << tracker;
-    }
 
     qDebug() << "Version mismatch";
-    QSqlDatabase db = QSqlDatabase::database();
-    db.close();
+    QList< QMap<QString, QString> > trackerList;
+    trackerList = SqlUtilities::loadTrackers();
+
+    SqlUtilities::closeDb();
     QFile::remove(mDbPath);
-    openDB();
-    createTables();
+
+    SqlUtilities::openDb(mDbPath);
+    SqlUtilities::createTables(DB_VERSION);
+
     for (int i = 0; i < trackerList.size(); ++i)
-        insertTracker(trackerList.at(i));
+    {
+        QMap<QString, QString> t = trackerList.at(i);
+        t["last_sync"] = "1970-01-01T12:13:14";
+        SqlUtilities::simpleInsert("trackers", t);
+    }
     mDbUpdated = true;
 }
-
-int
-MainWindow::insertTracker(QMap<QString, QString> tracker)
-{
-    QSqlQuery q;
-    q.prepare("INSERT INTO trackers (type, name, url, username, password, last_sync, version, valid_priorities, valid_severities, valid_statuses, monitored_components, auto_cache_comments) "
-              "VALUES (:type, :name, :url, :username, :password, :last_sync, :version, :valid_priorities, :valid_severities, :valid_statuses, :monitored_components, :auto_cache_comments)");
-
-    q.bindValue(":type", tracker["type"]);
-    q.bindValue(":name", tracker["name"]);
-    q.bindValue(":url", tracker["url"]);
-    q.bindValue(":username", tracker["username"]);
-    q.bindValue(":password", tracker["password"]);
-    q.bindValue(":last_sync", tracker["last_sync"]);
-    q.bindValue(":version", tracker["version"]);
-    q.bindValue(":valid_priorities", tracker["valid_priorities"]);
-    q.bindValue(":valid_severities", tracker["valid_severities"]);
-    q.bindValue(":valid_statuses", tracker["valid_statuses"]);
-    q.bindValue(":monitored_components", tracker["monitored_components"]);
-    q.bindValue(":auto_cache_comments", tracker["auto_cache_comments"]);
-    if (!q.exec())
-    {
-        qDebug() << "insertTracker failed: " << q.lastError().text();
-        return (-1);
-    }
-    qDebug() << "Tracker: " << q.lastInsertId().toInt();
-    return (q.lastInsertId().toInt());
-}
-
-// Triggered when a user double clicks a bug in the list
-void
-MainWindow::bugClicked(const QModelIndex &index)
-{
-    QModelIndex idIndex = pBugModel->index(index.row(), 0);
-    loadDetails(idIndex.data().toLongLong());
-    ui->detailsScrollArea->show();
-}
-
-// When a user double clicks a bug, this shows the details
-// at the bottom of the screen
-void
-MainWindow::loadDetails(long long id)
-{
-    QSqlQueryModel mergedModel;
-    QString sql = mBaseQuery + QString(" WHERE bugs.id=%1").arg(id);
-    mergedModel.setQuery(sql);
-
-    QSqlRecord r = mergedModel.record(0);
-    QString trackerId = r.value(1).toString();
-    mActiveBugId = r.value(3).toString();
-    pActiveBackend = mBackendMap[trackerId];
-    if (pActiveBackend == NULL)
-    {
-        qDebug() << "backend is NULL!";
-        return;
-    }
-
-    mLoadingDetails = true;
-    ui->priorityCombo->clear();
-    ui->priorityCombo->insertItems(0, pActiveBackend->validPriorities());
-    mActivePriority = r.value(6).toString();
-    mActivePriority.remove(QRegExp("<[^>]*>"));
-    ui->priorityCombo->setCurrentIndex(ui->priorityCombo->findText(mActivePriority));
-    ui->severityCombo->clear();
-    ui->severityCombo->insertItems(0, pActiveBackend->validSeverities());
-    mActiveSeverity = r.value(5).toString();
-    mActiveSeverity.remove(QRegExp("<[^>]*>"));
-    ui->severityCombo->setCurrentIndex(ui->severityCombo->findText(mActiveSeverity));
-    ui->statusCombo->clear();
-    ui->statusCombo->insertItems(0, pActiveBackend->validStatuses());
-    mActiveStatus = r.value(8).toString();
-    mActiveStatus.remove(QRegExp("<[^>]*>"));
-    ui->statusCombo->setCurrentIndex(ui->statusCombo->findText(mActiveStatus));
-
-    QString bugDetailsLabel = QString("%1 #%2 - %3")
-            .arg(r.value(2).toString())
-            .arg(r.value(3).toString())
-            .arg(r.value(9).toString());
-    ui->bugDetailsLabel->setText(bugDetailsLabel);
-    if ((pActiveBackend->autoCacheComments() == "0") && (isOnline()))
-    {
-        mSyncRequests++;
-        startAnimation();
-        pActiveBackend->getComments(mActiveBugId);
-    }
-    else
-    {
-        loadComments();
-    }
-}
-
-void
-MainWindow::loadComments()
-{
-    QLayoutItem *child = NULL;
-    while ((child = ui->commentLayout->takeAt(0)) != NULL)
-    {
-        delete child->widget();
-        delete child;
-    }
-
-    // This spacer is used in the details area to keep the comments in order.
-    // We keep track of it so it can be removed from the layout when a new comment is added,
-    // and then reinserted to force the layout again.
-    pCommentSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
-    QSqlTableModel model;
-    model.setTable("comments");
-    model.setFilter(QString("bug_id=%1 AND tracker_id=%2").arg(mActiveBugId).arg(pActiveBackend->id()));
-    model.select();
-    for(int i = 0; i < model.rowCount(); ++i)
-    {
-        QSqlRecord record = model.record(i);
-        CommentFrame *newFrame = new CommentFrame(ui->detailsScrollArea);
-        ui->commentLayout->addWidget(newFrame);
-        newFrame->setName(record.value(4).toString());
-        newFrame->setComment(record.value(5).toString());
-        newFrame->setDate(record.value(6).toString());
-        newFrame->setPrivate(record.value(7).toBool());
-        newFrame->setBugId(mActiveBugId);
-    }
-
-    model.setTable("shadow_comments");
-    model.setFilter(QString("bug_id=%1 AND tracker_id=%2").arg(mActiveBugId).arg(pActiveBackend->id()));
-    model.select();
-    for(int i = 0; i < model.rowCount(); ++i)
-    {
-        QSqlRecord record = model.record(i);
-        CommentFrame *newFrame = new CommentFrame(ui->detailsScrollArea);
-        newFrame->setRedHeader();
-        ui->commentLayout->addWidget(newFrame);
-        newFrame->setName(record.value(4).toString());
-        newFrame->setComment(record.value(5).toString());
-        newFrame->setDate(record.value(6).toString());
-        newFrame->setPrivate(record.value(7).toBool());
-        newFrame->setBugId(mActiveBugId);
-    }
-
-    ui->commentLayout->addSpacerItem(pCommentSpacer);
-    mLoadingDetails = false;
-    ui->detailsScrollArea->show();
-}
-
-// Triggered when a user clicks the "Reply" button in the
-// bug details
-void
-MainWindow::newCommentClicked()
-{
-    ui->commentLayout->removeItem(pCommentSpacer);
-    CommentFrame *newFrame = new CommentFrame(ui->detailsScrollArea, true);
-    connect(newFrame, SIGNAL(saveCommentClicked()),
-            this, SLOT(saveCommentClicked()));
-    ui->commentLayout->addWidget(newFrame);
-    newFrame->setComment("");
-    newFrame->setName(pActiveBackend->email());
-    newFrame->setBugId(mActiveBugId);
-    newFrame->setDate(QDateTime::currentDateTime().toString("yyyy-MM-ddThh:mm:ss"));
-    ui->commentLayout->addSpacerItem(pCommentSpacer);
-    ui->detailsScrollArea->verticalScrollBar()->setSliderPosition(
-            ui->detailsScrollArea->verticalScrollBar()->maximum() + newFrame->height());
-}
-
-// The user would like to save their comment
-void
-MainWindow::saveCommentClicked()
-{
-    CommentFrame *frame = qobject_cast<CommentFrame*>(sender());
-    QString sql = "INSERT INTO shadow_comments (tracker_id, bug_id, author, comment, timestamp) "
-                          "VALUES(:tracker_id, :bug_id, :author, :comment, :timestamp)";
-    qDebug() << "Saving " << sql;
-    QSqlQuery q;
-    q.prepare(sql);
-    q.bindValue("tracker_id", pActiveBackend->id());
-    q.bindValue(":bug_id", frame->bugId());
-    q.bindValue(":author", pActiveBackend->username());
-    q.bindValue(":comment", frame->commentText());
-    q.bindValue(":timestamp", frame->timestamp());
-    if (!q.exec())
-        ErrorHandler::handleError("Couldn't save the comment!", q.lastError().text());
-
-    frame->toggleEdit();
-    toggleButtons();
-}
-
 // Loads cached trackers from the database
 void
 MainWindow::loadTrackers()
 {
-    QListWidgetItem *trackerLabel = new QListWidgetItem("Trackers");
-    trackerLabel->setTextAlignment(Qt::AlignHCenter);
-    trackerLabel->setFlags(Qt::ItemIsEnabled);
-    ui->trackerList->addItem(trackerLabel);
-
-    // Use a frame to draw the separator between "all trackers" and the list
-    QFrame *f = new QFrame( this );
-    f->setFrameStyle( QFrame::HLine | QFrame::Sunken );
-
-    QListWidgetItem *spacer = new QListWidgetItem("");
-    spacer->setFlags(Qt::NoItemFlags);
-    ui->trackerList->addItem(spacer);
-    ui->trackerList->setItemWidget(spacer, f);
-
     QSqlTableModel model;
     model.setTable("trackers");
     model.select();
@@ -706,16 +272,13 @@ MainWindow::loadTrackers()
         info["password"] = record.value(5).toString();
         info["last_sync"] = record.value(6).toString();
         info["version"] = record.value(7).toString();
-        info["valid_priorities"] = record.value(8).toString();
-        info["valid_severities"] = record.value(9).toString();
-        info["valid_statuses"] = record.value(10).toString();
-        info["monitored_components"] = record.value(11).toString();
-        info["auto_cache_comments"] = record.value(12).toString();
+        info["monitored_components"] = record.value(8).toString();
+        info["auto_cache_comments"] = record.value(9).toString();
         addTracker(info);
     }
     // Populate the "All" Tab after loading the trackers.
     mStartup = 1;
-    populateCurrentTab(0);
+//    populateCurrentTab(0);
 
 }
 
@@ -724,6 +287,7 @@ MainWindow::loadTrackers()
 void
 MainWindow::addTracker(QMap<QString,QString> info)
 {
+    qDebug() << "Add tracker";
     // Create the proper Backend object
     if (QUrl(info["url"]).host().toLower() == "bugzilla.novell.com")
     {
@@ -732,8 +296,9 @@ MainWindow::addTracker(QMap<QString,QString> info)
     }
     else if (QUrl(info["url"]).host().toLower().endsWith("launchpad.net"))
     {
-        Launchpad *newBug = new Launchpad(info["url"]);
-        setupTracker(newBug, info);
+        QMessageBox box;
+        box.setText(tr("Entomologist no longer supports Launchpad."));
+        box.exec();
     }
 //    else if (info["type"] == "Google")
 //    {
@@ -763,41 +328,37 @@ void
 MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
 {
     qDebug() << "Setup tracker";
-    bool autosync = false;
     newBug->setId(info["id"]);
     newBug->setName(info["name"]);
     newBug->setUsername(info["username"]);
     newBug->setPassword(info["password"]);
     newBug->setLastSync(info["last_sync"]);
     newBug->setVersion(info["version"]);
-    newBug->setValidPriorities(info["valid_priorities"].split(","));
-    newBug->setValidSeverities(info["valid_severities"].split(","));
-    newBug->setValidStatuses(info["valid_statuses"].split(","));
     newBug->setMonitorComponents(info["monitored_components"].split(","));
     connect(newBug, SIGNAL(bugsUpdated()),
             this, SLOT(bugsUpdated()));
     connect(newBug, SIGNAL(backendError(QString)),
             this, SLOT(backendError(QString)));
-    connect(newBug, SIGNAL(commentsCached()),
-            this, SLOT(commentsCached()));
+    mStartup = 1;
+
     // If this was called after the user used the Add Tracker window,
     // insert the data into the DB
     if (info["id"] == "-1")
     {
+        info.take("id");
         info["auto_cache_comments"] = newBug->autoCacheComments();
-        int tracker = insertTracker(info);
+        int tracker = SqlUtilities::simpleInsert("trackers", info);
         newBug->setId(QString("%1").arg(tracker));
         mSyncPosition = mBackendList.size() + 1;
-        autosync = true;
+        connect(newBug, SIGNAL(fieldsFound()),
+                this, SLOT(fieldsChecked()));
+        newBug->checkFields();
     }
-
-    QTableView* tabBugTable = new QTableView;
-    trackerTabsList.append(tabBugTable);
-    ui->trackerTab->addTab(tabBugTable,newBug->name());
-    addTrackerToList(newBug,true);
-    mStartup = 1;
-    populateCurrentTab(trackerTabsList.indexOf(trackerTabsList.last()));
-
+    else
+    {
+        newBug->login();
+        addTrackerToList(newBug, false);
+    }
 }
 
 // Adds a tracker to the tracker list on the left
@@ -806,65 +367,31 @@ void
 MainWindow::addTrackerToList(Backend *newTracker, bool sync)
 {
     qDebug() << "Adding tracker to list";
-    QListWidgetItem *newItem = new QListWidgetItem(newTracker->name());
-    newItem->setFlags(Qt::ItemIsUserCheckable|Qt::ItemIsEnabled);
-    newItem->setCheckState(Qt::Checked);
-    newItem->setData(Qt::UserRole, newTracker->id());
-    ui->trackerList->addItem(newItem);
+
+    if (pDetectorProgress != NULL)
+    {
+        pDetectorProgress->reset();
+        pDetectorProgress->hide();
+    }
+
+    connect(this, SIGNAL(reloadFromDatabase()),
+            newTracker->displayWidget(), SLOT(reloadFromDatabase()));
+    connect(this, SIGNAL(setShowOptions(bool,bool,bool,bool)),
+            newTracker->displayWidget(), SLOT(setShowOptions(bool,bool,bool,bool)));
+    int newIndex = ui->trackerTab->addTab(newTracker->displayWidget(), newTracker->name());
+    trackerTabsList.append(newTracker->displayWidget());
+    pSearchTab->addTracker(newTracker);
 
     QString iconPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
     iconPath.append(QDir::separator()).append("entomologist");
     iconPath.append(QDir::separator()).append(QString("%1.png").arg(newTracker->name()));
+    ui->trackerTab->setTabIcon(newIndex, QIcon(iconPath));
     mBackendMap[newTracker->id()] = newTracker;
     mBackendList.append(newTracker);
     if(!QFile::exists(iconPath))
         fetchIcon(newTracker->url(), iconPath);
     if (sync)
         syncTracker(newTracker);
-}
-
-// When the user clicks the sort header in the bug view, this
-// does the actual sorting
-void
-MainWindow::sortIndicatorChanged(int logicalIndex, Qt::SortOrder order)
-{
-    QString sortOrder= "ASC";
-    if (order == Qt::DescendingOrder)
-        sortOrder = "DESC";
-
-    QString newSortQuery ="ORDER BY %1 " + sortOrder;
-    switch(logicalIndex)
-    {
-    case 2:
-        mSortQuery = newSortQuery.arg("trackers.name");
-        break;
-    case 3:
-        mSortQuery = newSortQuery.arg("bugs.bug_id");
-        break;
-    case 4:
-        mSortQuery = newSortQuery.arg("bugs.last_modified");
-        break;
-    case 5:
-        mSortQuery = newSortQuery.arg("bugs.severity");
-        break;
-    case 6:
-        mSortQuery = newSortQuery.arg("bugs.priority");
-        break;
-    case 7:
-        mSortQuery = newSortQuery.arg("bugs.assigned_to");
-        break;
-    case 8:
-        mSortQuery = newSortQuery.arg("bugs.status");
-        break;
-    case 9:
-        mSortQuery = newSortQuery.arg("bugs.summary");
-        break;
-    default:
-        mSortQuery = newSortQuery.arg("bugs.bug_id");
-        break;
-    }
-
-    filterTable();
 }
 
 // This slot is connected to a signal in each Backend object,
@@ -883,22 +410,12 @@ MainWindow::bugsUpdated()
             mUploading = false;
             stopAnimation();
             notifyUser();
+            emit reloadFromDatabase();
         }
         else
         {
             syncNextTracker();
         }
-    }
-}
-
-void
-MainWindow::commentsCached()
-{
-    mSyncRequests--;
-    if (mSyncRequests == 0)
-    {
-        stopAnimation();
-        loadComments();
     }
 }
 
@@ -941,18 +458,13 @@ MainWindow::startAnimation()
     ui->uploadButton->setEnabled(false);
     ui->changelogButton->setEnabled(false);
     ui->refreshButton->setEnabled(false);
-    ui->searchEdit->setEnabled(false);
-    ui->searchButton->setEnabled(false);
-    ui->trackerList->setEnabled(false);
-    ui->detailsScrollArea->setEnabled(false);
     ui->splitter_2->setEnabled(false);
 
     for(int i = 0; i < trackerTabsList.length(); i++)
     {
         trackerTabsList.at(i)->setEnabled(false);
-
     }
-     pSpinnerMovie->start();
+    pSpinnerMovie->start();
 }
 
 void
@@ -966,10 +478,6 @@ MainWindow::stopAnimation()
     ui->action_Work_Offline->setEnabled(true);
     ui->spinnerLabel->hide();
     ui->syncingLabel->hide();
-    ui->searchEdit->setEnabled(true);
-    ui->searchButton->setEnabled(true);
-    ui->trackerList->setEnabled(true);
-    ui->detailsScrollArea->setEnabled(true);
     ui->splitter_2->setEnabled(true);
 
     for(int i = 0; i < trackerTabsList.length(); i++)
@@ -1048,9 +556,16 @@ MainWindow::iconDownloaded()
         reader.setScaledSize(iconSize);
         const QImage icon = reader.read();
         if (icon.format() == QImage::Format_Invalid)
+        {
             fetchHTMLIcon(reply->url().toString(), savePath);
+        }
         else
+        {
             icon.save(savePath, "PNG");
+            QFileInfo info(savePath);
+            int tabIndex = compareTabName(info.baseName());
+            ui->trackerTab->setTabIcon(tabIndex, QIcon(QPixmap::fromImage(icon)));
+        }
     }
     else
     {
@@ -1130,6 +645,7 @@ MainWindow::htmlIconDownloaded()
 void
 MainWindow::syncTracker(Backend *tracker)
 {
+    qDebug() << "Syncing tracker...";
     if (!isOnline())
         return;
 
@@ -1158,7 +674,7 @@ MainWindow::addTrackerTriggered()
     {
         QMap<QString, QString> info = t.data();
 
-        if (trackerNameExists(info["name"]))
+        if (SqlUtilities::trackerNameExists(info["name"]))
         {
             QMessageBox box;
             box.setText(QString("You already have a tracker named \"%1\"").arg(info["name"]));
@@ -1219,7 +735,6 @@ MainWindow::finishedDetecting(QMap<QString, QString> data)
     if (pDetectorProgress->wasCanceled())
         return;
 
-    pDetectorProgress->reset();
     QString type = data["type"];
     if (type == "Unknown")
     {
@@ -1239,11 +754,15 @@ MainWindow::finishedDetecting(QMap<QString, QString> data)
     }
     else if (type == "Launchpad")
     {
+        QMessageBox box;
+        box.setText(tr("Entomologist no longer support Launchpad."));
+        box.exec();
+        delete detector;
+        return;
 
 // Launchpad uses a non-standard HTTP method ("PATCH") to update bugs.  Support for custom HTTP commands is
 // only available in Qt 4.7+, so we must disable that functionality in older versions.
  #if QT_VERSION < 0x040700
-        QMessageBox box;
         box.setText(tr("Launchpad support will be read-only."));
         box.setDetailedText(tr("Entomologist was compiled against an older version of Qt, probably because you're running an older distribution. "
                                "In order to have write-access to Launchpad, you'll need a binary compiled to use Qt 4.7 or higher"));
@@ -1258,6 +777,15 @@ MainWindow::finishedDetecting(QMap<QString, QString> data)
 
     delete detector;
     addTracker(data);
+}
+
+void
+MainWindow::showTodoList()
+{
+    if (pTodoListView == NULL)
+        pTodoListView = new ToDoListView();
+
+    pTodoListView->show();
 }
 
 // This is called when the user presses the refresh button
@@ -1279,7 +807,11 @@ MainWindow::resync()
 void
 MainWindow::syncNextTracker()
 {
-    if (mBackendList.empty()) return;
+    if (mBackendList.empty())
+    {
+        qDebug() << "Backend is empty";
+        return;
+        }
     Backend *b = mBackendList.at(mSyncPosition);
     ui->syncingLabel->setText(QString("Syncing %1...").arg(b->name()));
     mSyncPosition++;
@@ -1314,7 +846,6 @@ MainWindow::upload()
     {
         UploadDialog *newDialog = new UploadDialog(this);
         newDialog->setChangelog(getChangelog());
-        ui->detailsScrollArea->hide();
         if (newDialog->exec() != QDialog::Accepted)
             reallyUpload = false;
         delete newDialog;
@@ -1488,7 +1019,7 @@ MainWindow::showEditMonitoredComponents()
         QSqlQuery q("SELECT name, monitored_components FROM trackers WHERE monitored_components !=\"\"");
         while (q.next())
         {
-            QString id = QString::number(trackerNameExists(q.value(0).toString()));
+            QString id = QString::number(SqlUtilities::trackerNameExists(q.value(0).toString()));
             qDebug() << "Looking up backend for ID " << id;
 
             Backend *b = mBackendMap.value(id, NULL);
@@ -1534,7 +1065,7 @@ MainWindow::changeEvent(QEvent *e)
 void
 MainWindow::toggleButtons()
 {
-    if (!hasPendingChanges())
+    if (!SqlUtilities::hasPendingChanges())
     {
         ui->uploadButton->setEnabled(false);
         ui->changelogButton->setEnabled(false);
@@ -1547,96 +1078,14 @@ MainWindow::toggleButtons()
 
 }
 
-// The next three are all slots connected to the bug details dropdown menus
 void
-MainWindow::severityChanged(const QString &text)
+MainWindow::filterTable()
 {
-    if (mLoadingDetails || text == mActiveSeverity) return;
-
-    QSqlQuery q;
-    if (!hasShadowBug())
-    {
-        q.exec(QString("INSERT INTO shadow_bugs (tracker_id, bug_id, severity) VALUES (\'%1\', \'%2\', \'<font color=red>%3</font>\')")
-               .arg(pActiveBackend->id())
-               .arg(mActiveBugId)
-               .arg(text));
-    }
-    else
-    {
-        q.exec(QString("UPDATE shadow_bugs SET severity = \'<font color=red>%1</font>\' WHERE tracker_id = \'%2\' AND bug_id = \'%3\'")
-                .arg(text)
-               .arg(pActiveBackend->id())
-               .arg(mActiveBugId));
-    }
-    mActiveSeverity = text;
-    filterTable();
-    toggleButtons();
+    emit setShowOptions(ui->actionMy_Bugs->isChecked(),
+                        ui->actionMy_Reports->isChecked(),
+                        ui->actionMy_CCs->isChecked(),
+                        ui->actionMonitored_Components->isChecked());
 }
-
-void
-MainWindow::priorityChanged(const QString &text)
-{
-    if (mLoadingDetails || text == mActivePriority) return;
-
-    QSqlQuery q;
-    if (!hasShadowBug())
-    {
-        q.exec(QString("INSERT INTO shadow_bugs (tracker_id, bug_id, priority) VALUES (\'%1\', \'%2\', \'<font color=red>%3</font>\')")
-               .arg(pActiveBackend->id())
-               .arg(mActiveBugId)
-               .arg(text));
-    }
-    else
-    {
-        q.exec(QString("UPDATE shadow_bugs SET priority = \'<font color=red>%1</font>\' WHERE tracker_id = \'%2\' AND bug_id = \'%3\'")
-                .arg(text)
-               .arg(pActiveBackend->id())
-               .arg(mActiveBugId));
-    }
-    mActivePriority = text;
-    filterTable();
-    toggleButtons();
-}
-
-void
-MainWindow::statusChanged(const QString &text)
-{
-    if (mLoadingDetails || text == mActiveStatus) return;
-    QSqlQuery q;
-    if (!hasShadowBug())
-    {
-        q.exec(QString("INSERT INTO shadow_bugs (tracker_id, bug_id, status) VALUES (\'%1\', \'%2\', \'<font color=red>%3</font>\')")
-               .arg(pActiveBackend->id())
-               .arg(mActiveBugId)
-               .arg(text));
-    }
-    else
-    {
-        q.exec(QString("UPDATE shadow_bugs SET status = \'<font color=red>%1</font>\' WHERE tracker_id = \'%2\' AND bug_id = \'%3\'")
-                .arg(text)
-               .arg(pActiveBackend->id())
-               .arg(mActiveBugId));
-    }
-    mActiveStatus = text;
-    filterTable();
-    toggleButtons();
-}
-
-bool
-MainWindow::hasShadowBug()
-{
-    QString sql = QString("SELECT COUNT (id) FROM shadow_bugs WHERE bug_id = \'%1\' AND tracker_id=\'%2\'")
-                  .arg(mActiveBugId)
-                  .arg(pActiveBackend->id());
-    QSqlQuery q;
-    q.exec(sql);
-    q.next();
-    if (q.value(0).toInt() > 0)
-        return true;
-    else
-        return false;
-}
-
 
 // Whenever the user ticks boxes in the Show menu, this fires
 void
@@ -1659,111 +1108,12 @@ MainWindow::workOfflineTriggered()
     isOnline();
 }
 
-// Refresh the bug list based on the various checkboxes that have been selected
-void
-MainWindow::filterTable()
-{
-    QString showMy, showRep, showCC, showMonitored;
-    if (ui->actionMy_Bugs->isChecked())
-        showMy = "Assigned";
-    else
-        showMy = "XXXAssigned";
-
-    if (ui->actionMy_CCs->isChecked())
-        showCC = "CC";
-    else
-        showCC = "XXXCC";
-
-    if (ui->actionMy_Reports->isChecked())
-        showRep = "Reported";
-    else
-        showRep = "XXXReported";
-
-    if (ui->actionMonitored_Components->isChecked())
-        showMonitored = "Monitored";
-    else
-        showMonitored = "XXXMonitored";
-
-    QString tempQuery = QString("WHERE (bugs.bug_type=\'%1\' OR bugs.bug_type=\'%2\' OR bugs.bug_type=\'%3\' OR bugs.bug_type=\'%4')")
-                          .arg(showMy)
-                          .arg(showRep)
-                          .arg(showCC)
-                          .arg(showMonitored);
-
-    if(ui->trackerTab->currentIndex() == 0)
-        mActiveQuery = mBaseQuery + " " + mTrackerQuery + mSortQuery;
-    else
-        mActiveQuery = mBaseQuery + " " + tempQuery +" AND" + mWhereQuery + mTrackerQuery + mSortQuery;
-
-        pBugModel->setQuery(mActiveQuery);
-//    qDebug() << pBugModel->query().lastQuery();
-}
-
-// Triggered when a user ticks boxes in the tracker list
-void
-MainWindow::trackerListItemChanged(QListWidgetItem  *item)
-{
-    if (ui->trackerList->row(item) < 2) return;
-
-    QStringList list;
-    for(int i = 2; i < ui->trackerList->count(); i++)
-    {
-        if (ui->trackerList->item(i)->checkState() == Qt::Checked)
-        {
-            list << QString("bugs.tracker_id=%1").arg(ui->trackerList->item(i)->data(Qt::UserRole).toString());
-        }
-    }
-
-
-    // Don't let the user deselect the only checked box.  That just
-    // looks weird.
-    if (list.size() > 0)
-    {
-        mTrackerQuery = " AND (" +  list.join(" OR ") + ")";
-        filterTable();
-        populateCurrentTab(0);
-    }
-    else
-    {
-        item->setCheckState(Qt::Checked);
-    }
-
-}
-
-
 // This is a great example of Qt making things easier and easier over time
 bool
 MainWindow::isOnline()
 {
-    bool ret = false;
 
-#if QT_VERSION >= 0x040700
-    if (pManager->networkAccessible() != QNetworkAccessManager::NotAccessible)
-        ret = true;
-    else
-        ret = false;
-#else
-    QNetworkInterface iface;
-    QList<QNetworkInterface> ifaces = QNetworkInterface::allInterfaces();
-
-    for (int i = 0; i < ifaces.count(); ++i)
-    {
-        iface = ifaces.at(i);
-        if (iface.flags().testFlag(QNetworkInterface::IsUp)
-            && !iface.flags().testFlag(QNetworkInterface::IsLoopBack) )
-        {
-            if (iface.addressEntries().count() >= 1)
-            {
-                ret = true;
-                break;
-            }
-        }
-    }
-#endif
-
-    if (ui->action_Work_Offline->isChecked())
-        ret = false;
-
+    bool ret = Utilities::isOnline(pManager);
     if (ret)
     {
        pStatusMessage->setText(tr("Online"));
@@ -1788,60 +1138,6 @@ MainWindow::backendError(const QString &message)
             pDetectorProgress->reset();
     ErrorHandler::handleError("An error occurred.", message);
     bugsUpdated();
-}
-
-// Called when the user right clicks in the tracker list
-void
-MainWindow::customContextMenuRequested(const QPoint &pos)
-{
-    QListWidgetItem *currentItem = ui->trackerList->currentItem();
-    if (currentItem == NULL) return;
-
-    QString id = currentItem->data(Qt::UserRole).toString();
-
-    if (id.isEmpty())
-    {
-        ui->trackerList->setCurrentItem(NULL);
-        return;
-    }
-
-    QMenu contextMenu(tr("Context menu"), this);
-    QAction *editAction = contextMenu.addAction(tr("Edit"));
-    QAction *deleteAction = contextMenu.addAction(tr("Delete"));
-    QAction *resyncAction = contextMenu.addAction(tr("Resync"));
-    QAction *a = contextMenu.exec(QCursor::pos());
-    Backend *b = mBackendMap[id];
-    QString trackerName = b->name();
-    compareTabName(trackerName);
-    if (a == editAction)
-    {
-        NewTracker t(this, true);
-        t.setName(b->name());
-        t.setHost(b->url());
-        t.setUsername(b->username());
-        t.setPassword(b->password());
-
-        if (t.exec() == QDialog::Accepted)
-            updateTracker(id, t.data());
-    }
-    else if (a == deleteAction)
-    {
-        QMessageBox box;
-        box.setText(QString("Are you sure you want to delete %1?").arg(b->name()));
-        box.setStandardButtons(QMessageBox::Yes|QMessageBox::No);
-        if (box.exec() == QMessageBox::Yes)
-        {
-            ui->trackerList->takeItem(ui->trackerList->row(currentItem));
-            deleteTracker(id);
-        }
-    }
-    else if (a == resyncAction)
-    {
-        mSyncPosition = mBackendList.size();
-        syncTracker(b);
-    }
-    // Reset any list selection
-    ui->trackerList->setCurrentItem(NULL);
 }
 
 // When the user edits tracker information, this is called to save their new
@@ -1879,56 +1175,15 @@ MainWindow::updateTracker(const QString &id, QMap<QString, QString> data)
     if (QFile::exists(oldPath) && !QFile::exists(newPath))
         QFile::rename(oldPath, newPath);
 
-    // Rename the tracker in the list
-    QList<QListWidgetItem  *> itemList = ui->trackerList->findItems(b->name(), Qt::MatchExactly);
-    itemList.at(0)->setText(data["name"]);
-    b->setName(data["name"]);
-    b->setUsername(data["username"]);
-    b->setPassword(data["password"]);
-
     QString trackerName = b->name();
     ui->trackerTab->setTabText(workingTab,trackerName);
-
-    filterTable();
-}
-
-// The user pressed the search button, or pressed enter
-// in the search line edit
-void
-MainWindow::searchTriggered()
-{
-    QString searchText = ui->searchEdit->text();
-    QStringList query;
-
-    // Summary
-    query << QString("(bugs.summary LIKE \'\%%1\%\')").arg(searchText);
-    // Comment
-    QSqlQuery q;
-    QString sql = QString("SELECT bug_id FROM comments WHERE comment LIKE \'\%%1\%\'").arg(searchText);
-    if (q.exec(sql))
-    {
-        QStringList idList;
-        while (q.next())
-        {
-            idList << q.value(0).toString();
-        }
-
-        query << QString("(bugs.bug_id IN (%1))").arg(idList.join(","));
-    }
-    q.finish();
-
-    if (query.size() > 0)
-    {
-        mWhereQuery = "WHERE " + query.join(" OR ");
-        mActiveQuery = mBaseQuery + " " +  mWhereQuery + mTrackerQuery + mSortQuery;
-        pBugModel->setQuery(mActiveQuery);
-    }
-
 }
 
 void
 MainWindow::deleteTracker(const QString &id)
 {
+    // TODO: tell the tracker to delete it's bugs
+    // TODO: move this to SQLUtilities
     Backend *b = mBackendMap[id];
     mBackendMap.remove(id);
     delete b;
@@ -1940,17 +1195,7 @@ MainWindow::deleteTracker(const QString &id)
     sql.bindValue(":tracker_id", id);
     sql.exec();
 
-    query = "DELETE FROM bugs WHERE tracker_id=:tracker_id";
-    sql.prepare(query);
-    sql.bindValue(":tracker_id", id);
-    sql.exec();
-
     query = "DELETE FROM comments WHERE tracker_id=:tracker_id";
-    sql.prepare(query);
-    sql.bindValue(":tracker_id", id);
-    sql.exec();
-
-    query = "DELETE FROM shadow_bugs WHERE tracker_id = :tracker_id";
     sql.prepare(query);
     sql.bindValue(":tracker_id", id);
     sql.exec();
@@ -1961,15 +1206,13 @@ MainWindow::deleteTracker(const QString &id)
     sql.exec();
     ui->trackerTab->removeTab(workingTab);
     trackerTabsList.removeAt(workingTab);
-    pBugModel->setQuery(mActiveQuery);
-
 }
 
 void
-MainWindow::trackerItemClicked(QListWidgetItem  *item)
+MainWindow::fieldsChecked()
 {
-    // Ignore any attempts at selecting an item
-    ui->trackerList->setCurrentItem(NULL);
+    Backend *tracker= qobject_cast<Backend*>(sender());
+    addTrackerToList(tracker, true);
 }
 
 void
@@ -2003,6 +1246,64 @@ MainWindow::setupTrayIcon()
     pTrayIcon->show();
 }
 
+// Called from the tracker tab to display the context menu
+void
+MainWindow::showMenu(int tabIndex)
+{
+    // No point in showing the context menu for the search tab
+    int searchIndex = ui->trackerTab->indexOf(pSearchTab);
+    if (tabIndex == searchIndex)
+        return;
+
+    QMenu contextMenu(tr("Context menu"), this);
+    QString trackerName = ui->trackerTab->tabText(tabIndex);
+    Backend *b = NULL;
+    for (int i = 0; i < mBackendList.size(); ++i)
+    {
+        b = mBackendList.at(i);
+        if (trackerName == b->name())
+            break;
+    }
+
+    if (b == NULL)
+        return;
+
+    QString id = b->id();
+    QAction *editAction = contextMenu.addAction(tr("Edit"));
+    QAction *deleteAction = contextMenu.addAction(tr("Delete"));
+    QAction *resyncAction = contextMenu.addAction(tr("Resync"));
+    QAction *a = contextMenu.exec(QCursor::pos());
+    if (a == editAction)
+    {
+        NewTracker t(this, true);
+        t.setName(b->name());
+        t.setHost(b->url());
+        t.setUsername(b->username());
+        t.setPassword(b->password());
+
+        if (t.exec() == QDialog::Accepted)
+        {
+            qDebug() << "Updating tracker";
+            updateTracker(id, t.data());
+        }
+    }
+    else if (a == deleteAction)
+    {
+        QMessageBox box;
+        box.setText(QString("Are you sure you want to delete %1?").arg(b->name()));
+        box.setStandardButtons(QMessageBox::Yes|QMessageBox::No);
+        if (box.exec() == QMessageBox::Yes)
+        {
+            deleteTracker(id);
+        }
+    }
+    else if (a == resyncAction)
+    {
+        mSyncPosition = mBackendList.size();
+        syncTracker(b);
+    }
+}
+
 void
 MainWindow::trayActivated(QSystemTrayIcon::ActivationReason reason)
 {
@@ -2022,48 +1323,6 @@ MainWindow::trayActivated(QSystemTrayIcon::ActivationReason reason)
 }
 
 void
-MainWindow::tableViewContextMenu(const QPoint &p)
-{
-    int currentTab = ui->trackerTab->currentIndex();
-    QTableView *table = trackerTabsList.at(currentTab);
-    QModelIndex i = table->indexAt(p);
-    QString tracker_id = i.sibling(i.row(), 1).data().toString();
-    QString bug = i.sibling(i.row(), 3).data().toString();
-    QMenu contextMenu(tr("Bug Menu"), this);
-    QAction *copyAction = contextMenu.addAction(tr("Copy URL"));
-    contextMenu.addSeparator();
-    QAction *openAction = contextMenu.addAction(tr("Open in a browser"));
-    QAction *a = contextMenu.exec(QCursor::pos());
-    Backend *b = mBackendMap[tracker_id];
-    if (a == copyAction)
-    {
-        QString url = b->buildBugUrl(bug);
-        QApplication::clipboard()->setText(url);
-    }
-    else if (a == openAction)
-    {
-        QString url = b->buildBugUrl(bug);
-#ifdef Q_OS_ANDROID
-        Utilities::openAndroidUrl(QUrl(url));
-#else
-        QDesktopServices::openUrl(QUrl(url));
-#endif
-    }
-}
-
-// We don't want users to accidentally change the combobox values if
-// they use the scrollwheel to scroll up and down the details view
-bool
-MainWindow::eventFilter(QObject *obj, QEvent *event)
-{
-    if (event->type() == QEvent::Wheel)
-    {
-        return true;
-    }
-    return false;
-}
-
-void
 MainWindow::changelogTriggered()
 {
     ChangelogWindow *newWindow = new ChangelogWindow(this);
@@ -2073,117 +1332,16 @@ MainWindow::changelogTriggered()
     filterTable();
 }
 
-
 // Changes the application focus to the search bar.
 void
-MainWindow::searchFocusTriggered() {
-
-    ui->searchEdit->setFocus();
+MainWindow::searchFocusTriggered()
+{
+    int index = ui->trackerTab->indexOf(pSearchTab);
+    if (index != -1)
+        ui->trackerTab->setCurrentIndex(index);
 }
 
-// Populates the Currently Hilighted tab with the bug data for that tab.
-void
-MainWindow::populateCurrentTab(int currentTab) {
-
-    QTableView *table = trackerTabsList.at(currentTab);
-
-    table->setSortingEnabled(true);
-    table->setGridStyle(Qt::PenStyle(Qt::DotLine));
-    pBugModel = new SqlBugModel;
-    int compare = QString::compare(ui->trackerTab->tabText(currentTab),"All");
-    if(compare != 0)
-    {
-
-        mWhereQuery= QString(" bugs.tracker_id IN"
-                       " (SELECT trackers.id FROM trackers WHERE trackers.name = \"%1\")"
-                       ). arg(ui->trackerTab->tabText(currentTab));
-                       mActiveQuery = mBaseQuery + " WHERE" + mWhereQuery+ mTrackerQuery + mSortQuery;
-                       qDebug() << mActiveQuery;
-                       pBugModel->setQuery(mActiveQuery);
-                       ui->trackstatsFrame->hide(); // Hide the stats frame
-
-    }
-    else
-    {
-        ui->trackstatsFrame->show();
-        populateStats();
-    }
-    filterTable();
-    SqlBugDelegate *delegate = new SqlBugDelegate();
-    table->setItemDelegate(delegate);
-    table->setModel(pBugModel);
-
-    pBugModel->setHeaderData(2, Qt::Horizontal, tr("Tracker"));
-    pBugModel->setHeaderData(3, Qt::Horizontal, tr("Bug ID"));
-    pBugModel->setHeaderData(4, Qt::Horizontal, tr("Last Modified"));
-    pBugModel->setHeaderData(5, Qt::Horizontal, tr("Severity"));
-    pBugModel->setHeaderData(6, Qt::Horizontal, tr("Priority"));
-    pBugModel->setHeaderData(7, Qt::Horizontal, tr("Assignee"));
-    pBugModel->setHeaderData(8, Qt::Horizontal, tr("Status"));
-    pBugModel->setHeaderData(9, Qt::Horizontal, tr("Summary"));
-    table->hideColumn(0); // Hide the internal row id
-    table->hideColumn(1); // Hide the tracker id
-    if(compare > 0) table->hideColumn(2); // Hide the tracker name for individual trackers.
-    table->verticalHeader()->hide(); // Hide the Row numbers
-    table->resizeColumnsToContents();
-    table->resizeRowsToContents();
-    table->setAlternatingRowColors(true);
-
-    /* These have been added here to keep signals for the tables in one place
-     * and because populateCurrentTab() will always be called at least once on a TableView
-     */
-
-    // Make sure we don't keep reconnecting signals/setting icons on already instanced tabs.
-    if(mStartup == 1)
-    {
-        // Bug list sorting
-        connect(table->horizontalHeader(), SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
-                this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
-        //Context Menu
-        connect(table, SIGNAL(customContextMenuRequested(QPoint)),
-                this, SLOT(tableViewContextMenu(QPoint)));
-        // Double Click Comments Pane.
-        connect(table, SIGNAL(doubleClicked(QModelIndex)),
-                this, SLOT(bugClicked(QModelIndex)));
-
-        // Set the FavIcon for the Tab
-        QString iconpath = pBugModel->getIcon(ui->trackerTab->tabText(currentTab));
-        ui->trackerTab->setTabIcon(currentTab,QIcon(iconpath));
-        mStartup = 0;
-    }
-
-}
-void
-MainWindow::populateStats() {
-    QString currentAssignedBugs;
-    QSqlQuery bugs;
-    ui->statsList->clear();
-    bugs.exec("SELECT COUNT(id) FROM bugs");
-    bugs.next();
-    currentAssignedBugs = QString("Currently assigned bugs: %1")
-            .arg(bugs.value(0).toString());
-
-    QListWidgetItem *newStat = new QListWidgetItem("Bug Statistics");
-    newStat->setTextAlignment(Qt::AlignHCenter);
-    newStat->setFlags(Qt::ItemIsEnabled);
-    ui->statsList->addItem(newStat);
-
-    // Use a frame to draw the separator between "Bug Statistics" and the list
-    QFrame *f = new QFrame( this );
-    f->setFrameStyle( QFrame::HLine | QFrame::Sunken );
-
-    QListWidgetItem *spacer = new QListWidgetItem("");
-    spacer->setFlags(Qt::NoItemFlags);
-    ui->statsList->addItem(spacer);
-    ui->statsList->setItemWidget(spacer, f);
-
-    newStat = new QListWidgetItem(currentAssignedBugs);
-    newStat->setFlags(Qt::ItemIsEnabled);
-    ui->statsList->addItem(newStat);
-
-}
-
-void
+int
 MainWindow::compareTabName(QString compareItem)
 {
     for(int i = 0; i < trackerTabsList.length();i++)
@@ -2191,7 +1349,19 @@ MainWindow::compareTabName(QString compareItem)
         if(QString::compare(compareItem,ui->trackerTab->tabText(i)) == 0)
             workingTab = i;
     }
+    return(workingTab);
+}
 
+void
+MainWindow::openSearchedBug(const QString &trackerName,
+                            const QString &bugId)
+{
+    for (int i = 0; i < mBackendList.size(); ++i)
+    {
+        Backend *b = mBackendList.at(i);
+        if (b->name() == trackerName)
+            b->displayWidget()->loadSearchResult(bugId);
+    }
 }
 
 // TODO implement this?
@@ -2199,5 +1369,6 @@ void
 MainWindow::handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors)
 {
+    Q_UNUSED(errors);
     reply->ignoreSslErrors();
 }
