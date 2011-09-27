@@ -49,7 +49,7 @@ ToDoListPreferences::ToDoListPreferences(QWidget *parent) :
     ui->setupUi(this);
     ui->addServiceButton->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
     ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
-
+    ui->cancelButton->setText("Close"); // Cancel doesn't make much sense here as it's not a modal dialog so there isn't always a task to cancel.
     connect(ui->serviceList, SIGNAL(customContextMenuRequested(QPoint)),
             this, SLOT(customContextMenuRequested(QPoint)));
     connect(ui->addServiceButton, SIGNAL(clicked()),

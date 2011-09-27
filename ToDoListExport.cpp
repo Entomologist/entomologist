@@ -60,6 +60,7 @@ ToDoListExport::populateServices()
     }
 }
 
+// Function for address book integration.
 void
 ToDoListExport::populateRecipients()
 {

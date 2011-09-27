@@ -201,7 +201,8 @@ RememberTheMilk::tokenResponse()
 
         }
         else
-            emit serviceError("Unable to get authorisation token");
+            login();
+
     }
     else
     {

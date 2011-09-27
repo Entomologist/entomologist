@@ -725,7 +725,8 @@ ToDoListView::loginWaiting()
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender());
     QMessageBox login(this);
     login.setWindowTitle("Authorisation required");
-    login.setText("In order to sync with this service, you need to authorize Entomologist."
+    login.setText(QString("Authorisation Required for %1.").arg(syncName));
+    login.setInformativeText("In order to sync with this service, you need to authorize Entomologist."
                   "A web browser will open, and after you've authenticated, press <b>OK</b>.");
     login.setIcon(QMessageBox::Information);
     login.setDefaultButton(QMessageBox::Ok);
@@ -740,9 +741,9 @@ ToDoListView::regSuccess()
     QMessageBox success(this);
     success.setWindowTitle("Authorisation complete");
     success.setText("Entomologist has been authorised");
-    success.setDetailedText("Entomologist has been successfully authorised."
-                            "You can revoke this authorisation at any time by removing it from the list of authorised applications. "
-                            "If this was done as part of an export, Entomologist will now proceed with exporting your tasks");
+    success.setInformativeText(QString("Entomologist has been successfully authorised for %1."
+                                      "You can revoke this authorisation at any time by removing it from the list of authorised applications. "
+                                      "If this was done as part of an export, Entomologist will now proceed with exporting your tasks.").arg(syncName));
 
     success.setIcon(QMessageBox::Information);
     success.setDefaultButton(QMessageBox::Ok);
@@ -769,13 +770,21 @@ ToDoListView::authCompleted()
             {
                 currentList->setListStatus(ToDoList::NEW);
             }
-            //            progress = new QProgressDialog(QString("Syncing %1").arg(currentList->listName()),"",0,syncItems.length(),this);
-            //            progress->setWindowModality(Qt::WindowModal);
-            //            progress->show();
 
-            obj->setList(currentList);
-            obj->setupList();
-            currentList->setSyncCount(1);
+            foreach(ToDoItem* item, syncItems)
+                 if(item->status() == ToDoItem::UNCHANGED)
+                    syncItems.removeAt((syncItems.indexOf(item)));
+
+            if(syncItems.length() > 0)
+            {
+                progress = new QProgressDialog(QString("Syncing %1").arg(currentList->listName()),"Cancel",0,syncItems.length(),this);
+                progress->setWindowModality(Qt::WindowModal);
+                progress->show();
+                obj->setList(currentList);
+                obj->setupList();
+                currentList->setSyncCount(1);
+            }
+
         }
     }
 }
@@ -796,8 +805,8 @@ void
 ToDoListView::readyToAddItems()
 {
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender());
-
     timerCount = syncItems.length();
+    qDebug() << syncItems.length();
     timer = new QTimer(obj);
     timer->setInterval(1000);
     connect(timer,SIGNAL(timeout()),this,SLOT(syncItem()));
@@ -811,7 +820,7 @@ ToDoListView::syncItem()
 
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender()->parent());
     --timerCount;
-    //    progress->setValue(qAbs(timerCount - syncItems.length()));
+    progress->setValue(qAbs(timerCount - syncItems.length()));
     bool isNew = !hasBeenSynced(currentList);
 
     if(timerCount > -1)
