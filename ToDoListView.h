@@ -105,6 +105,7 @@ private:
     bool syncSingle;
     int findItem(QString targetName,QList<ToDoItem*> list);
     int timerCount;
+    int numberofItemsToSync;
     QTimer* timer;
     QProgressDialog* progress;
 };

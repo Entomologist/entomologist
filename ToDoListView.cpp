@@ -211,8 +211,8 @@ ToDoListView::bugAdded(const QString &data,
 
     qDebug() << "Checked unique";
     QSqlQuery query("INSERT INTO todolistbugs (tracker_id, tracker_table, "
-                                              "bug_id, todolist_id, date, "
-                                              "completed, last_modified) "
+                    "bug_id, todolist_id, date, "
+                    "completed, last_modified) "
                     "VALUES (:tracker_id, :tracker_table, :bug_id , :parent , :date , :completed, :modified)");
 
     int completed = 0;
@@ -256,11 +256,11 @@ ToDoListView::addItem(int bugID,
         return;
 
     QString iconPath = QString ("%1%2%3%4%5.png")
-                                .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
-                                .arg(QDir::separator())
-                                .arg("entomologist")
-                                .arg(QDir::separator())
-                                .arg(bugData.at(1));
+            .arg(QDesktopServices::storageLocation(QDesktopServices::DataLocation))
+            .arg(QDir::separator())
+            .arg("entomologist")
+            .arg(QDir::separator())
+            .arg(bugData.at(1));
     if (!QFile::exists(iconPath))
         iconPath = ":/bug";
 
@@ -303,11 +303,11 @@ ToDoListView::bugDataItems(int bugID,
 {
     QStringList info;
     QString sql =  QString("SELECT %1.bug_id, trackers.name, %1.summary "
-                    "FROM %1 INNER JOIN trackers ON trackers.id "
-                    "= %2 WHERE %1.bug_id = %3")
-                    .arg(trackerTable)
-                    .arg(trackerID)
-                    .arg(bugID);
+                           "FROM %1 INNER JOIN trackers ON trackers.id "
+                           "= %2 WHERE %1.bug_id = %3")
+            .arg(trackerTable)
+            .arg(trackerID)
+            .arg(bugID);
     QSqlQuery query(sql);
 
     if(!query.exec())
@@ -727,7 +727,7 @@ ToDoListView::loginWaiting()
     login.setWindowTitle("Authorisation required");
     login.setText(QString("Authorisation Required for %1.").arg(syncName));
     login.setInformativeText("In order to sync with this service, you need to authorize Entomologist."
-                  "A web browser will open, and after you've authenticated, press <b>OK</b>.");
+                             "A web browser will open, and after you've authenticated, press <b>OK</b>.");
     login.setIcon(QMessageBox::Information);
     login.setDefaultButton(QMessageBox::Ok);
 
@@ -742,8 +742,8 @@ ToDoListView::regSuccess()
     success.setWindowTitle("Authorisation complete");
     success.setText("Entomologist has been authorised");
     success.setInformativeText(QString("Entomologist has been successfully authorised for %1."
-                                      "You can revoke this authorisation at any time by removing it from the list of authorised applications. "
-                                      "If this was done as part of an export, Entomologist will now proceed with exporting your tasks.").arg(syncName));
+                                       "You can revoke this authorisation at any time by removing it from the list of authorised applications. "
+                                       "If this was done as part of an export, Entomologist will now proceed with exporting your tasks.").arg(syncName));
 
     success.setIcon(QMessageBox::Information);
     success.setDefaultButton(QMessageBox::Ok);
@@ -762,6 +762,7 @@ ToDoListView::authCompleted()
 
     if(!isLoginOnly)
     {
+
         if(syncLists.isEmpty() == false)
         {
             currentList = syncLists.takeFirst();
@@ -772,18 +773,24 @@ ToDoListView::authCompleted()
             }
 
             foreach(ToDoItem* item, syncItems)
-                 if(item->status() == ToDoItem::UNCHANGED)
+                if(item->status() == ToDoItem::UNCHANGED)
+                {
                     syncItems.removeAt((syncItems.indexOf(item)));
+                }
 
             if(syncItems.length() > 0)
             {
-                progress = new QProgressDialog(QString("Syncing %1").arg(currentList->listName()),"Cancel",0,syncItems.length(),this);
+
+                progress = new QProgressDialog(QString("Syncing %1").arg(currentList->listName()),0,0,syncItems.length(),this);
+                numberofItemsToSync = syncItems.length();
                 progress->setWindowModality(Qt::WindowModal);
                 progress->show();
                 obj->setList(currentList);
                 obj->setupList();
                 currentList->setSyncCount(1);
             }
+            else //Can assume that there aren't any items to sync for this list so get a new one.
+                authCompleted();
 
         }
     }
@@ -806,7 +813,6 @@ ToDoListView::readyToAddItems()
 {
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender());
     timerCount = syncItems.length();
-    qDebug() << syncItems.length();
     timer = new QTimer(obj);
     timer->setInterval(1000);
     connect(timer,SIGNAL(timeout()),this,SLOT(syncItem()));
@@ -819,12 +825,14 @@ ToDoListView::syncItem()
 {
 
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender()->parent());
-    --timerCount;
-    progress->setValue(qAbs(timerCount - syncItems.length()));
+
     bool isNew = !hasBeenSynced(currentList);
 
-    if(timerCount > -1)
+    if(timerCount >= 0)
     {
+
+        progress->setValue(qAbs(timerCount - numberofItemsToSync));
+
         if(!syncItems.isEmpty())
         {
             ToDoItem* t = syncItems.takeFirst();
@@ -852,6 +860,7 @@ ToDoListView::syncItem()
             if(!currentList->syncNeeded())
                 t->setStatus(ToDoItem::UNCHANGED);
         }
+        --timerCount;
     }
     else
     {
