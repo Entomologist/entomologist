@@ -85,7 +85,8 @@ SOURCES += main.cpp \
     todolistservices/RememberTheMilk.cpp \
     todolistservices/GoogleCalendar.cpp \
     todolistservices/GenericWebDav.cpp \
-    TrackerTableView.cpp
+    TrackerTableView.cpp \
+    SqlSearchDelegate.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -158,7 +159,8 @@ HEADERS += MainWindow.h \
     todolistservices/RememberTheMilk.h \
     todolistservices/GoogleCalendar.h \
     todolistservices/GenericWebDav.h \
-    TrackerTableView.h
+    TrackerTableView.h \
+    SqlSearchDelegate.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \

@@ -32,8 +32,11 @@
 #include <QSettings>
 #include "SqlUtilities.h"
 
-BackendUI::BackendUI(const QString &id, Backend *backend, QWidget *parent) :
-    QWidget(parent), mId(id)
+BackendUI::BackendUI(const QString &id,
+                     const QString &trackerName,
+                     Backend *backend,
+                     QWidget *parent) :
+    QWidget(parent), mId(id), mTrackerName(trackerName)
 {
     pBackend = backend;
     connect(pBackend, SIGNAL(searchResultFinished(QMap<QString,QString>)),
@@ -63,6 +66,27 @@ BackendUI::startSearchProgress()
     }
 
     pSearchProgress->setValue(1);
+}
+
+void
+BackendUI::saveHeaderSetting(int logicalIndex, int oldSize, int newSize)
+{
+    Q_UNUSED(logicalIndex);
+    Q_UNUSED(oldSize);
+    Q_UNUSED(newSize);
+    qDebug() << "saveHeaderSetting";
+    QSettings settings("Entomologist");
+    QString settingName = QString("%1-header-geometry").arg(mTrackerName);
+    settings.setValue(settingName, v->saveState());
+}
+
+void
+BackendUI::restoreHeaderSetting()
+{
+    QSettings settings("Entomologist");
+    QString settingName = QString("%1-header-geometry").arg(mTrackerName);
+    qDebug() << "restoreHeaderSetting for " << mTrackerName;
+    v->restoreState(settings.value(settingName, QByteArray()).toByteArray());
 }
 
 void
@@ -152,6 +176,8 @@ BackendUI::saveNewShadowItems(const QString &tableName,
 {
     qDebug() << "I'll save " << shadowBug;
     int shadow_id;
+    QString isPrivate = shadowBug["private_comment"];
+    shadowBug.remove("private_comment");
     if (shadowBug.count() > 2)
     {
         if ((shadow_id = SqlUtilities::hasShadowBug(tableName, shadowBug["bug_id"], shadowBug["tracker_id"])) >= 1)
@@ -172,6 +198,7 @@ BackendUI::saveNewShadowItems(const QString &tableName,
         comment["tracker_id"] = shadowBug["tracker_id"];
         comment["bug_id"] = shadowBug["bug_id"];
         comment["comment"] = newComment;
+        comment["private"] = isPrivate;
         comment["timestamp"] = QDateTime::currentDateTime().toString("yyyy-MM-ddThh:mm:ss");
         SqlUtilities::simpleInsert("shadow_comments", comment);
     }

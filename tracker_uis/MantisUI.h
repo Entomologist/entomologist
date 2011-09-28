@@ -39,7 +39,10 @@ class MantisUI : public BackendUI
     Q_OBJECT
 
 public:
-    explicit MantisUI(const QString &id, Backend *backend, QWidget *parent = 0);
+    explicit MantisUI(const QString &id,
+                      const QString &trackerName,
+                      Backend *backend,
+                      QWidget *parent = 0);
     ~MantisUI();
     void loadFields();
 
@@ -49,7 +52,8 @@ public slots:
     void headerContextMenu(const QPoint &pos);
     void commentsDialogClosing(QMap<QString, QString> details, QString newComment);
     void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
-
+    void loadSearchResult(const QString &id);
+    void searchResultFinished(QMap<QString, QString> resultMap);
 private:
     void setupTable();
     Ui::MantisUI *ui;

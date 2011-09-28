@@ -35,7 +35,10 @@ class BackendUI : public QWidget
 {
     Q_OBJECT
 public:
-    explicit BackendUI(const QString &id, Backend *backend, QWidget *parent = 0);
+    explicit BackendUI(const QString &id,
+                       const QString &trackerName,
+                       Backend *backend,
+                       QWidget *parent = 0);
     ~BackendUI();
 
     void setID(const QString &id) { mId = id; }
@@ -43,6 +46,11 @@ public:
     void setBackend(Backend *backend);
     virtual void loadFields() {}
     virtual void loadSearchResult(const QString &id) { Q_UNUSED(id); }
+
+signals:
+    // Emitted when a bug has changed, so MainWindow knows to enable
+    // the Upload and Changelog buttons
+    void bugChanged();
 
 public slots:
     virtual void reloadFromDatabase() {}
@@ -52,6 +60,8 @@ public slots:
                         bool showMonitored);
     void copyBugUrl(const QString &bugId);
     void openBugInBrowser(const QString &bugId);
+    void saveHeaderSetting(int logicalIndex, int oldSize, int newSize);
+
     virtual void addBugToToDoList(const QString &bugId) { Q_UNUSED(bugId); }
     virtual void searchResultFinished(QMap<QString, QString> resultMap) { Q_UNUSED(resultMap); }
 
@@ -64,6 +74,7 @@ protected:
                             const QString &newComment);
     void startSearchProgress();
     void stopSearchProgress();
+    void restoreHeaderSetting();
 
     Backend *pBackend;
     bool mShowMyBugs, mShowMyReports, mShowMyCCs, mShowMonitored;

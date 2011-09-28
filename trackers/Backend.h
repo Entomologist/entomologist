@@ -63,7 +63,6 @@ public:
     void setEmail(const QString &email) { mEmail = email; }
     QString email() { return mEmail; }
 
-
     void setValidSeverities(QStringList list) { mValidSeverities = list; }
     QStringList validSeverities() { return mValidSeverities; }
 
@@ -113,6 +112,8 @@ public:
     int latestUpdateCount() { return mUpdateCount; }
 
     virtual void search(const QString &query) { Q_UNUSED(query); }
+
+    virtual void deleteData() {}
 
 signals:
     void searchFinished();

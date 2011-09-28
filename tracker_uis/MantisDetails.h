@@ -13,7 +13,7 @@ class MantisDetails : public BackendDetails
     Q_OBJECT
 
 public:
-    explicit MantisDetails(QWidget *parent = 0);
+    explicit MantisDetails(const QString &bugId = "", QWidget *parent = 0);
     ~MantisDetails();
     void setProject(const QString &project);
     void setCategory(const QString &category);
@@ -28,6 +28,8 @@ public:
 
 private:
     Ui::MantisDetails *ui;
+    QString mBugId;
+
     // These are used to see if a combo box is set to a new value
     QString mSeverity, mPriority, mReproducibility, mStatus, mResolution;
 };

@@ -52,6 +52,8 @@ Mantis::Mantis(const QString &url, QObject *parent) :
             this, SLOT(bugsInsertionFinished(QStringList)));
     connect(pSqlWriter, SIGNAL(commentFinished()),
             this, SLOT(commentInsertionFinished()));
+    connect(pSqlWriter, SIGNAL(success()),
+            this, SLOT(searchInsertionFinished()));
 
     bool secure = true;
     if (QUrl(mUrl).scheme() == "http")
@@ -67,8 +69,14 @@ BackendUI *
 Mantis::displayWidget()
 {
     if (pDisplayWidget == NULL)
-        pDisplayWidget = new MantisUI(mId, this);
+        pDisplayWidget = new MantisUI(mId, mName, this);
     return(pDisplayWidget);
+}
+
+void
+Mantis::deleteData()
+{
+
 }
 
 void
@@ -85,7 +93,8 @@ Mantis::sync()
 void
 Mantis::search(const QString &query)
 {
-    emit searchFinished();
+    mViewType = SEARCHED;
+    setView(query);
 }
 
 void
@@ -100,18 +109,28 @@ Mantis::login()
 }
 
 void
-Mantis::setView()
+Mantis::setView(const QString &search)
 {
     // First we have to set up the 'view' to get the CSV
     // We set a date in the future to get the end of the date range
     QDateTime future = QDateTime::currentDateTime().addDays(7);
     QString queryType;
     if (mViewType == MONITORED)
+    {
         queryType = "user_monitor[]=-1&reporter_id[]=0&handler_id[]=0";
+    }
     else if (mViewType == REPORTED)
+    {
         queryType = "user_monitor[]=0&reporter_id[]=-1&handler_id[]=0";
+    }
+    else if (mViewType == SEARCHED)
+    {
+        queryType = QString("user_monitor[]=0&reporter_id[]=0&handler_id[]=0&search=%1").arg(search);
+    }
     else
+    {
         queryType = "user_monitor[]=0&reporter_id[]=0&handler_id[]=-1";
+    }
     QString url = mUrl + "/view_all_set.php?f=3";
 
     // I'm not sure why I missed this earlier, but Mantis's date range
@@ -154,10 +173,38 @@ Mantis::getMonitored()
     connect(rep, SIGNAL(finished()),
             this, SLOT(monitoredResponse()));
 }
+
+void
+Mantis::getSearched()
+{
+    qDebug() << "getSearched()";
+    QString url = mUrl + "/csv_export.php";
+    QNetworkRequest req = QNetworkRequest(QUrl(url));
+    QNetworkReply *rep = pManager->get(req);
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(searchResponse()));
+}
+
 void
 Mantis::getSearchedBug(const QString &bugId)
 {
+    qDebug() << "getSearchedBug: " << bugId;
+    QtSoapHttpTransport *searchTransport = new QtSoapHttpTransport(this);
+    bool secure = true;
+    if (QUrl(mUrl).scheme() == "http")
+        secure = false;
 
+    searchTransport->setHost(QUrl(mUrl).host(), secure);
+    connect(searchTransport, SIGNAL(responseReady()),
+            this, SLOT(searchedBugResponse()));
+    connect(searchTransport->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)),
+            this, SLOT(handleSslErrors(QNetworkReply*,QList<QSslError>)));
+    QtSoapMessage request;
+    request.setMethod(QtSoapQName("mc_issue_get", "http://futureware.biz/mantisconnect"));
+    request.addMethodArgument("username", "", mUsername );
+    request.addMethodArgument("password", "", mPassword);
+    request.addMethodArgument("issue_id", "", bugId.toInt());
+    searchTransport->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
 }
 void
 Mantis::handleCSV(const QString &csv, const QString &bugType)
@@ -342,7 +389,6 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
         newBug["bug_type"] = bugType;
         mBugs[tmpBugId] = newBug;
     }
-    qDebug() << "Handle CSV finished";
 }
 
 QVector<QString>
@@ -597,7 +643,6 @@ Mantis::response()
                 newComment["private"] = "0";
                 if (note["view_state"]["name"].toString() == "private")
                     newComment["private"] = "1";
-
                 list << newComment;
             }
             pSqlWriter->insertBugComments(list);
@@ -656,6 +701,54 @@ Mantis::response()
         qDebug() << "Invalid response: " << messageName;
         emit backendError("Something went wrong!");
     }
+}
+
+void
+Mantis::searchedBugResponse()
+{
+    QtSoapHttpTransport *transport = qobject_cast<QtSoapHttpTransport*>(sender());
+    const QtSoapMessage &resp = transport->getResponse();
+    qDebug() << "searchedBugResponse";
+    if (resp.isFault())
+    {
+        qDebug() << "SOAP fault: " << resp.faultString().toString();
+        qDebug() << resp.faultDetail().toString();
+        transport->deleteLater();
+        emit bugsUpdated();
+        emit backendError(QString("%1: %2").arg(resp.faultString().toString()).arg(resp.faultDetail().toString()));
+        return;
+    }
+
+    const QtSoapType &message = resp.method();
+    const QtSoapType &response = resp.returnValue();
+    QString messageName = message.name().name();
+    qDebug() << resp.toXmlString();
+    if (messageName == "mc_issue_getResponse")
+    {
+        QList<QMap<QString, QString> > list;
+        QMap<QString, QString> params;
+        params["description"] = response["description"].toString();
+        params["tracker_id"] = mId;
+        params["bug_id"] = response["id"].toString();;
+        params["severity"] = response["severity"]["name"].toString();
+        params["priority"] = response["priority"]["name"].toString();
+        params["project"] = response["project"]["name"].toString();
+        params["category"] = response["category"].toString();
+        params["reproducibility"] = response["reproducibility"]["name"].toString();
+        params["os"] = response["os"].toString();
+        params["os_version"] = response["os_build"].toString();
+        params["assigned_to"] = response["handler"]["name"].toString();
+        params["status"] = response["status"]["name"].toString();
+        params["summary"] = response["summary"].toString();
+        params["product_version"] = response["product_version"].toString();
+        params["bug_type"] = "Searched";
+        params["last_modified"] = response["last_updated"].toString();
+        list << params;
+        qDebug() << list;
+        pSqlWriter->multiInsert("mantis", list);
+        emit searchResultFinished(params);
+    }
+    transport->deleteLater();
 }
 
 void
@@ -950,6 +1043,8 @@ void Mantis::viewResponse()
         getReported();
     else if (mViewType == MONITORED)
         getMonitored();
+    else if (mViewType == SEARCHED)
+        getSearched();
 }
 
 void Mantis::assignedResponse()
@@ -1036,6 +1131,48 @@ void Mantis::monitoredResponse()
     handleCSV(rep, "CC");
     mViewType = REPORTED;
     setView();
+}
+
+void
+Mantis::searchResponse()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        qDebug() << "searchResponse: " << reply->errorString();
+        emit backendError(reply->errorString());
+        reply->close();
+        return;
+    }
+
+    qDebug() << "searchResponse";
+    QString rep = QString::fromUtf8(reply->readAll());
+    reply->deleteLater();
+    handleCSV(rep, "Searched");
+
+    QList< QMap<QString,QString> > insertList;
+    QVariantMap responseMap;
+    QMapIterator<QString, QVariant> i(mBugs);
+    mUpdateCount = mBugs.count();
+    while (i.hasNext())
+    {
+        i.next();
+        responseMap = i.value().toMap();
+        QMap<QString, QString> newBug;
+        newBug["tracker_name"] = mName;
+        newBug["bug_id"] = responseMap.value("id").toString();
+        newBug["summary"] = responseMap.value("summary").toString();
+        insertList << newBug;
+    }
+
+    pSqlWriter->multiInsert("search_results", insertList);
+}
+
+void
+Mantis::searchInsertionFinished()
+{
+    qDebug() << "searchInsertionFinished";
+    emit searchFinished();
 }
 
 void

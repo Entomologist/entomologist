@@ -1,9 +1,10 @@
 #include "MantisDetails.h"
 #include "ui_MantisDetails.h"
 
-MantisDetails::MantisDetails(QWidget *parent) :
+MantisDetails::MantisDetails(const QString &bugId, QWidget *parent) :
     BackendDetails(parent),
-    ui(new Ui::MantisDetails)
+    ui(new Ui::MantisDetails),
+    mBugId(bugId)
 {
     ui->setupUi(this);
     ui->reproCombo->installEventFilter(parent);

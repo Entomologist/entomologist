@@ -43,18 +43,35 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
 
     ui->splitter->setCollapsible(0, false);
 
+    // The splitter by default is difficult to see (on Linux, anyway),
+    // so let's make it a little more obvious
+    styleSplitter(ui->splitter->handle(1));
+    styleSplitter(ui->splitter->handle(2));
+//    setStyleSheet("QDialog { background-color: white; }");
+    ui->detailsFrame->setStyleSheet("QFrame#detailsFrame {border: 1px solid black; border-radius: 4px; }");
     connect(ui->cancelButton,SIGNAL(clicked()),SLOT(close()));
     connect(ui->saveButton,SIGNAL(clicked()),SLOT(save()));
     connect(ui->detailsLabel, SIGNAL(clicked(QString)),
             this, SLOT(textClicked(QString)));
     connect(ui->summaryLabel, SIGNAL(clicked(QString)),
             this, SLOT(textClicked(QString)));
-
 }
 
 NewCommentsDialog::~NewCommentsDialog()
 {
     delete ui;
+}
+
+void
+NewCommentsDialog::styleSplitter(QSplitterHandle *handle)
+{
+    QVBoxLayout *layout = new QVBoxLayout(handle);
+    layout->setSpacing(0);
+    layout->setMargin(0);
+    QFrame *line = new QFrame(handle);
+    line->setFrameShape(QFrame::HLine);
+    line->setFrameShadow(QFrame::Sunken);
+    layout->addWidget(line);
 }
 
 void
@@ -98,7 +115,6 @@ NewCommentsDialog::commentsCached()
     ui->descriptionFrame->setEnabled(true);
     ui->commentsFrame->setEnabled(true);
     ui->newCommentFrame->setEnabled(true);
-
     setComments();
 }
 
@@ -165,12 +181,17 @@ NewCommentsDialog::loadComments()
 void
 NewCommentsDialog::setComments()
 {
-    qDebug() << "Setting comments for " << mTrackerId << " and " << mCurrentBugId;
     int i = 0;
+    int total = 0;
     if (ui->descriptionTextBox->toPlainText().isEmpty())
         ui->descriptionTextBox->setText(SqlUtilities::getBugDescription(pBackend->type(), mCurrentBugId));
+    qDebug() << mTrackerId << mCurrentBugId;
     QList < QMap<QString, QString> > mainComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, false);
     QList < QMap<QString, QString> > shadowComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, true);
+    total = mainComments.size() + shadowComments.size();
+    if (total > 0)
+        ui->noCommentsLabel->hide();
+
     QSpacerItem* commentSpacer = new QSpacerItem(20, 40, QSizePolicy::Minimum, QSizePolicy::Expanding);
     for(i = 0; i < mainComments.size(); ++i)
     {
@@ -180,7 +201,8 @@ NewCommentsDialog::setComments()
          frame->setName(comment["author"]);
          frame->setComment(comment["comment"]);
          frame->setDate(comment["timestamp"]);
-         frame->setPrivate(false);
+         if (comment["private"] == "1")
+            frame->setPrivate();
          frame->setBugId(mCurrentBugId);
     }
 
@@ -192,7 +214,9 @@ NewCommentsDialog::setComments()
         frame->setName(comment["author"]);
         frame->setComment(comment["comment"]);
         frame->setDate(comment["timestamp"]);
-        frame->setPrivate(false);
+        if (comment["private"] == "1")
+           frame->setPrivate();
+
         frame->setBugId(mCurrentBugId);
         frame->setRedHeader();
     }
@@ -223,6 +247,7 @@ NewCommentsDialog::save()
 
     details["tracker_id"] = mTrackerId;
     details["bug_id"] = mCurrentBugId;
+    details["private_comment"] = (ui->newCommentPrivateCheckbox->isChecked()) ? "1" : "0";
     QString newComment = ui->commentEdit->document()->toPlainText();
     emit commentsDialogClosing(details, newComment);
     close();

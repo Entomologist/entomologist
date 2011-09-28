@@ -58,6 +58,7 @@ public:
 
     QString buildBugUrl(const QString &id);
     QString autoCacheComments() { return "0"; }
+    void deleteData();
 
 public slots:
     void searchCallFinished();

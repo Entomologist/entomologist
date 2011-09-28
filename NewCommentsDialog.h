@@ -13,6 +13,7 @@ class Backend;
 class BackendDetails;
 class QMovie;
 class QLabel;
+class QSplitterHandle;
 
 class NewCommentsDialog : public QDialog
 {
@@ -40,6 +41,7 @@ protected:
     void closeEvent(QCloseEvent *event);
 
 private:
+    void styleSplitter(QSplitterHandle *handle);
     void frameToggle(QWidget *frame, QLabel *arrow);
     Ui::NewCommentsDialog *ui;
     QString mCurrentBugId, mTrackerId;

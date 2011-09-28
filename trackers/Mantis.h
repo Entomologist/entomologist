@@ -37,6 +37,7 @@ public:
     void uploadAll();
     QString buildBugUrl(const QString &id);
     QString autoCacheComments();
+    void deleteData();
 
 public slots:
     void headFinished();
@@ -47,6 +48,9 @@ public slots:
     void assignedResponse();
     void reportedResponse();
     void monitoredResponse();
+    void searchResponse();
+    void searchedBugResponse();
+    void searchInsertionFinished();
     void handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
     void bugsInsertionFinished(QStringList idList);
     void commentInsertionFinished();
@@ -55,13 +59,15 @@ private:
     enum viewType {
         ASSIGNED = 0,
         REPORTED,
-        MONITORED
+        MONITORED,
+        SEARCHED
     };
 
     void getAssigned();
     void validFieldCall(const QString &request);
     void getReported();
     void getMonitored();
+    void getSearched();
     void getCategories();
     void addNotes();
     void getNextUpload();
@@ -71,7 +77,7 @@ private:
     QVariantMap mUploadList;
     QString mCurrentUploadId;
     QVariantList mCommentUploadList;
-    void setView();
+    void setView(const QString &search = "");
     viewType mViewType;
     QVariantMap mBugs;
     QStringList mCategoriesList;

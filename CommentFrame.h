@@ -37,24 +37,15 @@ public:
     ~CommentFrame();
 
     void setRedHeader();
-    void toggleEdit();
     void setName(const QString &name);
     void setDate(const QString &date);
-    void setPrivate(bool checked);
+    void setPrivate();
     void setComment(const QString &comment);
     void setCommentNumber(const QString &number) { mCommentNumber = number; }
 
     void setBugId(const QString &id) { mBugId = id; }
     QString bugId() { return mBugId; }
-
-    QString commentText();
     QString timestamp();
-
-public slots:
-    void saveButtonClicked();
-
-signals:
-    void saveCommentClicked();
 
 protected:
     void changeEvent(QEvent *e);

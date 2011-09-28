@@ -250,6 +250,7 @@ SqlUtilities::simpleInsert(const QString &tableName,
                     .arg(tableName)
                     .arg(keys.join(","))
                     .arg(placeholder.join(","));
+    qDebug() << query;
     q.prepare(query);
     for (int i = 0; i < keys.size(); ++i)
         q.bindValue(i,data.value(keys.at(i)));
@@ -365,7 +366,17 @@ bool
 SqlUtilities::hasPendingChanges()
 {
     QSqlQuery q;
-    q.exec("SELECT COUNT(id) FROM shadow_bugs");
+    q.exec("SELECT COUNT(id) FROM shadow_trac");
+    q.next();
+    if (q.value(0).toInt() > 0)
+        return true;
+
+    q.exec("SELECT COUNT(id) FROM shadow_bugzilla");
+    q.next();
+    if (q.value(0).toInt() > 0)
+        return true;
+
+    q.exec("SELECT COUNT(id) FROM shadow_mantis");
     q.next();
     if (q.value(0).toInt() > 0)
         return true;
@@ -838,7 +849,7 @@ SqlUtilities::mantisBugDetail(const QString &rowId)
     QMap<QString, QString> ret;
     QRegExp removeFont("<[^>]*>");
 
-    QString details = "SELECT mantis.id, trackers.name, mantis.bug_id, mantis.last_modified,"
+    QString details = "SELECT mantis.tracker_id, trackers.name, mantis.bug_id, mantis.last_modified,"
                    "coalesce(shadow_mantis.project, mantis.project),"
                    "coalesce(shadow_mantis.category, mantis.category),"
                    "coalesce(shadow_mantis.os, mantis.os),"
@@ -929,4 +940,452 @@ SqlUtilities::loadComments(const QString &trackerId,
     }
 
     return ret;
+}
+
+QList< QMap<QString, QString> >
+SqlUtilities::getCommentsChangelog()
+{
+    QList< QMap<QString, QString> > ret;
+    QString commentsQuery = "SELECT trackers.name, "
+                            "shadow_comments.bug_id, "
+                            "shadow_comments.comment, "
+                            "shadow_comments.id "
+                            "from shadow_comments join trackers ON shadow_comments.tracker_id = trackers.id";
+    QSqlQuery q(commentsQuery);
+    if (!q.exec())
+    {
+        qDebug() << "Error loading comments changelog: " << q.lastError().text();
+        return ret;
+    }
+    while(q.next())
+    {
+        QMap<QString, QString> entry;
+        entry["tracker_name"] = q.value(0).toString();
+        entry["bug_id"] = q.value(1).toString();
+        entry["comment"] = q.value(2).toString();
+        entry["id"] = q.value(3).toString();
+        ret << entry;
+    }
+
+    return ret;
+}
+
+QList< QMap<QString, QString> >
+SqlUtilities::getTracChangelog()
+{
+    QList< QMap<QString, QString> > ret;
+    QString bugsQuery = "SELECT trackers.name, "
+                   "shadow_trac.bug_id, "
+                   "trac.severity, "
+                   "shadow_trac.severity, "
+                   "trac.priority, "
+                   "shadow_trac.priority, "
+                   "trac.assigned_to, "
+                   "shadow_trac.assigned_to, "
+                   "trac.status, "
+                   "shadow_trac.status, "
+                   "trac.summary, "
+                   "shadow_trac.summary, "
+                   "trac.component, "
+                   "shadow_trac.component,"
+                   "trac.milestone,"
+                   "shadow_trac.milestone,"
+                   "trac.version,"
+                   "shadow_trac.version, "
+                   "trac.resolution,"
+                   "shadow_trac.resolution,"
+                   "shadow_trac.id "
+                   "from shadow_trac left outer join trac on shadow_trac.bug_id = trac.bug_id AND shadow_trac.tracker_id = trac.tracker_id "
+                   "join trackers ON shadow_trac.tracker_id = trackers.id";
+    QSqlQuery q(bugsQuery);
+    if (!q.exec())
+    {
+        qDebug() << "getTracChangelog error: " << q.lastError().text();
+        qDebug() << "getTracChangelog error: " << q.lastQuery();
+        return ret;
+    }
+
+    while (q.next())
+    {
+        if (!q.value(3).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Severity",
+                                     q.value(2).toString(),
+                                     q.value(3).toString());
+        }
+
+        if (!q.value(5).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Priority",
+                                     q.value(4).toString(),
+                                     q.value(5).toString());
+        }
+
+        if (!q.value(7).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Assigned To",
+                                     q.value(6).toString(),
+                                     q.value(7).toString());
+        }
+
+        if (!q.value(9).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Status",
+                                     q.value(8).toString(),
+                                     q.value(9).toString());
+        }
+
+        if (!q.value(11).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Summary",
+                                     q.value(10).toString(),
+                                     q.value(11).toString());
+        }
+
+        if (!q.value(13).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Component",
+                                     q.value(12).toString(),
+                                     q.value(13).toString());
+        }
+
+        if (!q.value(15).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Milestone",
+                                     q.value(14).toString(),
+                                     q.value(15).toString());
+        }
+
+        if (!q.value(17).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Version",
+                                     q.value(16).toString(),
+                                     q.value(17).toString());
+        }
+
+        if (!q.value(19).isNull())
+        {
+            ret << newChangelogEntry(q.value(20).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Resolution",
+                                     q.value(18).toString(),
+                                     q.value(19).toString());
+        }
+    }
+
+    return(ret);
+}
+
+QList< QMap<QString, QString> >
+SqlUtilities::getBugzillaChangelog()
+{
+    QList< QMap<QString, QString> > ret;
+    QString bugsQuery = "SELECT trackers.name, "
+                   "shadow_bugzilla.bug_id, "
+                   "bugzilla.severity, "
+                   "shadow_bugzilla.severity, "
+                   "bugzilla.priority, "
+                   "shadow_bugzilla.priority, "
+                   "bugzilla.assigned_to, "
+                   "shadow_bugzilla.assigned_to, "
+                   "bugzilla.status, "
+                   "shadow_bugzilla.status, "
+                   "bugzilla.summary, "
+                   "shadow_bugzilla.summary, "
+                   "bugzilla.component, "
+                   "shadow_bugzilla.component,"
+                   "bugzilla.product,"
+                   "shadow_bugzilla.product,"
+                   "shadow_bugzilla.id "
+                   "from shadow_bugzilla left outer join bugzilla on shadow_bugzilla.bug_id = bugzilla.bug_id AND shadow_bugzilla.tracker_id = bugzilla.tracker_id "
+                   "join trackers ON shadow_bugzilla.tracker_id = trackers.id";
+    QSqlQuery q(bugsQuery);
+    if (!q.exec())
+    {
+        qDebug() << "getBugzillaChangelog error: " << q.lastError().text();
+        qDebug() << "getBugzillaChangelog error: " << q.lastQuery();
+        return ret;
+    }
+
+    while (q.next())
+    {
+        if (!q.value(3).isNull())
+        {
+            ret << newChangelogEntry(q.value(16).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Severity",
+                                     q.value(2).toString(),
+                                     q.value(3).toString());
+        }
+
+        if (!q.value(5).isNull())
+        {
+            ret << newChangelogEntry(q.value(16).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Priority",
+                                     q.value(4).toString(),
+                                     q.value(5).toString());
+        }
+
+        if (!q.value(7).isNull())
+        {
+            ret << newChangelogEntry(q.value(16).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Assigned To",
+                                     q.value(6).toString(),
+                                     q.value(7).toString());
+        }
+
+        if (!q.value(9).isNull())
+        {
+            ret << newChangelogEntry(q.value(16).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Status",
+                                     q.value(8).toString(),
+                                     q.value(9).toString());
+        }
+
+        if (!q.value(11).isNull())
+        {
+            ret << newChangelogEntry(q.value(16).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Summary",
+                                     q.value(10).toString(),
+                                     q.value(11).toString());
+        }
+
+        if (!q.value(13).isNull())
+        {
+            ret << newChangelogEntry(q.value(16).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Component",
+                                     q.value(12).toString(),
+                                     q.value(13).toString());
+        }
+
+        if (!q.value(15).isNull())
+        {
+            ret << newChangelogEntry(q.value(16).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Product",
+                                     q.value(14).toString(),
+                                     q.value(15).toString());
+        }
+    }
+
+    return(ret);
+
+}
+
+QList< QMap<QString, QString> >
+SqlUtilities::getMantisChangelog()
+{
+#if 0
+                                              "os TEXT,"
+                                              "os_version TEXT,"
+                                              "bug_type TEXT,"
+                                              "bug_state TEXT,"
+                                              "last_modified TEXT)";
+#endif
+
+    QList< QMap<QString, QString> > ret;
+    QString bugsQuery = "SELECT trackers.name, "
+                   "shadow_mantis.bug_id, "
+                   "mantis.severity, "
+                   "shadow_mantis.severity, "
+                   "mantis.priority, "
+                   "shadow_mantis.priority, "
+                   "mantis.assigned_to, "
+                   "shadow_mantis.assigned_to, "
+                   "mantis.status, "
+                   "shadow_mantis.status, "
+                   "mantis.summary, "
+                   "shadow_mantis.summary, "
+                   "mantis.category, "
+                   "shadow_mantis.category,"
+                   "mantis.project,"
+                   "shadow_mantis.project,"
+                   "mantis.product_version,"
+                   "shadow_mantis.product_version,"
+                   "mantis.reproducibility,"
+                   "shadow_mantis.reproducibility,"
+                   "mantis.os,"
+                   "shadow_mantis.os, "
+                   "mantis.os_version,"
+                   "shadow_mantis.os_version,"
+                   "shadow_mantis.id "
+                   "from shadow_mantis left outer join mantis on shadow_mantis.bug_id = mantis.bug_id AND shadow_mantis.tracker_id = mantis.tracker_id "
+                   "join trackers ON shadow_mantis.tracker_id = trackers.id";
+    QSqlQuery q(bugsQuery);
+    if (!q.exec())
+    {
+        qDebug() << "getMantisChangelog error: " << q.lastError().text();
+        qDebug() << "getMantisChangelog error: " << q.lastQuery();
+        return ret;
+    }
+
+    while (q.next())
+    {
+        if (!q.value(3).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Severity",
+                                     q.value(2).toString(),
+                                     q.value(3).toString());
+        }
+
+        if (!q.value(5).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Priority",
+                                     q.value(4).toString(),
+                                     q.value(5).toString());
+        }
+
+        if (!q.value(7).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Assigned To",
+                                     q.value(6).toString(),
+                                     q.value(7).toString());
+        }
+
+        if (!q.value(9).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Status",
+                                     q.value(8).toString(),
+                                     q.value(9).toString());
+        }
+
+        if (!q.value(11).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Summary",
+                                     q.value(10).toString(),
+                                     q.value(11).toString());
+        }
+
+        if (!q.value(13).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Category",
+                                     q.value(12).toString(),
+                                     q.value(13).toString());
+        }
+
+        if (!q.value(15).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Project",
+                                     q.value(14).toString(),
+                                     q.value(15).toString());
+        }
+
+        if (!q.value(17).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Product Version",
+                                     q.value(16).toString(),
+                                     q.value(17).toString());
+        }
+
+        if (!q.value(19).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Reproducibility",
+                                     q.value(18).toString(),
+                                     q.value(19).toString());
+        }
+
+        if (!q.value(21).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "OS",
+                                     q.value(20).toString(),
+                                     q.value(21).toString());
+        }
+
+        if (!q.value(23).isNull())
+        {
+            ret << newChangelogEntry(q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "OS Version",
+                                     q.value(22).toString(),
+                                     q.value(23).toString());
+        }
+    }
+
+    return(ret);
+}
+
+QMap<QString, QString>
+SqlUtilities::newChangelogEntry(const QString &id,
+                                const QString &trackerName,
+                                const QString &bugId,
+                                const QString &columnName,
+                                const QString &oldValue,
+                                const QString &newValue)
+{
+    QMap<QString, QString> ret;
+    ret["id"] = id;
+    ret["tracker_name"] = trackerName;
+    ret["bug_id"] = bugId;
+    ret["column_name"] = columnName;
+    ret["from"] = (oldValue.isEmpty()) ? "(none)" : oldValue;
+    ret["to"] = newValue;
+    return(ret);
 }

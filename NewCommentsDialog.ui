@@ -6,8 +6,8 @@
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>543</width>
-    <height>542</height>
+    <width>868</width>
+    <height>771</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -45,7 +45,7 @@
          <string/>
         </property>
         <property name="pixmap">
-         <pixmap resource="resources.qrc">:/spinner</pixmap>
+         <pixmap>:/spinner</pixmap>
         </property>
         <property name="alignment">
          <set>Qt::AlignHCenter|Qt::AlignTop</set>
@@ -102,7 +102,7 @@
         <string/>
        </property>
        <property name="pixmap">
-        <pixmap resource="resources.qrc">:/small_arrow_down</pixmap>
+        <pixmap>:/small_arrow_down</pixmap>
        </property>
       </widget>
      </item>
@@ -168,7 +168,7 @@
            <string/>
           </property>
           <property name="pixmap">
-           <pixmap resource="resources.qrc">:/small_arrow_down</pixmap>
+           <pixmap>:/small_arrow_down</pixmap>
           </property>
          </widget>
         </item>
@@ -277,7 +277,7 @@
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_8">
        <item>
-        <widget class="ClickableText" name="commentsLabel">
+        <widget class="QLabel" name="commentsLabel">
          <property name="font">
           <font>
            <weight>75</weight>
@@ -314,13 +314,35 @@
               <rect>
                <x>0</x>
                <y>0</y>
-               <width>519</width>
-               <height>17</height>
+               <width>844</width>
+               <height>55</height>
               </rect>
              </property>
              <layout class="QVBoxLayout" name="verticalLayout_6">
               <item>
-               <layout class="QVBoxLayout" name="commentsLayout"/>
+               <layout class="QVBoxLayout" name="commentsLayout">
+                <item>
+                 <widget class="QLabel" name="noCommentsLabel">
+                  <property name="font">
+                   <font>
+                    <pointsize>16</pointsize>
+                    <weight>75</weight>
+                    <italic>true</italic>
+                    <bold>true</bold>
+                   </font>
+                  </property>
+                  <property name="text">
+                   <string>No Comments</string>
+                  </property>
+                  <property name="alignment">
+                   <set>Qt::AlignCenter</set>
+                  </property>
+                  <property name="textInteractionFlags">
+                   <set>Qt::NoTextInteraction</set>
+                  </property>
+                 </widget>
+                </item>
+               </layout>
               </item>
              </layout>
             </widget>
@@ -358,17 +380,41 @@
          </property>
          <layout class="QVBoxLayout" name="verticalLayout_9">
           <item>
-           <widget class="QLabel" name="newCommentLabel">
-            <property name="font">
-             <font>
-              <weight>75</weight>
-              <bold>true</bold>
-             </font>
-            </property>
-            <property name="text">
-             <string>New Comment:</string>
-            </property>
-           </widget>
+           <layout class="QHBoxLayout" name="horizontalLayout_2">
+            <item>
+             <widget class="QLabel" name="newCommentLabel">
+              <property name="font">
+               <font>
+                <weight>75</weight>
+                <bold>true</bold>
+               </font>
+              </property>
+              <property name="text">
+               <string>New Comment:</string>
+              </property>
+             </widget>
+            </item>
+            <item>
+             <spacer name="horizontalSpacer_5">
+              <property name="orientation">
+               <enum>Qt::Horizontal</enum>
+              </property>
+              <property name="sizeHint" stdset="0">
+               <size>
+                <width>40</width>
+                <height>20</height>
+               </size>
+              </property>
+             </spacer>
+            </item>
+            <item>
+             <widget class="QCheckBox" name="newCommentPrivateCheckbox">
+              <property name="text">
+               <string>Private</string>
+              </property>
+             </widget>
+            </item>
+           </layout>
           </item>
           <item>
            <widget class="QPlainTextEdit" name="commentEdit">
@@ -427,8 +473,6 @@
    <header>ClickableText.h</header>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="resources.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

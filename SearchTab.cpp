@@ -2,7 +2,7 @@
 #include <QSettings>
 
 #include "SqlSearchModel.h"
-#include "SqlBugDelegate.h"
+#include "SqlSearchDelegate.h"
 #include "SqlUtilities.h"
 #include "SearchTab.h"
 #include "ui_SearchTab.h"
@@ -37,7 +37,7 @@ SearchTab::SearchTab(QWidget *parent) :
     pModel = new SqlSearchModel(this);
     pModel->setTable("search_results");
     pModel->select();
-    SqlBugDelegate *delegate = new SqlBugDelegate();
+    SqlSearchDelegate *delegate = new SqlSearchDelegate();
     ui->tableView->setItemDelegate(delegate);
     ui->tableView->setModel(pModel);
     pModel->setHeaderData(1, Qt::Horizontal, tr("Tracker"));
@@ -92,17 +92,13 @@ SearchTab::searchButtonClicked()
     QString search = ui->searchQuery->text();
 
     if (search.isEmpty())
-    {
-        qDebug() << "Empty search";
         return;
-    }
-
 
     SqlUtilities::clearSearch();
     ui->searchWidget->hide();
     ui->searchSpinnerWidget->show();
     pSpinnerMovie->start();
-
+    mSearchCount = 0;
     int index = ui->trackerCombo->currentIndex();
     QString selected = ui->trackerCombo->currentText();
     QSettings settings("Entomologist");
@@ -118,6 +114,7 @@ SearchTab::searchButtonClicked()
             || (b->name() == selected))
         {
             mSearchCount++;
+            qDebug() << "mSearchCount: " << mSearchCount;
             b->search(search);
         }
      }

@@ -37,8 +37,11 @@
 #include <QDebug>
 #include <QSettings>
 
-BugzillaUI::BugzillaUI(const QString &id, Backend *backend, QWidget *parent) :
-    BackendUI(id, backend, parent),
+BugzillaUI::BugzillaUI(const QString &id,
+                       const QString &trackerName,
+                       Backend *backend,
+                       QWidget *parent) :
+    BackendUI(id, trackerName, backend, parent),
     ui(new Ui::BugzillaUI)
 {
     QSettings settings("Entomologist");
@@ -49,7 +52,7 @@ BugzillaUI::BugzillaUI(const QString &id, Backend *backend, QWidget *parent) :
 
     v = ui->tableView->horizontalHeader();
     v->setContextMenuPolicy(Qt::CustomContextMenu);
-
+    restoreHeaderSetting();
     connect(ui->tableView, SIGNAL(copyBugURL(QString)),
             this, SLOT(copyBugUrl(QString)));
     connect(ui->tableView, SIGNAL(openBugInBrowser(QString)),
@@ -58,6 +61,8 @@ BugzillaUI::BugzillaUI(const QString &id, Backend *backend, QWidget *parent) :
             this, SLOT(headerContextMenu(QPoint)));
     connect(v, SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
+    connect(v, SIGNAL(sectionResized(int,int,int)),
+            this, SLOT(saveHeaderSetting(int,int,int)));
 
     connect(ui->tableView, SIGNAL(doubleClicked(QModelIndex)),
             this, SLOT(itemDoubleClicked(QModelIndex)));
@@ -101,7 +106,6 @@ BugzillaUI::~BugzillaUI()
     delete ui;
 }
 
-
 void
 BugzillaUI::loadFields()
 {
@@ -115,6 +119,7 @@ BugzillaUI::commentsDialogClosing(QMap<QString, QString> details, QString newCom
 {
     saveNewShadowItems("shadow_bugzilla", details, newComment);
     reloadFromDatabase();
+    emit bugChanged();
 }
 
 void

@@ -81,8 +81,16 @@ BackendUI *
 Bugzilla::displayWidget()
 {
     if (pDisplayWidget == NULL)
-        pDisplayWidget = new BugzillaUI(mId, this);
+    {
+        pDisplayWidget = new BugzillaUI(mId, mName, this);
+    }
     return(pDisplayWidget);
+}
+
+void
+Bugzilla::deleteData()
+{
+
 }
 
 void

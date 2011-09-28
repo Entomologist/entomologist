@@ -83,6 +83,12 @@ public:
                            const QString &sql);
     static QStringList fieldValues(const QString &tracker_id,
                                    const QString &fieldName);
+
+    static QList< QMap<QString, QString> > getCommentsChangelog();
+    static QList< QMap<QString, QString> > getTracChangelog();
+    static QList< QMap<QString, QString> > getBugzillaChangelog();
+    static QList< QMap<QString, QString> > getMantisChangelog();
+
     // Deletes all entries in the search table
     static void clearSearch();
 
@@ -115,6 +121,12 @@ public slots:
     void saveCredentials(int id, const QString &username, const QString &password);
 
 private:
+    static QMap<QString, QString> newChangelogEntry(const QString &id,
+                                                    const QString &trackerName,
+                                                    const QString &bugId,
+                                                    const QString &columnName,
+                                                    const QString &oldValue,
+                                                    const QString &newValue);
     QSqlDatabase mDatabase;
 };
 

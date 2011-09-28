@@ -36,8 +36,11 @@
 #include <QDebug>
 #include <QSettings>
 
-MantisUI::MantisUI(const QString &id, Backend *backend, QWidget *parent) :
-    BackendUI(id, backend, parent),
+MantisUI::MantisUI(const QString &id,
+                   const QString &trackerName,
+                   Backend *backend,
+                   QWidget *parent) :
+    BackendUI(id, trackerName, backend, parent),
     ui(new Ui::MantisUI)
 {
     ui->setupUi(this);
@@ -56,22 +59,22 @@ MantisUI::MantisUI(const QString &id, Backend *backend, QWidget *parent) :
             this, SLOT(headerContextMenu(QPoint)));
     connect(v, SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
-
     connect(ui->tableView, SIGNAL(doubleClicked(QModelIndex)),
             this, SLOT(itemDoubleClicked(QModelIndex)));
-    mTableHeaders << tr("Bug ID")
-    << tr("Last Modified")
-    << tr("Project")
-    << tr("Category")
-    << tr("OS")
-    << tr("OS Version")
-    << tr("Product Version")
-    << tr("Severity")
-    << tr("Priority")
-    << tr("Reproducibility")
-    << tr("Assigned To")
-    << tr("Status")
-    << tr("Summary");
+    mTableHeaders << ""
+                    << tr("Bug ID")
+                    << tr("Last Modified")
+                    << tr("Project")
+                    << tr("Category")
+                    << tr("OS")
+                    << tr("OS Version")
+                    << tr("Product Version")
+                    << tr("Severity")
+                    << tr("Priority")
+                    << tr("Reproducibility")
+                    << tr("Assigned To")
+                    << tr("Status")
+                    << tr("Summary");
 
     mBaseQuery = "SELECT mantis.id, mantis.highlight_type, mantis.bug_id, mantis.last_modified,"
                    "coalesce(shadow_mantis.project, mantis.project),"
@@ -91,7 +94,7 @@ MantisUI::MantisUI(const QString &id, Backend *backend, QWidget *parent) :
     mSortQuery = " ORDER BY mantis.bug_id ASC";
     loadFields();
 
-    unsigned int savedSortColumn = settings.value(QString("%1-sort-column").arg(pBackend->name()), 1).toUInt();
+    unsigned int savedSortColumn = settings.value(QString("%1-sort-column").arg(pBackend->name()), 2).toUInt();
     Qt::SortOrder savedSortOrder = static_cast<Qt::SortOrder>(settings.value(QString("%1-sort-order").arg(pBackend->name()), 0).toUInt());
     v->setSortIndicator(savedSortColumn, savedSortOrder);
     setupTable();
@@ -103,6 +106,10 @@ MantisUI::MantisUI(const QString &id, Backend *backend, QWidget *parent) :
         i.next();
         v->hideSection(i.key().toInt());
     }
+
+    connect(v, SIGNAL(sectionResized(int,int,int)),
+            this, SLOT(saveHeaderSetting(int,int,int)));
+    restoreHeaderSetting();
 }
 
 MantisUI::~MantisUI()
@@ -114,6 +121,9 @@ void
 MantisUI::headerContextMenu(const QPoint &pos)
 {
     int index = v->logicalIndexAt(pos);
+    if (index == 1)
+        return;
+
     QString title = mTableHeaders.at(index - 1);
     hideColumnsMenu(pos, "hide-mantis-columns", title);
 }
@@ -127,12 +137,42 @@ MantisUI::loadFields()
     mResolutions = SqlUtilities::fieldValues(mId, "resolution");
     mRepro = SqlUtilities::fieldValues(mId, "reproducibility");
 }
+void
+MantisUI::loadSearchResult(const QString &id)
+{
+    startSearchProgress();
+    pBackend->getSearchedBug(id);
+}
+void
+MantisUI::searchResultFinished(QMap<QString, QString> resultMap)
+{
+    NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
+    connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
+             this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
+    dialog->setBugInfo(resultMap);
+
+    MantisDetails *details = new MantisDetails(resultMap["bug_id"]);
+    details->setProject(resultMap["project"]);
+    details->setVersion(resultMap["product_version"]);
+    details->setCategory(resultMap["category"]);
+    details->setSeverities(resultMap["severity"], mSeverities);
+    details->setPriorities(resultMap["priority"], mPriorities);
+    details->setStatuses(resultMap["status"], mStatuses);
+    details->setResolutions(resultMap["resolution"], mResolutions);
+    details->setReproducibility(resultMap["reproducibility"], mRepro);
+    dialog->setDetailsWidget(details);
+    dialog->loadComments();
+    stopSearchProgress();
+    dialog->show();
+    stopSearchProgress();
+}
 
 void
 MantisUI::commentsDialogClosing(QMap<QString, QString> details, QString newComment)
 {
     saveNewShadowItems("shadow_mantis", details, newComment);
     reloadFromDatabase();
+    emit bugChanged();
 }
 
 void
@@ -145,7 +185,7 @@ MantisUI::itemDoubleClicked(const QModelIndex &index)
              this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
 
     dialog->setBugInfo(detailMap);
-    MantisDetails *details = new MantisDetails();
+    MantisDetails *details = new MantisDetails(detailMap["bug_id"]);
     details->setProject(detailMap["project"]);
     details->setVersion(detailMap["product_version"]);
     details->setCategory(detailMap["category"]);
@@ -168,6 +208,7 @@ MantisUI::setupTable()
     SqlBugDelegate *delegate = new SqlBugDelegate();
     ui->tableView->setItemDelegate(delegate);
     ui->tableView->setModel(pBugModel);
+    pBugModel->setHeaderData(1, Qt::Horizontal, "");
     pBugModel->setHeaderData(2, Qt::Horizontal, tr("Bug ID"));
     pBugModel->setHeaderData(3, Qt::Horizontal, tr("Last Modified"));
     pBugModel->setHeaderData(4, Qt::Horizontal, tr("Project"));
@@ -185,7 +226,6 @@ MantisUI::setupTable()
     ui->tableView->setSortingEnabled(true);
     ui->tableView->setGridStyle(Qt::PenStyle(Qt::DotLine));
     ui->tableView->hideColumn(0); // Hide the internal row id
-    ui->tableView->hideColumn(1); // Hide the highlight type
     ui->tableView->verticalHeader()->hide(); // Hide the Row numbers
     ui->tableView->resizeColumnsToContents();
     ui->tableView->resizeRowsToContents();
@@ -204,42 +244,45 @@ MantisUI::sortIndicatorChanged(int logicalIndex, Qt::SortOrder order)
     switch(logicalIndex)
     {
     case 1:
-        mSortQuery = newSortQuery.arg("mantis.bug_id");
+        mSortQuery = newSortQuery.arg("mantis.highlight_type");
         break;
     case 2:
-        mSortQuery = newSortQuery.arg("mantis.last_modified");
+        mSortQuery = newSortQuery.arg("mantis.bug_id");
         break;
     case 3:
-        mSortQuery = newSortQuery.arg("mantis.project");
+        mSortQuery = newSortQuery.arg("mantis.last_modified");
         break;
     case 4:
-        mSortQuery = newSortQuery.arg("mantis.category");
+        mSortQuery = newSortQuery.arg("mantis.project");
         break;
     case 5:
-        mSortQuery = newSortQuery.arg("mantis.os");
+        mSortQuery = newSortQuery.arg("mantis.category");
         break;
     case 6:
-        mSortQuery = newSortQuery.arg("mantis.os_version");
+        mSortQuery = newSortQuery.arg("mantis.os");
         break;
     case 7:
-        mSortQuery = newSortQuery.arg("mantis.product_version");
+        mSortQuery = newSortQuery.arg("mantis.os_version");
         break;
     case 8:
-        mSortQuery = newSortQuery.arg("mantis.severity");
+        mSortQuery = newSortQuery.arg("mantis.product_version");
         break;
     case 9:
-        mSortQuery = newSortQuery.arg("mantis.priority");
+        mSortQuery = newSortQuery.arg("mantis.severity");
         break;
     case 10:
-        mSortQuery = newSortQuery.arg("mantis.reproducibility");
+        mSortQuery = newSortQuery.arg("mantis.priority");
         break;
     case 11:
-        mSortQuery = newSortQuery.arg("mantis.assigned_to");
+        mSortQuery = newSortQuery.arg("mantis.reproducibility");
         break;
     case 12:
-        mSortQuery = newSortQuery.arg("mantis.status");
+        mSortQuery = newSortQuery.arg("mantis.assigned_to");
         break;
     case 13:
+        mSortQuery = newSortQuery.arg("mantis.status");
+        break;
+    case 14:
         mSortQuery = newSortQuery.arg("mantis.summary");
         break;
     default:

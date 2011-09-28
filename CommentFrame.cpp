@@ -21,6 +21,8 @@
  *
  */
 
+#include <QDateTime>
+
 #include "CommentFrame.h"
 #include "ui_CommentFrame.h"
 
@@ -28,23 +30,13 @@ CommentFrame::CommentFrame(QWidget *parent, bool isNewComment)
     : QFrame(parent), ui(new Ui::CommentFrame)
 {
     ui->setupUi(this);
+    ui->privateLabel->hide();
     if (isNewComment)
-    {
         ui->infoWidget->setStyleSheet("background: #E9112E");
-        ui->commentLabel->hide();
-        ui->replyButton->hide();
-        connect(ui->saveButton, SIGNAL(clicked()),
-                this, SLOT(saveButtonClicked()));
-    }
     else
-    {
         ui->infoWidget->setStyleSheet("background: #96B8CA");
-        ui->saveButton->hide();
-        ui->commentTextEdit->hide();
-    }
 
-    setStyleSheet("background: white");
-
+    setStyleSheet("QFrame { background-color: white; } ");
 }
 
 CommentFrame::~CommentFrame()
@@ -58,32 +50,10 @@ CommentFrame::setRedHeader()
     ui->infoWidget->setStyleSheet("background: #E9112E");
 }
 
-void
-CommentFrame::toggleEdit()
-{
-    ui->commentLabel->setText(ui->commentTextEdit->toPlainText());
-    ui->commentLabel->show();
-    ui->commentTextEdit->hide();
-    ui->replyButton->show();
-    ui->saveButton->hide();
-}
-
-QString
-CommentFrame::commentText()
-{
-    return ui->commentTextEdit->toPlainText();
-}
-
 QString
 CommentFrame::timestamp()
 {
     return ui->dateLabel->text();
-}
-
-void
-CommentFrame::saveButtonClicked()
-{
-    emit saveCommentClicked();
 }
 
 void
@@ -95,13 +65,14 @@ CommentFrame::setName(const QString &name)
 void
 CommentFrame::setDate(const QString &date)
 {
-    ui->dateLabel->setText(date);
+    QDateTime formatDate = QDateTime::fromString(date, Qt::ISODate);
+    ui->dateLabel->setText(formatDate.toString(Qt::DefaultLocaleLongDate));
 }
 
 void
-CommentFrame::setPrivate(bool checked)
+CommentFrame::setPrivate()
 {
-    ui->privateCheckbox->setChecked(checked);
+    ui->privateLabel->show();
 }
 
 void

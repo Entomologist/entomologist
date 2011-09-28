@@ -64,8 +64,14 @@ BackendUI *
 Trac::displayWidget()
 {
     if (pDisplayWidget == NULL)
-        pDisplayWidget = new TracUI(mId, this);
+        pDisplayWidget = new TracUI(mId, mName, this);
     return(pDisplayWidget);
+}
+
+void
+Trac::deleteData()
+{
+
 }
 
 void
@@ -496,20 +502,17 @@ Trac::searchRpcResponse(QVariant &arg)
         QVariantList result = resultList.at(i).toList();
         QMap<QString, QString> bug;
         QStringList split = result.at(0).toString().split('/');
-        qDebug() << "SPLIT: " << result.at(0).toString();
         bug["tracker_name"] = mName;
         bug["bug_id"] = split.last();
         bug["summary"] = result.at(1).toString();
         insertList << bug;
     }
-    qDebug() << "multiInsert " << insertList;
     pSqlWriter->multiInsert("search_results", insertList);
 }
 
 void
 Trac::searchInsertionFinished()
 {
-   qDebug() << "searchInsertionFinished";
    emit searchFinished();
 }
 

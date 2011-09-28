@@ -38,7 +38,10 @@ class TracUI : public BackendUI
     Q_OBJECT
 
 public:
-    explicit TracUI(const QString &id, Backend *backend, QWidget *parent = 0);
+    explicit TracUI(const QString &id,
+                    const QString &trackerName,
+                    Backend *backend,
+                    QWidget *parent = 0);
     ~TracUI();
     void loadFields();
 

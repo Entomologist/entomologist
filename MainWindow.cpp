@@ -378,7 +378,9 @@ MainWindow::addTrackerToList(Backend *newTracker, bool sync)
             newTracker->displayWidget(), SLOT(reloadFromDatabase()));
     connect(this, SIGNAL(setShowOptions(bool,bool,bool,bool)),
             newTracker->displayWidget(), SLOT(setShowOptions(bool,bool,bool,bool)));
-    int newIndex = ui->trackerTab->addTab(newTracker->displayWidget(), newTracker->name());
+    connect(newTracker->displayWidget(), SIGNAL(bugChanged()),
+            this, SLOT(toggleButtons()));
+    int newIndex = ui->trackerTab->insertTab(0, newTracker->displayWidget(), newTracker->name());
     trackerTabsList.append(newTracker->displayWidget());
     pSearchTab->addTracker(newTracker);
 
@@ -386,6 +388,7 @@ MainWindow::addTrackerToList(Backend *newTracker, bool sync)
     iconPath.append(QDir::separator()).append("entomologist");
     iconPath.append(QDir::separator()).append(QString("%1.png").arg(newTracker->name()));
     ui->trackerTab->setTabIcon(newIndex, QIcon(iconPath));
+    ui->trackerTab->setCurrentIndex(newIndex);
     mBackendMap[newTracker->id()] = newTracker;
     mBackendList.append(newTracker);
     if(!QFile::exists(iconPath))
@@ -601,7 +604,6 @@ MainWindow::htmlIconDownloaded()
     {
         reply->close();
         qDebug() << "Couldn't get an icon or HTML for " << url << " so I'm giving up: " << reply->errorString();
-        qDebug() << reply->readAll();
         return;
     }
 
@@ -809,9 +811,8 @@ MainWindow::syncNextTracker()
 {
     if (mBackendList.empty())
     {
-        qDebug() << "Backend is empty";
         return;
-        }
+    }
     Backend *b = mBackendList.at(mSyncPosition);
     ui->syncingLabel->setText(QString("Syncing %1...").arg(b->name()));
     mSyncPosition++;
@@ -1186,6 +1187,15 @@ MainWindow::deleteTracker(const QString &id)
     // TODO: move this to SQLUtilities
     Backend *b = mBackendMap[id];
     mBackendMap.remove(id);
+    for (int i = 0; i < mBackendList.size(); ++i)
+    {
+        if (mBackendList.at(i) == b)
+        {
+            mBackendList.removeAt(i);
+            break;
+        }
+    }
+
     delete b;
 
 

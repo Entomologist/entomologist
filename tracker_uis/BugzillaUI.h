@@ -35,7 +35,10 @@ class BugzillaUI : public BackendUI
     Q_OBJECT
 
 public:
-    explicit BugzillaUI(const QString &id, Backend *backend, QWidget *parent = 0);
+    explicit BugzillaUI(const QString &id,
+                        const QString &trackerName,
+                        Backend *backend,
+                        QWidget *parent = 0);
     ~BugzillaUI();
     void loadFields();
 

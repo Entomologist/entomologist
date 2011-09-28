@@ -39,8 +39,11 @@
 #include <QDateTime>
 #include <QSettings>
 
-TracUI::TracUI(const QString &id, Backend *backend, QWidget *parent) :
-    BackendUI(id, backend, parent),
+TracUI::TracUI(const QString &id,
+               const QString &trackerName,
+               Backend *backend,
+               QWidget *parent) :
+    BackendUI(id, trackerName, backend, parent),
     ui(new Ui::TracUI)
 {
     ui->setupUi(this);
@@ -54,6 +57,7 @@ TracUI::TracUI(const QString &id, Backend *backend, QWidget *parent) :
 
     v = ui->tableView->horizontalHeader();
     v->setContextMenuPolicy(Qt::CustomContextMenu);
+    restoreHeaderSetting();
     mTableHeaders << ""
                   << tr("Bug ID")
                   << tr("Last Modified")
@@ -74,7 +78,8 @@ TracUI::TracUI(const QString &id, Backend *backend, QWidget *parent) :
             this, SLOT(headerContextMenu(QPoint)));
     connect(v, SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
-
+    connect(v, SIGNAL(sectionResized(int,int,int)),
+            this, SLOT(saveHeaderSetting(int,int,int)));
     connect(ui->tableView, SIGNAL(doubleClicked(QModelIndex)),
             this, SLOT(itemDoubleClicked(QModelIndex)));
     mBaseQuery = "SELECT trac.id, trac.highlight_type, trac.bug_id, trac.last_modified,"
@@ -144,6 +149,7 @@ TracUI::commentsDialogClosing(QMap<QString, QString> details, QString newComment
 {
     saveNewShadowItems("shadow_trac", details, newComment);
     reloadFromDatabase();
+    emit bugChanged();
 }
 
 void

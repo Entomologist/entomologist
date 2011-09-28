@@ -73,6 +73,7 @@ public slots:
                          const QList<QSslError> &errors);
     void trayActivated(QSystemTrayIcon::ActivationReason reason);
     void addTrackerTriggered();
+    void toggleButtons();
     void showMenu(int tabIndex);
     void prefsTriggered();
     void websiteTriggered();
@@ -118,7 +119,6 @@ private:
     void fetchHTMLIcon(const QString &url, const QString &savePath);
     bool isOnline();
     int trackerNameExists(const QString &name);
-    void toggleButtons();
     void setTimer();
 
     QString getChangelog();

@@ -25,6 +25,7 @@
 #include <QMessageBox>
 
 #include "ChangelogWindow.h"
+#include "SqlUtilities.h"
 #include "ChangelogListDelegate.h"
 #include "ui_ChangelogWindow.h"
 
@@ -51,116 +52,47 @@ void
 ChangelogWindow::loadChangelog()
 {
     ui->listWidget->clear();
+    QList< QMap<QString, QString> > commentsChangelist;
+    QList< QMap<QString, QString> > bugChangelist;
+
     qDebug() << "Loading changelog";
-    QSqlQueryModel model;
     QString line;
-    QString bugsQuery = "SELECT trackers.name, "
-                   "shadow_bugs.bug_id, "
-                   "bugs.severity, "
-                   "shadow_bugs.severity, "
-                   "bugs.priority, "
-                   "shadow_bugs.priority, "
-                   "bugs.assigned_to, "
-                   "shadow_bugs.assigned_to, "
-                   "bugs.status, "
-                   "shadow_bugs.status, "
-                   "bugs.summary, "
-                   "shadow_bugs.summary, "
-                   "shadow_bugs.id "
-                   "from shadow_bugs left outer join bugs on shadow_bugs.bug_id = bugs.bug_id AND shadow_bugs.tracker_id = bugs.tracker_id "
-                   "join trackers ON shadow_bugs.tracker_id = trackers.id";
-    QString commentsQuery = "SELECT trackers.name, "
-                            "shadow_comments.bug_id, "
-                            "shadow_comments.comment, "
-                            "shadow_comments.id "
-                            "from shadow_comments join trackers ON shadow_comments.tracker_id = trackers.id";
     QString entry = tr("<b>%1</b> bug <font color=\"blue\"><u>%2</u></font>: Change "
                        "<b>%3</b> from <b>%4</b> to <b>%5</b><br>");
     QString commentEntry = tr("Add a comment to <b>%1</b> bug <font color=\"blue\"><b>%2</u></font>:<br>"
                               "<i>%3</i><br>");
-    model.setQuery(bugsQuery);
-    for (int i = 0; i < model.rowCount(); ++i)
+
+    bugChangelist = SqlUtilities::getTracChangelog();
+    bugChangelist << SqlUtilities::getBugzillaChangelog();
+    bugChangelist << SqlUtilities::getMantisChangelog();
+
+    for (int i = 0; i < bugChangelist.size(); ++i)
     {
-        QSqlRecord record = model.record(i);
-        if (!record.value(3).isNull())
-        {
-            line = QString(entry).arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Severity"),
-                             record.value(2).toString(),
-                             record.value(3).toString());
-            QListWidgetItem *newItem = new QListWidgetItem();
-            newItem->setText(line);
-            newItem->setData(Qt::UserRole, QString("bug:%1").arg(record.value(12).toString()));
-            ui->listWidget->addItem(newItem);
-        }
-
-        if (!record.value(5).isNull())
-        {
-            line = QString(entry).arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Priority"),
-                             record.value(4).toString(),
-                             record.value(5).toString());
-
-            QListWidgetItem *newItem = new QListWidgetItem();
-            newItem->setText(line);
-            newItem->setData(Qt::UserRole, QString("bug:%1").arg(record.value(12).toString()));
-            ui->listWidget->addItem(newItem);
-        }
-
-        if (!record.value(7).isNull())
-        {
-            line = QString(entry).arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Assigned To"),
-                             record.value(6).toString(),
-                             record.value(7).toString());
-            QListWidgetItem *newItem = new QListWidgetItem();
-            newItem->setText(line);
-            newItem->setData(Qt::UserRole, QString("bug:%1").arg(record.value(12).toString()));
-            ui->listWidget->addItem(newItem);
-        }
-        if (!record.value(9).isNull())
-        {
-            line = QString(entry).arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Status"),
-                             record.value(8).toString(),
-                             record.value(9).toString());
-            QListWidgetItem *newItem = new QListWidgetItem();
-            newItem->setText(line);
-            newItem->setData(Qt::UserRole, QString("bug:%1").arg(record.value(12).toString()));
-            ui->listWidget->addItem(newItem);
-        }
-        if (!record.value(11).isNull())
-        {
-            line = QString(entry).arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Summary"),
-                             record.value(10).toString(),
-                             record.value(11).toString());
-            QListWidgetItem *newItem = new QListWidgetItem();
-            newItem->setText(line);
-            newItem->setData(Qt::UserRole, QString("bug:%1").arg(record.value(12).toString()));
-            ui->listWidget->addItem(newItem);
-        }
-    }
-
-    model.setQuery(commentsQuery);
-    for (int i = 0; i < model.rowCount(); ++i)
-    {
-        QString ret = "";
+        QMap<QString,QString> newChange = bugChangelist.at(i);
+        line = QString(entry).arg(newChange["tracker_name"],
+                                  newChange["bug_id"],
+                                  newChange["column_name"],
+                                  newChange["from"],
+                                  newChange["to"]);
         QListWidgetItem *newItem = new QListWidgetItem();
-        QSqlRecord record = model.record(i);
-        ret += commentEntry.arg(record.value(0).toString(),
-                                record.value(1).toString(),
-                                record.value(2).toString());
-        newItem->setText(ret);
-        newItem->setData(Qt::UserRole, QString("comment:%1").arg(record.value(3).toString()));
+        newItem->setText(line);
+        newItem->setData(Qt::UserRole, QString("bug:%1").arg(newChange["id"]));
         ui->listWidget->addItem(newItem);
     }
 
+    commentsChangelist = SqlUtilities::getCommentsChangelog();
+    for (int i = 0; i < commentsChangelist.size(); ++i)
+    {
+        QString ret = "";
+        QMap<QString, QString> comment = commentsChangelist.at(i);
+        QListWidgetItem *newItem = new QListWidgetItem();
+        ret += commentEntry.arg(comment["tracker_name"],
+                                comment["bug_id"],
+                                comment["comment"]);
+        newItem->setText(ret);
+        newItem->setData(Qt::UserRole, QString("comment:%1").arg(comment["id"]));
+        ui->listWidget->addItem(newItem);
+    }
     ui->listWidget->setItemDelegate(new ChangelogListDelegate(ui->listWidget));
 }
 
