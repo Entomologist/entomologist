@@ -72,6 +72,8 @@ private:
     bool compareTaskDates(QString task1,QString task2);
     bool listExists(QString name);
     void insertTaskID(ToDoItem* item,QString itemID);
+
+
 };
 
 

@@ -16,7 +16,7 @@ BugTreeItemDelegate::BugTreeItemDelegate(QObject *parent) :
 QWidget*
 BugTreeItemDelegate::createEditor(QWidget *parent, const QStyleOptionViewItem &option, const QModelIndex &index) const
 {
-
+    Q_UNUSED(option);
     if(QDate::fromString(index.data().toString(),dateFormat).isValid())
     {
         qDebug() << QDate::fromString(index.data().toString()).isValid();

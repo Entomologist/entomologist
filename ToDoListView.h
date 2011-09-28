@@ -31,6 +31,7 @@
 #include <QTreeWidgetItem>
 #include <QProgressDialog>
 #include "todolistservices/RememberTheMilk.h"
+#include "todolistservices/GoogleTasks.h"
 #include "ToDoItem.h"
 #include "ToDoList.h"
 
@@ -108,6 +109,7 @@ private:
     int numberofItemsToSync;
     QTimer* timer;
     QProgressDialog* progress;
+    void insertAuthToken(GoogleTasks*);
 };
 
 #endif // TODOLISTVIEW_H

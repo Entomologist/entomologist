@@ -33,7 +33,7 @@
 #include "ui_ToDoListPreferences.h"
 #include "todolistservices/GenericWebDav.h"
 #include "todolistservices/RememberTheMilk.h"
-#include "todolistservices/GoogleCalendar.h"
+#include "todolistservices/GoogleTasks.h"
 #include "todolistservices/ServicesBackend.h"
 
 /* This class displays configuration options for ToDo Lists. The user can add new export
@@ -90,7 +90,7 @@ ToDoListPreferences::addService()
     ToDoListServiceAdd* a;
     a = new ToDoListServiceAdd(this);
     QStringList services;
-    services<< "Generic Web Dav" << "Google Calendar" << "Remember The Milk";
+    services<< "Generic Web Dav" << "Google Tasks" << "Remember The Milk";
     a->setServiceCombo(services);
     if(a->exec() == QDialog::Accepted)
         insertData(a);
@@ -158,7 +158,7 @@ ToDoListPreferences::editService()
     ToDoListServiceAdd* a;
     a = new ToDoListServiceAdd(this);
     QStringList services;
-    services<< "Generic Web Dav" << "Google Calendar" << "Remember The Milk";
+    services<< "Generic Web Dav" << "Google Tasks" << "Remember The Milk";
     a->setServiceCombo(services);
     a->setData(servicetype,name,username,password,url);
     a->disableUser();

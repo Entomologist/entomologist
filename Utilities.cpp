@@ -35,6 +35,7 @@
 void
 Utilities::openAndroidUrl(QUrl url)
 {
+    Q_UNUSED(url);
 #ifdef Q_OS_ANDROID
     JNIEnv *env;
     JavaVM* m_javaVM = QPlatformNativeInterface::nativeResourceForWidget("JavaVM",0);

@@ -115,7 +115,7 @@ TracUI::~TracUI()
 
 void TracUI::addBugToToDoList(const QString &bugId)
 {
-
+    Q_UNUSED(bugId);
 }
 
 void

@@ -85,6 +85,7 @@ Mantis::sync()
 void
 Mantis::search(const QString &query)
 {
+    Q_UNUSED(query);
     emit searchFinished();
 }
 
@@ -157,7 +158,7 @@ Mantis::getMonitored()
 void
 Mantis::getSearchedBug(const QString &bugId)
 {
-
+    Q_UNUSED(bugId);
 }
 void
 Mantis::handleCSV(const QString &csv, const QString &bugType)

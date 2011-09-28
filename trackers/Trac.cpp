@@ -31,6 +31,7 @@ Trac::Trac(const QString &url,
            QObject *parent) :
     Backend(url)
 {
+    Q_UNUSED(parent);
     mUsername = username;
     mPassword = password;
     QUrl myUrl(url + "/login/xmlrpc");
@@ -779,6 +780,7 @@ Trac::versionRpcResponse(QVariant &arg)
 void Trac::versionRpcError(int error,
                            const QString &message)
 {
+    Q_UNUSED(error);
     qDebug()<< "Trac versionRpcError: " << message;
     emit versionChecked("-1");
 }
@@ -801,6 +803,7 @@ Trac::commentInsertionFinished()
 void
 Trac::bugsInsertionFinished(QStringList idList)
 {
+    Q_UNUSED(idList);
     qDebug() << "Bug insertion is finished";
     updateSync();
     emit bugsUpdated();

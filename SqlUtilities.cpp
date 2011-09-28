@@ -469,7 +469,7 @@ SqlUtilities::createTables(int dbVersion)
                                                         "username TEXT,"
                                                         "password TEXT,"
                                                         "url TEXT,"
-                                                        "auth_key TEXT)";
+                                                        "auth_key TEXT, refresh_token TEXT)";
 
     QString createTodoListBugsSql = "CREATE TABLE todolistbugs (id INTEGER PRIMARY KEY,"
                                                      "tracker_id INTEGER,"

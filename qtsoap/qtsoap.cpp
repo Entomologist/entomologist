@@ -3216,6 +3216,7 @@ void
 QtSoapHttpTransport::handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors)
 {
+    Q_UNUSED(errors);
     reply->ignoreSslErrors();
 }
 

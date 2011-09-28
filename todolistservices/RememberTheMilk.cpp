@@ -45,6 +45,7 @@ RememberTheMilk::RememberTheMilk(QString service, bool state)
     : serviceName(service),
       loginState(state)
 {
+    serviceType_ = "Remember The Milk";
     apiKey = "7714673fe0ea7961dd885fb6c895aa79";
     secret = "0aecb45bfbd2cab5";
     manager = new QNetworkAccessManager();
@@ -71,7 +72,7 @@ RememberTheMilk::login()
         {
             authToken = query.value(0).toString();
         }
-        if(authToken.compare("") != 0)
+        if(!authToken.isEmpty())
             checkToken();
         else
         {
@@ -756,7 +757,8 @@ RememberTheMilk::addTaskResponse()
 void
 RememberTheMilk::insertTaskID(ToDoItem *item,QString itemID)
 {
-
+    Q_UNUSED(item);
+    Q_UNUSED(itemID);
 
 }
 
@@ -998,9 +1000,10 @@ RememberTheMilk::getTaskID(QString taskName)
 bool
 RememberTheMilk::compareTaskDates(QString task1, QString task2)
 {
+    Q_UNUSED(task1);
+    Q_UNUSED(task2);
 
-
-
+    return false;
 }
 
 

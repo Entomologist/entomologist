@@ -48,7 +48,7 @@
 #include "ui_ToDoListView.h"
 #include "ToDoItem.h"
 #include "todolistservices/RememberTheMilk.h"
-#include "todolistservices/GoogleCalendar.h"
+#include "todolistservices/GoogleTasks.h"
 #include "todolistservices/GenericWebDav.h"
 #include "ErrorHandler.h"
 
@@ -674,12 +674,18 @@ ToDoListView::createService(QString serviceType,QString serviceName)
         connect(rm,SIGNAL(readyToAddItems()),this,SLOT(readyToAddItems()));
     }
 
-    /*
-    else if(serviceType.compare("Google Calendar") == 0)
-        GoogleTasks* gc = new GoogleTasks();
+
+    else if(serviceType.compare("Google Tasks") == 0)
+    {
+        GoogleTasks* gc = new GoogleTasks(serviceName,isLoginOnly);
+        connect(gc,SIGNAL(serviceError(QString)),this,SLOT(serviceError(QStirng)));
+        connect(gc,SIGNAL(loginWaiting()),this,SLOT(loginWaiting()));
+        connect(gc,SIGNAL(authCompleted()),this,SLOT(authCompleted()));
+        gc->login();
+    }
     else if(serviceType.compare("Generic WebDAV") == 0)
         GenericWebDav* gd = new GenericWebDav();
-        */
+
 }
 
 void
@@ -723,6 +729,8 @@ void
 ToDoListView::loginWaiting()
 {
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender());
+
+
     QMessageBox login(this);
     login.setWindowTitle("Authorisation required");
     login.setText(QString("Authorisation Required for %1.").arg(syncName));
@@ -730,9 +738,16 @@ ToDoListView::loginWaiting()
                              "A web browser will open, and after you've authenticated, press <b>OK</b>.");
     login.setIcon(QMessageBox::Information);
     login.setDefaultButton(QMessageBox::Ok);
-
     if (login.exec() == QMessageBox::Ok)
-        obj->newUser();
+    {
+        if(obj->serviceType().compare("Google Tasks") == 0)
+            insertAuthToken(static_cast<GoogleTasks*>(obj)); // very nasty.
+        else
+            obj->newUser();
+    }
+
+
+
 }
 
 void
@@ -759,6 +774,9 @@ ToDoListView::authCompleted()
     else
         obj = static_cast<ServicesBackend*>(sender()->parent());
 
+    // We need to get the Access/Refresh Tokens.
+    if(obj->serviceType() == "Google Tasks")
+        obj->newUser();
 
     if(!isLoginOnly)
     {
@@ -794,6 +812,21 @@ ToDoListView::authCompleted()
 
         }
     }
+}
+
+// Specific to Google Task as it opens a browser window but doesn't send anything back to us.
+void
+ToDoListView::insertAuthToken(GoogleTasks* task)
+{
+    bool ok;
+    QString token = QInputDialog::getText(this,tr("Authorization token required"),tr("Auth Token:"),QLineEdit::Normal,0,&ok);
+
+    if(ok && !token.isEmpty())
+    {
+        task->setAuthToken(token);
+        task->newUser();
+    }
+
 }
 
 bool

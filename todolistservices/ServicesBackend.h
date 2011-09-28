@@ -24,6 +24,10 @@ public:
     virtual void updateList() {}
     virtual void deleteList() {}
     virtual void setList(ToDoList* list) { Q_UNUSED(list); }
+    virtual QString serviceType() { return serviceType_; }
+    QString serviceType_;
+
+
 signals:
     void serviceError(const QString &message);
     void loginWaiting();
@@ -32,6 +36,9 @@ signals:
     void readyToAddItems();
     void taskIsNewer(ToDoItem* item);
     void taskAdded(ToDoItem* item);
+
+private:
+
 
 };
 
