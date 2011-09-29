@@ -866,85 +866,36 @@ QString
 MainWindow::getChangelog()
 {
     QString ret;
-    QSqlQueryModel model;
-    QString bugsQuery = "SELECT trackers.name, "
-                   "shadow_bugs.bug_id, "
-                   "bugs.severity, "
-                   "shadow_bugs.severity, "
-                   "bugs.priority, "
-                   "shadow_bugs.priority, "
-                   "bugs.assigned_to, "
-                   "shadow_bugs.assigned_to, "
-                   "bugs.status, "
-                   "shadow_bugs.status, "
-                   "bugs.summary, "
-                   "shadow_bugs.summary "
-                   "from shadow_bugs left outer join bugs on shadow_bugs.bug_id = bugs.bug_id AND shadow_bugs.tracker_id = bugs.tracker_id "
-                   "join trackers ON shadow_bugs.tracker_id = trackers.id";
-    QString commentsQuery = "SELECT trackers.name, "
-                            "shadow_comments.bug_id, "
-                            "shadow_comments.comment "
-                            "from shadow_comments join trackers ON shadow_comments.tracker_id = trackers.id";
-    QString entry = tr("&bull; <b>%1</b> bug <font color=\"blue\"><u>%2</u></font>: Change "
+    QList< QMap<QString, QString> > commentsChangelist;
+    QList< QMap<QString, QString> > bugChangelist;
+    QString entry = tr("<b>%1</b> bug <font color=\"blue\"><u>%2</u></font>: Change "
                        "<b>%3</b> from <b>%4</b> to <b>%5</b><br>");
-    QString commentEntry = tr("&bull; Add a comment to <b>%1</b> bug <font color=\"blue\"><b>%2</u></font>:<br>"
+    QString commentEntry = tr("Add a comment to <b>%1</b> bug <font color=\"blue\"><b>%2</u></font>:<br>"
                               "<i>%3</i><br>");
-    model.setQuery(bugsQuery);
-    for (int i = 0; i < model.rowCount(); ++i)
+
+    bugChangelist = SqlUtilities::getTracChangelog();
+    bugChangelist << SqlUtilities::getBugzillaChangelog();
+    bugChangelist << SqlUtilities::getMantisChangelog();
+
+    for (int i = 0; i < bugChangelist.size(); ++i)
     {
-        QSqlRecord record = model.record(i);
-        if (!record.value(3).isNull())
-        {
-            ret += entry.arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Severity"),
-                             record.value(2).toString(),
-                             record.value(3).toString());
-        }
-
-        if (!record.value(5).isNull())
-        {
-            ret += entry.arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Priority"),
-                             record.value(4).toString(),
-                             record.value(5).toString());
-        }
-
-        if (!record.value(7).isNull())
-        {
-            ret += entry.arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Assigned To"),
-                             record.value(6).toString(),
-                             record.value(7).toString());
-        }
-        if (!record.value(9).isNull())
-        {
-            ret += entry.arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Status"),
-                             record.value(8).toString(),
-                             record.value(9).toString());
-        }
-        if (!record.value(11).isNull())
-        {
-            ret += entry.arg(record.value(0).toString(),
-                             record.value(1).toString(),
-                             tr("Summary"),
-                             record.value(10).toString(),
-                             record.value(11).toString());
-        }
+        QMap<QString,QString> newChange = bugChangelist.at(i);
+        ret += QString(entry).arg(newChange["tracker_name"],
+                                  newChange["bug_id"],
+                                  newChange["column_name"],
+                                  newChange["from"],
+                                  newChange["to"]);
     }
 
-    model.setQuery(commentsQuery);
-    for (int i = 0; i < model.rowCount(); ++i)
+    commentsChangelist = SqlUtilities::getCommentsChangelog();
+    for (int i = 0; i < commentsChangelist.size(); ++i)
     {
-        QSqlRecord record = model.record(i);
-        ret += commentEntry.arg(record.value(0).toString(),
-                                record.value(1).toString(),
-                                record.value(2).toString());
+        QMap<QString, QString> comment = commentsChangelist.at(i);
+        ret += commentEntry.arg(comment["tracker_name"],
+                                comment["bug_id"],
+                                comment["comment"]);
     }
+
     return ret;
 }
 
