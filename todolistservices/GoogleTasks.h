@@ -31,10 +31,16 @@ private:
     bool mState;
     QString getTaskIDFromDB(const QString &taskID,const QString &serviceName);
     QString mGrantType;
+    ToDoList* mTodoList;
+    QList<ToDoList*> remoteLists;
+    void addList();
+    void createToDoList();
+    bool listExists(QString name);
+
 private slots:
     void getSwapToken();
     void getListRepsonse();
-    void setListResponse();
+    void addListResponse();
     void deleteListResponse();
 
 

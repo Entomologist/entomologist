@@ -682,6 +682,7 @@ ToDoListView::createService(QString serviceType,QString serviceName)
         connect(gc,SIGNAL(serviceError(QString)),this,SLOT(serviceError(QString)));
         connect(gc,SIGNAL(loginWaiting()),this,SLOT(loginWaiting()));
         connect(gc,SIGNAL(authCompleted()),this,SLOT(authCompleted()));
+        connect(gc,SIGNAL(readyToAddItems()),this,SLOT(readyToAddItems()));
         gc->login();
     }
     else if(serviceType.compare("Generic WebDAV") == 0)

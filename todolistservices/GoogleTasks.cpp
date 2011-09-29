@@ -29,6 +29,8 @@
 #include <QVariantMap>
 #include <QSqlQuery>
 #include <QSqlError>
+#include <QVariantList>
+
 #include <qjson/json_parser.hh>
 #include <qjson/serializer.h>
 #include "GoogleTasks.h"
@@ -122,7 +124,6 @@ GoogleTasks::getSwapToken()
 {
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
     QString response = rep->readAll();
-    qDebug() << response;
     bool ok;
     QJson::Parser parser;
     QVariantMap json = parser.parse(response.toAscii(),&ok).toMap();
@@ -178,11 +179,12 @@ void
 GoogleTasks::getLists()
 {
 
-    QString url = "https://www.googleapis.com/tasks/v1/lists?pp=1&key=" + mAccessToken;
+    QString url = "https://www.googleapis.com/tasks/v1/users/@me/lists?pp=1&access_token=" + mAccessToken + "&key=" + this->mToken;
 
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply* rep = pManager->get(req);
     connect(rep,SIGNAL(finished()),this,SLOT(getListRepsonse()));
+
 
 }
 
@@ -191,31 +193,87 @@ GoogleTasks::getListRepsonse()
 {
 
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
-    qDebug() << rep->readAll();
+    rep->deleteLater();
+    QString response = rep->readAll();
+    bool ok;
+    QJson::Parser parser;
+    QVariantMap json = parser.parse(response.toAscii(),&ok).toMap();
+
+    QVariantList items = json["items"].toList();
+
+    foreach(QVariant i, items)
+    {   QVariantMap item = i.toMap();
+        ToDoList* newItem = new ToDoList(item["title"].toString());
+        newItem->setmGoogleTasksListID(item["id"].toString());
+        remoteLists.append(newItem);
+    }
+
+    rep->close();
+    if(!listExists(mTodoList->listName()) || mTodoList->status()== ToDoList::NEW)
+        addList();
+
+    else if(mTodoList->status() == ToDoList::UPDATED)
+        updateList();
+
+    else
+    {
+        qDebug() << "Getting Tasks";
+        //getTasks();
+    }
 }
 
+bool
+GoogleTasks::listExists(QString name)
+{
+    bool exists = false;
+
+    foreach(ToDoList* list, remoteLists)
+        if(list->listName().compare(name) == 0)
+            exists = true;
+
+
+    return exists;
+}
 
 void
 GoogleTasks::setList(ToDoList *list)
 {
-    QVariantMap title;
-    title.insert("title:",list->listName());
-    QJson::Serializer serial;
-    QByteArray json = serial.serialize(title);
-
-    QString url = "https://www.googleapis.com/tasks/v1/users/@me/lists?pp=1&key=" + mAccessToken;
-
-    QNetworkRequest req = QNetworkRequest(QUrl(url));
-    QNetworkReply* rep = pManager->post(req,json);
-    connect(rep,SIGNAL(finished()),this,SLOT(setListResponse()));
-
+    mTodoList = list;
 }
 
 void
-GoogleTasks::setListResponse()
+GoogleTasks::createToDoList()
 {
-    QNetworkReply* reply = static_cast<QNetworkReply*>(sender());
-    qDebug() << reply->readAll();
+
+
+}
+
+
+
+void
+GoogleTasks::addList()
+{
+    QString url = "https://www.googleapis.com/tasks/v1/users/@me/lists?pp=1&access_token=" + mAccessToken + "&key=" + this->mToken;
+
+    QVariantMap title;
+            title.insert("title",mTodoList->listName());
+
+    QJson::Serializer serializer;
+    QByteArray json = serializer.serialize(title);
+    qDebug() << json;
+    QNetworkRequest req = QNetworkRequest(QUrl(url));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
+    QNetworkReply* rep = pManager->post(req,json);
+    connect(rep,SIGNAL(finished()),this,SLOT(addListResponse()));
+}
+
+void
+GoogleTasks::addListResponse()
+{
+
+    QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
+    qDebug() << rep->readAll();
+
 }
 
 void
