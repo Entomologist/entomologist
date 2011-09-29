@@ -29,7 +29,6 @@ public:
     void deleteList();
     void getLists();
     void setList(ToDoList* list);
-
 private slots:
     void frobResponse();
     void tokenResponse();
@@ -72,7 +71,7 @@ private:
     bool compareTaskDates(QString task1,QString task2);
     bool listExists(QString name);
     void insertTaskID(ToDoItem* item,QString itemID);
-
+    ToDoItem* currentItem;
 
 };
 

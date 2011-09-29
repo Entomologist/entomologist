@@ -63,7 +63,7 @@
  *
  * TODO:
  *
- * - Google Calendar-WebDAV/Pull Data from Remote services if the date/completed status have changed.
+ * -WebDAV/Pull Data from Remote services if the date/completed status have changed.
  *
  */
 
@@ -82,13 +82,13 @@ ToDoListView::ToDoListView(QWidget *parent) :
     if(!query.next())
     {
         QString newId = toDoListInsert("Default List");
-        toDoListAdded("Default List", "", newId, false);
+        toDoListAdded("Default List", "","", newId, false);
     }
     else
     {
-        toDoListAdded(query.value(0).toString(),query.value(1).toString(), query.value(2).toString(), false);
+        toDoListAdded(query.value(0).toString(),query.value(1).toString(), query.value(2).toString(),query.value(3).toString(), false);
         while(query.next())
-            toDoListAdded(query.value(0).toString(),query.value(1).toString(), query.value(2).toString(), false);
+            toDoListAdded(query.value(0).toString(),query.value(1).toString(), query.value(2).toString(),query.value(3).toString(), false);
     }
 
     ui->bugTreeWidget->expandAll();
@@ -146,7 +146,7 @@ ToDoListView::findItems()
 }
 
 void
-ToDoListView::toDoListAdded(QString name, QString listID, QString dbId, bool isNew)
+ToDoListView::toDoListAdded(const QString &name,const QString &listID,const QString &googleID, const QString &dbId, bool isNew)
 {
 
     QTreeWidgetItem* item = new QTreeWidgetItem(ui->bugTreeWidget->invisibleRootItem(), 1);
@@ -162,7 +162,8 @@ ToDoListView::toDoListAdded(QString name, QString listID, QString dbId, bool isN
     }
     else
     {
-        list->setListID(listID);
+        list->setmRTMListID(listID);
+        list->setmGoogleTasksListID(googleID);
         QStringList services = currentServices(list->listName());
         foreach(QString service,services)
             list->setServices(service);
@@ -547,7 +548,7 @@ ToDoListView::newTopLevelItem()
         if(checkUniqueList(itemName))
         {
             QString newId = toDoListInsert(itemName);
-            toDoListAdded(itemName, "", newId, true);
+            toDoListAdded(itemName, "","", newId, true);
         }
         else
         {
@@ -678,7 +679,7 @@ ToDoListView::createService(QString serviceType,QString serviceName)
     else if(serviceType.compare("Google Tasks") == 0)
     {
         GoogleTasks* gc = new GoogleTasks(serviceName,isLoginOnly);
-        connect(gc,SIGNAL(serviceError(QString)),this,SLOT(serviceError(QStirng)));
+        connect(gc,SIGNAL(serviceError(QString)),this,SLOT(serviceError(QString)));
         connect(gc,SIGNAL(loginWaiting()),this,SLOT(loginWaiting()));
         connect(gc,SIGNAL(authCompleted()),this,SLOT(authCompleted()));
         gc->login();
@@ -774,9 +775,7 @@ ToDoListView::authCompleted()
     else
         obj = static_cast<ServicesBackend*>(sender()->parent());
 
-    // We need to get the Access/Refresh Tokens.
-    if(obj->serviceType() == "Google Tasks")
-        obj->newUser();
+
 
     if(!isLoginOnly)
     {
@@ -858,7 +857,6 @@ ToDoListView::syncItem()
 {
 
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender()->parent());
-
     bool isNew = !hasBeenSynced(currentList);
 
     if(timerCount >= 0)
@@ -869,6 +867,8 @@ ToDoListView::syncItem()
         if(!syncItems.isEmpty())
         {
             ToDoItem* t = syncItems.takeFirst();
+
+
             if(isNew || (t->status() == ToDoItem::NEW && t->status() != ToDoItem::DELETED))
                 obj->addTask(t);
             else
@@ -961,6 +961,7 @@ ToDoListView::addServiceToList(QString serviceName,ToDoList* list)
         }
     }
 }
+
 
 
 void

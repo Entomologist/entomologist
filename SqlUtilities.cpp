@@ -460,7 +460,8 @@ SqlUtilities::createTables(int dbVersion)
                                                    "value TEXT)";
     QString createTodoListSql = "CREATE TABLE todolist (id INTEGER PRIMARY KEY,"
                                                        "name TEXT,"
-                                                       "list_id TEXT,"
+                                                       "rtm_listid TEXT,"
+                                                        "google_listid TEXT,"
                                                        "sync_services TEXT)";
 
     QString createServicesSql = "CREATE TABLE services (id INTEGER PRIMARY KEY,"
@@ -469,7 +470,8 @@ SqlUtilities::createTables(int dbVersion)
                                                         "username TEXT,"
                                                         "password TEXT,"
                                                         "url TEXT,"
-                                                        "auth_key TEXT, refresh_token TEXT)";
+                                                        "auth_key TEXT,"
+                                                        "refresh_token TEXT)";
 
     QString createTodoListBugsSql = "CREATE TABLE todolistbugs (id INTEGER PRIMARY KEY,"
                                                      "tracker_id INTEGER,"
@@ -481,15 +483,17 @@ SqlUtilities::createTables(int dbVersion)
                                                      "item_ids TEXT,"
                                                      "last_modified TEXT)";
 
-    QString createServiceTasksSql = "CREATE TABLE service_tasks (id INTERGER PRIMARY KEY,"
+    QString createServiceTasksSql = "CREATE TABLE service_tasks (id INTEGER PRIMARY KEY,"
+                                                       "task_id TEXT,"
                                                        "service_name TEXT,"
                                                        "item_id TEXT,"
-                                                       "task_id TEXT)";
+                                                       "misc_id TEXT)";
 
     QString createSearchSql = "CREATE TABLE search_results (id INTEGER PRIMARY KEY,"
                                                             "tracker_name TEXT,"
                                                             "bug_id TEXT,"
                                                             "summary TEXT)";
+
     QString createBugzillaSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
                                               "highlight_type INTEGER,"
                                               "tracker_id INTEGER,"

@@ -16,6 +16,9 @@ public:
     void updateCompleted(ToDoItem* item);
     void updateDate(ToDoItem* item);
     void setAuthToken(QString token) { mToken = token; insertKey(mToken,"auth_key"); }
+    void getLists();
+    void setList(ToDoList* List);
+    void deleteList();
 
 private:
     void insertKey(QString token, QString item);
@@ -26,9 +29,14 @@ private:
     QString mRedirectURL,mScope,mClientID;
     QString mUrl,mService;
     bool mState;
-
+    QString getTaskIDFromDB(const QString &taskID,const QString &serviceName);
+    QString mGrantType;
 private slots:
     void getSwapToken();
+    void getListRepsonse();
+    void setListResponse();
+    void deleteListResponse();
+
 
 };
 

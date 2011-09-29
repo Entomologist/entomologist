@@ -49,7 +49,7 @@ class ToDoListView : public QDialog
 public:
     explicit ToDoListView(QWidget *parent = 0);
     ~ToDoListView();
-    void toDoListAdded(QString name, QString listID, QString dbId, bool isNew);
+    void toDoListAdded(const QString &name,const QString &rtmID,const QString &googleID,const QString &dbId,bool isNew);
     QString toDoListInsert(QString name);
     void closeEvent(QCloseEvent *event);
 

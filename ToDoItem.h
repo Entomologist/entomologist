@@ -33,44 +33,43 @@ public:
     ToDoItem(QString list,QString internalID,QString bugID,QString summary,
              QString date,QString lastModified, bool completed);
 
-    //getters
-    int status();
-    QString listName();
-    QString bugID();
-    QString summary();
-    QString name();
-    QString date();
-    bool isCompleted();
-    QString lastModified();
-    QString taskID();
-    QString taskSeries();
-    QString internalID();
+    int status() { return mStatus;}
+    QString listName() { return mListName;}
+    QString bugID() { return mBugID; }
+    QString summary() { return mSummary; }
+    QString name() { return mBugID + " : " + mSummary; }
+    QString date() { return mDate;}
+    bool isCompleted() { return mCompleted;}
+    QString lastModified() { return mLastModified;}
+    QString RTMTaskID() { return mRTMTaskID;}
+    QString RTMTaskSeriesID() { return mRTMTaskSeriesID; }
+    QString internalID() { return mInternalID;}
+    QString googleTaskID() { return mGoogleTaskID; }
 
-    //setters
-    void setInternalID(QString internalID);
-    void setStatus(taskStatus status);
-    void setListName(QString listName);
-    void setBugID(QString bugID);
-    void setSummary(QString summary);
-    void setDate(QString date);
-    void setCompleted(bool completed);
-    void setTaskID(QString taskID);
-    void setTaskSeries(QString taskseries);
-signals:
-
-public slots:
+    void setInternalID(const QString &internalID) { mInternalID = internalID; }
+    void setStatus(taskStatus status) { mStatus = status; }
+    void setListName(const QString &listName) { mListName = listName; }
+    void setBugID(const QString &bugID) { mBugID = bugID; }
+    void setSummary(const QString &summary) { mSummary = summary;}
+    void setDate(const QString &date) { mDate = date;}
+    void setCompleted(bool completed) { mCompleted = completed; }
+    void setRTMTaskID(const QString &taskID) { mRTMTaskID = taskID; }
+    void setRTMTaskSeriesID(const QString &taskseries) { mRTMTaskSeriesID = taskseries; }
+    void setGoogleTasksID(const QString &id) { mGoogleTaskID = id;}
 
 private:
-    taskStatus status_;
-    QString listName_;
-    QString internalID_;
-    QString bugID_;
-    QString summary_;
-    QString date_;
-    QString lastModified_;
-    QString taskID_;
-    QString taskseries_;
-    bool completed_;
+    taskStatus mStatus;
+    QString mListName;
+    QString mInternalID;
+    QString mBugID;
+    QString mSummary;
+    QString mDate;
+    QString mLastModified;
+    QString mRTMTaskID;
+    QString mRTMTaskSeriesID;
+    QString mGoogleTaskID;
+    bool mCompleted;
+
 
 };
 
