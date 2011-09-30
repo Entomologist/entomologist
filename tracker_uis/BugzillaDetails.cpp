@@ -9,6 +9,7 @@ BugzillaDetails::BugzillaDetails(QWidget *parent) :
     ui->priorityCombo->installEventFilter(parent);
     ui->severityCombo->installEventFilter(parent);
     ui->statusCombo->installEventFilter(parent);
+    ui->resolutionCombo->installEventFilter(parent);
 }
 
 BugzillaDetails::~BugzillaDetails()
@@ -29,6 +30,9 @@ BugzillaDetails::fieldDetails()
     if (mStatus != ui->statusCombo->currentText())
         newMap["status"] = ui->statusCombo->currentText();
 
+    if (mResolution != ui->resolutionCombo->currentText())
+        newMap["resolution"] = ui->resolutionCombo->currentText();
+
     return newMap;
 }
 
@@ -38,6 +42,14 @@ BugzillaDetails::setSeverities(const QString &selected, QStringList severities)
     mSeverity = selected;
     ui->severityCombo->addItems(severities);
     ui->severityCombo->setCurrentIndex(ui->severityCombo->findText(selected));
+}
+
+void
+BugzillaDetails::setResolutions(const QString &selected, QStringList resolutions)
+{
+    mResolution = selected;
+    ui->resolutionCombo->addItems(resolutions);
+    ui->resolutionCombo->setCurrentIndex(ui->resolutionCombo->findText(selected));
 }
 
 void

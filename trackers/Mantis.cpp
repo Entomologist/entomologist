@@ -112,8 +112,6 @@ void
 Mantis::setView(const QString &search)
 {
     // First we have to set up the 'view' to get the CSV
-    // We set a date in the future to get the end of the date range
-    QDateTime future = QDateTime::currentDateTime().addDays(7);
     QString queryType;
     if (mViewType == MONITORED)
     {
@@ -133,10 +131,9 @@ Mantis::setView(const QString &search)
     }
     QString url = mUrl + "/view_all_set.php?f=3";
 
-    // I'm not sure why I missed this earlier, but Mantis's date range
-    // filter doesn't actually filter on modified times, so we'll
-    // have to download all bugs on each sync.
-    QString query = QString("type=1&page_number=1&view_type=simple&%1&hide_status[]=80")
+    // Mantis's date range filter doesn't actually filter on modified times, so we'll
+    // have to download all bugs open on each sync.
+    QString query = QString("type=1&page_number=1&per_page=64000&view_type=simple&%1&hide_status[]=80&show_resolution[]=10&show_resolution[]=30")
             .arg(queryType);
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply *rep = pManager->post(req, query.toAscii());
@@ -563,41 +560,82 @@ Mantis::response()
             mCurrentUploadId = issue["id"].toString();
             QtSoapMessage request;
             QtSoapStruct *s = new QtSoapStruct(QtSoapQName("issue"));
-            if (!changed.value("severity").isNull())
+#if 0
+            else if (column == "Category")
+                uploadBug["category"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+#endif
+            if (!changed.value("Severity").isNull())
             {
                 QtSoapStruct *newSeverity = new QtSoapStruct(QtSoapQName("severity"));
-                newSeverity->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("severity").toString()));
+                newSeverity->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("Severity").toString()));
                 s->insert(newSeverity);
             }
             else
                 s->insert(new QtSoapStruct((QtSoapStruct&)issue["severity"]));
 
-            if (!changed.value("priority").isNull())
+            if (!changed.value("Priority").isNull())
             {
                 QtSoapStruct *newPriority = new QtSoapStruct(QtSoapQName("priority"));
-                newPriority->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("priority").toString()));
+                newPriority->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("Priority").toString()));
                 s->insert(newPriority);
             }
             else
                 s->insert(new QtSoapStruct((QtSoapStruct&)issue["priority"]));
 
-            if (!changed.value("status").isNull())
+            if (!changed.value("Status").isNull())
             {
                 QtSoapStruct *newStatus = new QtSoapStruct(QtSoapQName("status"));
-                newStatus->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("status").toString()));
+                newStatus->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("Status").toString()));
                 s->insert(newStatus);
             }
             else
                 s->insert(new QtSoapStruct((QtSoapStruct&)issue["status"]));
 
-            s->insert(new QtSoapStruct((QtSoapStruct &)issue["handler"]));
-            s->insert(new QtSoapStruct((QtSoapStruct &)issue["reproducibility"]));
-            s->insert(new QtSoapStruct((QtSoapStruct &)issue["resolution"]));
+            if (!changed.value("Assigned To").isNull())
+            {
+                QtSoapStruct *newStatus = new QtSoapStruct(QtSoapQName("handler"));
+                newStatus->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("Assigned To").toString()));
+                s->insert(newStatus);
+            }
+            else
+                s->insert(new QtSoapStruct((QtSoapStruct&)issue["handler"]));
+
+            if (!changed.value("Reproducibility").isNull())
+            {
+                QtSoapStruct *newStatus = new QtSoapStruct(QtSoapQName("reproducibility"));
+                newStatus->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("Reproducibility").toString()));
+                s->insert(newStatus);
+            }
+            else
+                s->insert(new QtSoapStruct((QtSoapStruct&)issue["reproducibility"]));
+
+            if (!changed.value("Summary").isNull())
+            {
+                s->insert(new QtSoapSimpleType(changed.value("Summary").toString()));
+            }
+            else
+                s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["summary"]));
+
+            if (!changed.value("Category").isNull())
+            {
+                s->insert(new QtSoapSimpleType(changed.value("Category").toString()));
+            }
+            else
+                s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["category"]));
+
+            if (!changed.value("Resolution").isNull())
+            {
+                QtSoapStruct *newStatus = new QtSoapStruct(QtSoapQName("resolution"));
+                newStatus->insert(new QtSoapSimpleType(QtSoapQName("name"), changed.value("Resolution").toString()));
+                s->insert(newStatus);
+            }
+            else
+                s->insert(new QtSoapStruct((QtSoapStruct&)issue["resolution"]));
+
             s->insert(new QtSoapStruct((QtSoapStruct &)issue["projection"]));
             s->insert(new QtSoapStruct((QtSoapStruct &)issue["eta"]));
             s->insert(new QtSoapStruct((QtSoapStruct &)issue["view_state"]));
             s->insert(new QtSoapStruct((QtSoapStruct &)issue["reporter"]));
-            s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["summary"]));
             s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["description"]));
             s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["additional_information"]));
             s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["steps_to_reproduce"]));
@@ -606,7 +644,6 @@ Mantis::response()
             s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["os"]));
             s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["os_build"]));
             s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["sponsorship_total"]));
-            s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["category"]));
             s->insert(new QtSoapSimpleType((QtSoapSimpleType &)issue["version"]));
             s->insert(new QtSoapStruct((QtSoapStruct &)issue["project"]));
             request.setMethod(QtSoapQName("mc_issue_update", "http://futureware.biz/mantisconnect"));
@@ -652,7 +689,7 @@ Mantis::response()
     {
         mUploadList.remove(mCurrentUploadId);
         QSqlQuery sql;
-        sql.exec(QString("DELETE FROM shadow_bugs WHERE bug_id=\'%1\' AND tracker_id=%2").arg(mCurrentUploadId).arg(mId));
+        sql.exec(QString("DELETE FROM shadow_mantis WHERE bug_id=\'%1\' AND tracker_id=%2").arg(mCurrentUploadId).arg(mId));
         getNextUpload();
     }
     else if (messageName == "mc_issue_note_addResponse")
@@ -876,8 +913,9 @@ Mantis::getComments(const QString &bugId)
 void
 Mantis::uploadAll()
 {
-    if (!hasPendingChanges())
+    if (!SqlUtilities::hasPendingChanges("shadow_mantis", mId))
     {
+        qDebug() << "No pending changes";
         emit bugsUpdated();
         return;
     }
@@ -885,35 +923,42 @@ Mantis::uploadAll()
     mUploadList.clear();
     mCommentUploadList.clear();
     mUploadingBugs = true;
-    QString sql = QString("SELECT bug_id, severity, priority, assigned_to, status, summary FROM shadow_bugs where tracker_id=%1")
-                       .arg(mId);
-    QString commentSql = QString("SELECT bug_id, comment, private FROM shadow_comments WHERE tracker_id=%1")
-                         .arg(mId);
-    QSqlQuery comment(commentSql);
-    while (comment.next())
+    int i = 0;
+    int j = 0;
+    QVariantList changeList = SqlUtilities::getMantisChangelog();
+    QList< QMap<QString, QString> > commentList = SqlUtilities::getCommentsChangelog();
+
+    for (i = 0; i < commentList.size(); ++i)
     {
+        QMap<QString, QString> comment = commentList.at(i);
+        if (comment["tracker_name"] != mName)
+            continue;
+
         QVariantMap map;
-        map["bug_id"] = comment.value(0).toString();
-        map["comment"] = comment.value(1).toString();
-        map["private"] = comment.value(2).toString();
+        map["bug_id"] = comment["bug_id"];
+        map["comment"] = comment["comment"];
+        map["private"] = comment["private"];
+        map["id"] = comment["id"];
         mCommentUploadList << map;
     }
 
-    QSqlQuery q(sql);
-    while (q.next())
+    for (i = 0; i < changeList.size(); ++i)
     {
-        QVariantMap ret;
-        if (!q.value(1).isNull())
-            ret["severity"] = q.value(1).toString().remove(QRegExp("<[^>]*>"));
-        if (!q.value(2).isNull())
-            ret["priority"] = q.value(2).toString().remove(QRegExp("<[^>]*>"));
-        if (!q.value(3).isNull())
-            ret["assignee"] = q.value(3).toString().remove(QRegExp("<[^>]*>"));
-        if (!q.value(4).isNull())
-            ret["status"] = q.value(4).toString().remove(QRegExp("<[^>]*>"));
-        if (!q.value(5).isNull())
-            ret["short_desc"] = q.value(5).toString().remove(QRegExp("<[^>]*>"));
-        mUploadList[q.value(0).toString()] = ret;
+        QVariantList changes = changeList.at(i).toList();
+        QVariantMap uploadBug;
+        for (j = 0; j < changes.size(); ++j)
+        {
+            QVariantMap newChange = changes.at(j).toMap();
+            if (newChange.value("tracker_name").toString() != mName)
+                break;
+
+            uploadBug["bug_id"] = newChange.value("bug_id").toString();
+            QString column = newChange.value("column_name").toString();
+            uploadBug[column] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+        }
+
+        if (uploadBug.size() > 0)
+            mUploadList[uploadBug.value("bug_id").toString()] = uploadBug;
     }
 
     if ((mCommentUploadList.size() == 0) && (mUploadList.size() == 0))
@@ -1091,7 +1136,7 @@ void Mantis::assignedResponse()
         insertList << newBug;
     }
 
-    pSqlWriter->insertBugs("mantis", insertList);
+    pSqlWriter->insertBugs("mantis", insertList, mId);
 }
 
 void Mantis::reportedResponse()

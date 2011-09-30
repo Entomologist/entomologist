@@ -327,7 +327,6 @@ MainWindow::addTracker(QMap<QString,QString> info)
 void
 MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
 {
-    qDebug() << "Setup tracker";
     newBug->setId(info["id"]);
     newBug->setName(info["name"]);
     newBug->setUsername(info["username"]);
@@ -854,6 +853,7 @@ MainWindow::upload()
 
     if (reallyUpload)
     {
+        qDebug() << "Uploading...";
         startAnimation();
         mUploading = true;
         mSyncPosition = 0;
@@ -867,7 +867,7 @@ MainWindow::getChangelog()
 {
     QString ret;
     QList< QMap<QString, QString> > commentsChangelist;
-    QList< QMap<QString, QString> > bugChangelist;
+    QVariantList bugChangelist;
     QString entry = tr("<b>%1</b> bug <font color=\"blue\"><u>%2</u></font>: Change "
                        "<b>%3</b> from <b>%4</b> to <b>%5</b><br>");
     QString commentEntry = tr("Add a comment to <b>%1</b> bug <font color=\"blue\"><b>%2</u></font>:<br>"
@@ -879,12 +879,16 @@ MainWindow::getChangelog()
 
     for (int i = 0; i < bugChangelist.size(); ++i)
     {
-        QMap<QString,QString> newChange = bugChangelist.at(i);
-        ret += QString(entry).arg(newChange["tracker_name"],
-                                  newChange["bug_id"],
-                                  newChange["column_name"],
-                                  newChange["from"],
-                                  newChange["to"]);
+        QVariantList changes = bugChangelist.at(i).toList();
+        for (int j = 0; j < changes.size(); ++j)
+        {
+            QVariantMap newChange = changes.at(j).toMap();
+            ret += QString(entry).arg(newChange.value("tracker_name").toString(),
+                                      newChange.value("bug_id").toString(),
+                                      newChange.value("column_name").toString(),
+                                      newChange.value("from").toString(),
+                                      newChange.value("to").toString());
+        }
     }
 
     commentsChangelist = SqlUtilities::getCommentsChangelog();
@@ -1098,19 +1102,23 @@ void
 MainWindow::updateTracker(const QString &id, QMap<QString, QString> data)
 {
     Backend *b = mBackendMap[id];
-
-    QString query = "UPDATE trackers SET name=:name,username=:username,password=:password WHERE id=:id";
-    QSqlQuery q;
-    q.prepare(query);
-    q.bindValue(":name", data["name"]);
-    q.bindValue(":username", data["username"]);
-    q.bindValue(":password", data["password"]);
-    q.bindValue(":id", id);
-    if (!q.exec())
+    for (int i = 0; i < mBackendList.size(); ++i)
     {
-        backendError(q.lastError().text());
+        if (data["name"] == mBackendList.at(i)->name())
+        {
+            QMessageBox box;
+            box.setText(QString("A tracker named <b>%1</b> already exists.").arg(data["name"]));
+            box.exec();
+            return;
+        }
+    }
+
+    if (!SqlUtilities::renameTracker(id, data["name"], data["username"], data["password"]))
+    {
+        backendError("An error occurred renaming the tracker");
         return;
     }
+
     QString iconDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
     iconDir.append(QDir::separator()).append("entomologist");
 
@@ -1127,15 +1135,33 @@ MainWindow::updateTracker(const QString &id, QMap<QString, QString> data)
     if (QFile::exists(oldPath) && !QFile::exists(newPath))
         QFile::rename(oldPath, newPath);
 
-    QString trackerName = b->name();
-    ui->trackerTab->setTabText(workingTab,trackerName);
+    QString oldName, newName;
+    oldName = b->name();
+    newName = data["name"];
+    ui->trackerTab->setTabText(ui->trackerTab->currentIndex(), newName);
+    pSearchTab->renameTracker(oldName, newName);
+    b->setName(newName);
+    b->setUsername(data["username"]);
+    b->setPassword(data["password"]);
+    QSettings settings("Entomologist");
+
+    QVariant oldSortCol = settings.value(QString("%1-sort-column").arg(oldName));
+    settings.remove(QString("%1-sort-column").arg(oldName));
+    settings.setValue(QString("%1-sort-column").arg(newName), oldSortCol);
+
+    QVariant oldSortOrd = settings.value(QString("%1-sort-order").arg(oldName));
+    settings.remove(QString("%1-sort-order").arg(oldName));
+    settings.setValue(QString("%1-sort-order").arg(newName), oldSortOrd);
+
+    QVariant oldGeom = settings.value(QString("%1-header-geometry").arg(oldName));
+    settings.remove(QString("%1-header-geometry").arg(oldName));
+    settings.setValue(QString("%1-header-geometry").arg(newName), oldGeom);
+
 }
 
 void
 MainWindow::deleteTracker(const QString &id)
 {
-    // TODO: tell the tracker to delete it's bugs
-    // TODO: move this to SQLUtilities
     Backend *b = mBackendMap[id];
     mBackendMap.remove(id);
     for (int i = 0; i < mBackendList.size(); ++i)
@@ -1147,26 +1173,17 @@ MainWindow::deleteTracker(const QString &id)
         }
     }
 
+    QString name = b->name();
+    SqlUtilities::removeTracker(b->id(), name);
+    pSearchTab->removeTracker(b);
     delete b;
 
-
-    QString query = "DELETE FROM trackers WHERE id=:tracker_id";
-    QSqlQuery sql;
-    sql.prepare(query);
-    sql.bindValue(":tracker_id", id);
-    sql.exec();
-
-    query = "DELETE FROM comments WHERE tracker_id=:tracker_id";
-    sql.prepare(query);
-    sql.bindValue(":tracker_id", id);
-    sql.exec();
-
-    query = "DELETE FROM shadow_comments WHERE tracker_id = :tracker_id";
-    sql.prepare(query);
-    sql.bindValue(":tracker_id", id);
-    sql.exec();
     ui->trackerTab->removeTab(workingTab);
     trackerTabsList.removeAt(workingTab);
+    QSettings settings("Entomologist");
+    settings.remove(QString("%1-sort-column").arg(name));
+    settings.remove(QString("%1-sort-order").arg(name));
+    settings.remove(QString("%1-header-geometry").arg(name));
 }
 
 void
@@ -1244,7 +1261,7 @@ MainWindow::showMenu(int tabIndex)
 
         if (t.exec() == QDialog::Accepted)
         {
-            qDebug() << "Updating tracker";
+
             updateTracker(id, t.data());
         }
     }

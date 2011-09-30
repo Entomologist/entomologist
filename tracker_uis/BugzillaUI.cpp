@@ -112,6 +112,7 @@ BugzillaUI::loadFields()
     mSeverities = SqlUtilities::fieldValues(mId, "severity");
     mPriorities = SqlUtilities::fieldValues(mId, "priority");
     mStatuses = SqlUtilities::fieldValues(mId, "status");
+    mResolutions = SqlUtilities::fieldValues(mId, "resolution");
 }
 
 void
@@ -144,6 +145,7 @@ BugzillaUI::searchResultFinished(QMap<QString, QString> resultMap)
     details->setSeverities(resultMap["severity"], mSeverities);
     details->setPriorities(resultMap["priority"], mPriorities);
     details->setStatuses(resultMap["status"], mStatuses);
+    details->setResolutions(resultMap["resolution"], mResolutions);
     details->setComponent(resultMap["component"]);
     details->setProduct(resultMap["product"]);
     dialog->setDetailsWidget(details);
@@ -168,6 +170,7 @@ BugzillaUI::itemDoubleClicked(const QModelIndex &index)
     details->setSeverities(detailMap["severity"], mSeverities);
     details->setPriorities(detailMap["priority"], mPriorities);
     details->setStatuses(detailMap["status"], mStatuses);
+    details->setResolutions(detailMap["resolution"], mResolutions);
     details->setComponent(detailMap["component"]);
     details->setProduct(detailMap["product"]);
     dialog->setDetailsWidget(details);

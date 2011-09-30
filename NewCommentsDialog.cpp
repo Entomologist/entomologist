@@ -20,6 +20,7 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     ui->saveButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
     QSettings settings("Entomologist");
     QByteArray restoredSplitterState = settings.value("comment-window-splitter").toByteArray();
+    restoreGeometry(settings.value("comment-window-geometry").toByteArray());
 
     pSpinnerMovie = new QMovie(this);
     pSpinnerMovie->setFileName(":/spinner");
@@ -55,6 +56,7 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
             this, SLOT(textClicked(QString)));
     connect(ui->summaryLabel, SIGNAL(clicked(QString)),
             this, SLOT(textClicked(QString)));
+
 }
 
 NewCommentsDialog::~NewCommentsDialog()
@@ -259,5 +261,6 @@ NewCommentsDialog::closeEvent(QCloseEvent *event)
     qDebug() << "Closing";
     QSettings settings("Entomologist");
     settings.setValue("comment-window-splitter", ui->splitter->saveState());
+    settings.setValue("comment-window-geometry", saveGeometry());
     QDialog::closeEvent(event);
 }

@@ -28,7 +28,7 @@
 #include <QMap>
 #include <QSqlDatabase>
 #include <QStringList>
-
+#include <QVariant>
 class QString;
 
 class SqlUtilities : public QObject
@@ -52,6 +52,8 @@ public:
     // Checks the various shadow tables to see
     // if the user has modified anything
     static bool hasPendingChanges();
+    static bool hasPendingChanges(const QString &shadowTable,
+                                  const QString &trackerId);
 
     // Returns the ID of the tracker if the name exists
     static int trackerNameExists(const QString &name);
@@ -60,7 +62,11 @@ public:
     static int hasShadowBug(const QString &table_name,
                              const QString &bugId,
                              const QString &trackerId);
-
+    static void removeShadowBug(const QString &shadowTable,
+                             const QString &bugId,
+                             const QString &trackerId);
+    static void removeShadowComment(const QString &bugId,
+                                    const QString &trackerId);
     // Create the tables
     static void createTables(int dbVersion);
 
@@ -77,6 +83,9 @@ public:
     static bool simpleUpdate(const QString &tableName,
                              QMap<QString, QString> update,
                              QMap<QString, QString> where);
+    static void simpleDelete(const QString &rowId,
+                             const QString &tableName);
+
     static QString getBugDescription(const QString &table,
                                      const QString &bugId);
     static void directExec(QSqlDatabase db,
@@ -85,15 +94,22 @@ public:
                                    const QString &fieldName);
 
     static QList< QMap<QString, QString> > getCommentsChangelog();
-    static QList< QMap<QString, QString> > getTracChangelog();
-    static QList< QMap<QString, QString> > getBugzillaChangelog();
-    static QList< QMap<QString, QString> > getMantisChangelog();
+    static QVariantList getTracChangelog();
+    static QVariantList getBugzillaChangelog();
+    static QVariantList getMantisChangelog();
+    static QStringList getChangedBugzillaIds(const QString &trackerId);
 
     // Deletes all entries in the search table
     static void clearSearch();
-
+    static void renameSearchTracker(const QString &oldName, const QString &newName);
+    static bool renameTracker(const QString &id,
+                              const QString &name,
+                              const QString &username,
+                              const QString &password);
     // Clears the highlight_type when highlight_type is HIGHLIGHT_RECENT
     static void clearRecentBugs(const QString &tableName);
+    static void removeTracker(const QString &trackerId,
+                              const QString &trackerName);
 
     // Tracker-specific SELECT calls
     static QMap<QString, QString> tracBugDetail(const QString &rowId);
@@ -109,7 +125,7 @@ signals:
 
 public slots:
     void deleteBugs(const QString &trackerId);
-    void insertBugs(const QString &tableName, QList< QMap<QString, QString> > list);
+    void insertBugs(const QString &tableName, QList< QMap<QString, QString> > list, const QString &trackerId);
     void multiInsert(const QString &tableName, QList< QMap<QString, QString> > list);
 
     // insertComments inserts comments for a number of different bugs.
@@ -121,7 +137,8 @@ public slots:
     void saveCredentials(int id, const QString &username, const QString &password);
 
 private:
-    static QMap<QString, QString> newChangelogEntry(const QString &id,
+    static QVariantMap newChangelogEntry(const QString &trackerTable,
+                                                    const QString &id,
                                                     const QString &trackerName,
                                                     const QString &bugId,
                                                     const QString &columnName,

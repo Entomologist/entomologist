@@ -26,6 +26,7 @@
 #include <QDateTime>
 
 #include "Backend.h"
+#include "SqlUtilities.h"
 #include "tracker_uis/BackendUI.h"
 #include "SqlWriterThread.h"
 
@@ -97,24 +98,4 @@ Backend::friendlyTime(const QString &time)
         return(time);
 
     return(newTime.toString("yyyy-MM-dd hh:mm:ss"));
-}
-
-bool
-Backend::hasPendingChanges()
-{
-    QSqlQuery q;
-    q.exec(QString("SELECT COUNT(id) FROM shadow_bugs WHERE tracker_id=%1").arg(mId));
-    if (q.next())
-    {
-        if (q.value(0).toInt() > 0)
-            return true;
-    }
-
-    q.exec(QString("SELECT COUNT(id) FROM shadow_comments WHERE tracker_id=%1").arg(mId));
-    if (q.next())
-    {
-        if (q.value(0).toInt() > 0)
-            return true;
-    }
-    return false;
 }

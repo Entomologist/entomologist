@@ -54,7 +54,7 @@ public slots:
 private:
     void setupTable();
     Ui::BugzillaUI *ui;
-    QStringList mPriorities, mSeverities, mStatuses;
+    QStringList mPriorities, mSeverities, mStatuses, mResolutions;
 };
 
 #endif // BUGZILLAUI_H

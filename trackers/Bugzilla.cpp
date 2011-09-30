@@ -1,4 +1,4 @@
-/*
+    /*
  *  Copyright (c) 2011 Novell, Inc.
  *  All Rights Reserved.
  *
@@ -116,7 +116,6 @@ Bugzilla::sync()
     QVariantMap params;
     params["login"] = QVariant(mUsername);
     params["password"] = QVariant(mPassword);
-    args << params;
     pClient->call("User.login", args, this, SLOT(loginSyncRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 
 }
@@ -166,37 +165,26 @@ Bugzilla::search(const QString &query)
 void
 Bugzilla::uploadAll()
 {
-    qDebug() << "Upload all for " << name() << mLastSync;
-    if (!hasPendingChanges())
+    if (!SqlUtilities::hasPendingChanges("shadow_bugzilla", mId))
     {
         emit bugsUpdated();
         return;
     }
+    qDebug() << "Bugzilla::uploadAll()";
     mUploading = true;
     login();
 }
 
 void Bugzilla::doUploading()
 {
-    qDebug() << "doUploading";
-    // First, iterate through the shadow_bugs table
+    qDebug() << "Bugzilla::doUploading...";
+    QStringList idList;
     QString ids;
-    QSqlTableModel model;
-    model.setTable("shadow_bugs");
-    model.setFilter(QString("tracker_id=%1").arg(mId));
-    model.select();
-
-    if (model.rowCount() == 0)
-    {
-        postComments();
-        return;
-    }
-
-    for (int i = 0; i < model.rowCount(); ++i)
-    {
-        QSqlRecord record = model.record(i);
-        ids += "id=" + record.value(2).toString() + "&";
-    }
+    idList = SqlUtilities::getChangedBugzillaIds(mId);
+    for (int i = 0; i < idList.size(); ++i)
+        ids += "id=" + idList.at(i) + "&";
+    qDebug() << "Id list: " << idList;
+    qDebug() << "ids: " << ids;
 
     // We're assuming that the login cookie is still valid here
     // TODO: It might not be
@@ -347,17 +335,45 @@ Bugzilla::getCCs()
 void
 Bugzilla::postNewItems(QMap<QString, QString> tokenMap)
 {
-    QMap<QString, QString> vals;
-    QMapIterator<QString, QString> i(tokenMap);
-    while (i.hasNext())
+    QVariantList changeList = SqlUtilities::getBugzillaChangelog();
+    int i, j;
+    for (i = 0; i < changeList.size(); ++i)
     {
-        i.next();
-        vals = getShadowValues(i.key());
-        vals["id"] = i.key();
-        vals["token"] = i.value();
-        mPostQueue << vals;
+        QVariantList changes = changeList.at(i).toList();
+        QMap<QString, QString> uploadBug;
+        for (j = 0; j < changes.size(); ++j)
+        {
+            QVariantMap newChange = changes.at(j).toMap();
+            if (newChange.value("tracker_name").toString() != mName)
+                break;
+            if (!tokenMap.contains(newChange.value("bug_id").toString()))
+                break;
+
+            QString column = newChange.value("column_name").toString();
+
+            uploadBug["id"] = newChange.value("bug_id").toString();
+            uploadBug["token"] = tokenMap.value(uploadBug["id"]);
+            if (column == "Severity")
+                uploadBug["bug_severity"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Priority")
+                uploadBug["priority"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Assigned To")
+                uploadBug["assignee"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Status")
+                uploadBug["bug_status"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Summary")
+                uploadBug["short_desc"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Status")
+                uploadBug["status"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Resolution")
+                uploadBug["resolution"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+        }
+
+        if (uploadBug.size() > 0)
+            mPostQueue << uploadBug;
     }
 
+    qDebug() << "Going to post " << mPostQueue;
     postItem();
 }
 
@@ -400,27 +416,6 @@ Bugzilla::postItem()
             this, SLOT(itemPostFinished()));
 }
 
-QMap<QString, QString>
-Bugzilla::getShadowValues(const QString &id)
-{
-    QMap<QString, QString> ret;
-    QString sql = QString("SELECT severity, priority, assigned_to, status, summary FROM shadow_bugs where bug_id=%1 AND tracker_id=%2")
-                       .arg(id)
-                       .arg(mId);
-    QSqlQuery q(sql);
-    q.next();
-    if (!q.value(0).isNull())
-        ret["bug_severity"] = q.value(0).toString();
-    if (!q.value(1).isNull())
-        ret["priority"] = q.value(1).toString();
-    if (!q.value(2).isNull())
-        ret["assignee"] = q.value(2).toString();
-    if (!q.value(3).isNull())
-        ret["bug_status"] = q.value(3).toString();
-    if (!q.value(4).isNull())
-        ret["short_desc"] = q.value(4).toString();
-    return ret;
-}
 
 void
 Bugzilla::postComments()
@@ -543,6 +538,16 @@ Bugzilla::checkValidSeverities()
 }
 
 void
+Bugzilla::checkValidResolutions()
+{
+    QVariantList args;
+    QVariantMap params;
+    params["field"] = "resolution";
+    args << params;
+    pClient->call("Bug.legal_values", args, this, SLOT(resolutionResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
+}
+
+void
 Bugzilla::checkValidStatuses()
 {
     QVariantList args;
@@ -632,11 +637,15 @@ Bugzilla::versionRpcResponse(QVariant &arg)
 
 void Bugzilla::loginRpcResponse(QVariant &arg)
 {
+    qDebug() << "Login response";
     QVariantMap map = arg.toMap();
     if (!map.isEmpty())
     {
         mBugzillaId = map.value("id").toString();
     }
+    if (mUploading)
+        doUploading();
+
 }
 
 void Bugzilla::loginSyncRpcResponse(QVariant &arg)
@@ -802,6 +811,25 @@ Bugzilla::priorityResponse(QVariant &arg)
 }
 
 void
+Bugzilla::resolutionResponse(QVariant &arg)
+{
+    QStringList response;
+    response = arg.toMap().value("values").toStringList();
+    QList<QMap<QString, QString> > fieldList;
+    for (int i = 0; i < response.size(); ++i)
+    {
+        QMap<QString, QString> fieldMap;
+        fieldMap["tracker_id"] = mId;
+        fieldMap["field_name"] = "resolution";
+        fieldMap["value"] = response.at(i);
+        fieldList << fieldMap;
+    }
+
+    pSqlWriter->multiInsert("fields", fieldList);
+    checkValidStatuses();
+}
+
+void
 Bugzilla::statusResponse(QVariant &arg)
 {
     QStringList response;
@@ -835,7 +863,7 @@ Bugzilla::severityResponse(QVariant &arg)
     }
 
     pSqlWriter->multiInsert("fields", fieldList);
-    checkValidStatuses();
+    checkValidResolutions();
 }
 
 void
@@ -1102,6 +1130,7 @@ Bugzilla::idDetailsFinished()
     QString id, token, text;
     QMap<QString, QString> tokenMap;
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+
     if (reply->error())
     {
         emit backendError(reply->errorString());
@@ -1144,8 +1173,10 @@ Bugzilla::idDetailsFinished()
     }
 
     // Now that we've found the tokens, post all the relevent information
-    postNewItems(tokenMap);
     reply->close();
+    reply->deleteLater();
+
+    postNewItems(tokenMap);
 }
 
 
@@ -1172,8 +1203,7 @@ Bugzilla::itemPostFinished()
         if (map["id"] == id)
         {
             mPostQueue.takeAt(i);
-            QSqlQuery sql;
-            sql.exec(QString("DELETE FROM shadow_bugs WHERE bug_id=\'%1\' AND tracker_id=%2").arg(id).arg(mId));
+            SqlUtilities::removeShadowBug("shadow_bugzilla", id, mId);
             break;
         }
     }

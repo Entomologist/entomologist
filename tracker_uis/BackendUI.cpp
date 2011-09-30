@@ -74,7 +74,6 @@ BackendUI::saveHeaderSetting(int logicalIndex, int oldSize, int newSize)
     Q_UNUSED(logicalIndex);
     Q_UNUSED(oldSize);
     Q_UNUSED(newSize);
-    qDebug() << "saveHeaderSetting";
     QSettings settings("Entomologist");
     QString settingName = QString("%1-header-geometry").arg(mTrackerName);
     settings.setValue(settingName, v->saveState());
@@ -85,7 +84,6 @@ BackendUI::restoreHeaderSetting()
 {
     QSettings settings("Entomologist");
     QString settingName = QString("%1-header-geometry").arg(mTrackerName);
-    qDebug() << "restoreHeaderSetting for " << mTrackerName;
     v->restoreState(settings.value(settingName, QByteArray()).toByteArray());
 }
 

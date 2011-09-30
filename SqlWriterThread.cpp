@@ -49,8 +49,8 @@ SqlWriterThread::run()
     qRegisterMetaType< QList<QMap<QString,QString> > >("QList<QMap<QString,QString> >");
     connect(this, SIGNAL(multiRowInsert(QString, QList<QMap<QString,QString> >)),
             pWriter, SLOT(multiInsert(QString, QList<QMap<QString,QString> >)));
-    connect(this, SIGNAL(bugsInsert(QString,QList<QMap<QString,QString> >)),
-            pWriter, SLOT(insertBugs(QString,QList<QMap<QString,QString> >)));
+    connect(this, SIGNAL(bugsInsert(QString,QList<QMap<QString,QString> >, QString)),
+            pWriter, SLOT(insertBugs(QString,QList<QMap<QString,QString> >, QString)));
     connect(this, SIGNAL(newComments(QList<QMap<QString,QString> >)),
             pWriter, SLOT(insertComments(QList<QMap<QString,QString> >)));
     connect(this, SIGNAL(newBugComments(QList<QMap<QString,QString> >)),
@@ -81,9 +81,9 @@ SqlWriterThread::multiInsert(const QString &table, QList<QMap<QString, QString> 
     emit multiRowInsert(table, list);
 }
 void
-SqlWriterThread::insertBugs(const QString &table, QList<QMap<QString, QString> > list)
+SqlWriterThread::insertBugs(const QString &table, QList<QMap<QString, QString> > list, const QString &trackerId)
 {
-    emit bugsInsert(table, list);
+    emit bugsInsert(table, list, trackerId);
 }
 
 void

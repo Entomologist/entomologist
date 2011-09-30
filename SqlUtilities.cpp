@@ -74,7 +74,6 @@ SqlUtilities::multiInsert(const QString &tableName,
                          QList< QMap<QString, QString> > list)
 {
     qDebug() << "SqlUtilities::multiInsert";
-    qDebug() << "multiInsert: " << list;
     if (list.size() == 0)
     {
         emit success();
@@ -135,10 +134,11 @@ SqlUtilities::multiInsert(const QString &tableName,
 
 void
 SqlUtilities::insertBugs(const QString &tableName,
-                         QList< QMap<QString, QString> > list)
+                         QList< QMap<QString, QString> > list,
+                         const QString &trackerId)
 {
     QStringList idList;
-    if (list.size() == 0)
+    if ((list.size() == 0) && trackerId == "-1")
     {
         emit bugsFinished(idList);
         return;
@@ -155,7 +155,7 @@ SqlUtilities::insertBugs(const QString &tableName,
                     .arg(tableName)
                     .arg(keys.join(","))
                     .arg(placeholder.join(","));
-    QString bugDeleteSql = QString("DELETE FROM %1 WHERE bug_id=:bug_id AND tracker_id=:tracker_id").arg(tableName);
+    QString bugDeleteSql= QString("DELETE FROM %1 WHERE bug_id=:bug_id AND tracker_id=:tracker_id").arg(tableName);
     QString commentDeleteSql = "DELETE FROM comments WHERE bug_id=:bug_id AND tracker_id=:tracker_id";
 
     if (!q.prepare(query))
@@ -178,8 +178,33 @@ SqlUtilities::insertBugs(const QString &tableName,
         emit failure(commentQuery.lastError().text());
         return;
     }
-
     mDatabase.transaction();
+    if (trackerId != "-1")
+    {
+        qDebug() << "Going to delete a bunch of things in " << tableName << " for " << trackerId;
+        QSqlQuery rmShadow;
+
+        if (!rmShadow.exec(QString("DELETE FROM %1 WHERE tracker_id = %2").arg(tableName).arg(trackerId)))
+        {
+            qDebug() << "Couldn't delete mantis bugs: " << rmShadow.lastError().text();
+        }
+        if (!rmShadow.exec(QString("DELETE FROM shadow_%1 WHERE tracker_id = %2").arg(tableName).arg(trackerId)))
+        {
+            qDebug() << "Couldn't delete shadow_mantis bugs: " << rmShadow.lastError().text();
+        }
+
+        if (!rmShadow.exec(QString("DELETE FROM comments WHERE tracker_id = %1").arg(trackerId)))
+        {
+            qDebug() << "Couldn't delete comments: " << rmShadow.lastError().text();
+        }
+
+        if (!rmShadow.exec(QString("DELETE FROM shadow_comments WHERE tracker_id = %2").arg(trackerId)))
+        {
+            qDebug() << "Couldn't delete shadow_comments: " << rmShadow.lastError().text();
+        }
+
+    }
+
     for (int a = 0; a < list.size(); ++a)
     {
         QMap<QString, QString> data = list.at(a);
@@ -188,25 +213,26 @@ SqlUtilities::insertBugs(const QString &tableName,
         commentQuery.bindValue(":bug_id", data["bug_id"]);
         commentQuery.bindValue(":tracker_id", data["tracker_id"]);
 
-        if (!bugQuery.exec())
+        if (trackerId == "-1")
         {
-            qDebug() << "multiRowInsert bugQuery failed: " << q.lastError().text();
-            emit failure(q.lastError().text());
-            error = true;
-            break;
-        }
+            if (!bugQuery.exec())
+            {
+                qDebug() << "multiRowInsert bugQuery failed: " << q.lastError().text();
+                emit failure(q.lastError().text());
+                error = true;
+                break;
+            }
 
-        if (!commentQuery.exec())
-        {
-            qDebug() << "multiRowInsert commentQuery failed: " << q.lastError().text();
-            emit failure(q.lastError().text());
-            error = true;
-            break;
+            if (!commentQuery.exec())
+            {
+                qDebug() << "multiRowInsert commentQuery failed: " << q.lastError().text();
+                emit failure(q.lastError().text());
+                error = true;
+                break;
+            }
         }
-
         for (int i = 0; i < keys.size(); ++i)
         {
-//            qDebug() << "Binding " << i << keys.at(i);
             q.bindValue(i, data.value(keys.at(i)));
         }
         if (!q.exec())
@@ -250,7 +276,6 @@ SqlUtilities::simpleInsert(const QString &tableName,
                     .arg(tableName)
                     .arg(keys.join(","))
                     .arg(placeholder.join(","));
-    qDebug() << query;
     q.prepare(query);
     for (int i = 0; i < keys.size(); ++i)
         q.bindValue(i,data.value(keys.at(i)));
@@ -292,7 +317,6 @@ SqlUtilities::simpleUpdate(const QString &tableName, QMap<QString, QString> upda
                      .arg(tableName)
                      .arg(updateList.join(","))
                      .arg(whereList.join(" AND "));
-    qDebug() << query;
     if(!q.prepare(query))
     {
         qDebug() << "Could not prepare simpleUpdate: " << q.lastError().text();
@@ -389,6 +413,30 @@ SqlUtilities::hasPendingChanges()
     return false;
 }
 
+bool
+SqlUtilities::hasPendingChanges(const QString &shadowTable,
+                                const QString &trackerId)
+{
+    QString shadowQuery = QString("SELECT COUNT(id) FROM %1 WHERE tracker_id = %2").arg(shadowTable).arg(trackerId);
+    QSqlQuery q;
+    q.exec(shadowQuery);
+    if (q.next())
+    {
+        if (q.value(0).toInt() > 0)
+            return true;
+    }
+
+    QString commentQuery = QString("SELECT COUNT(id) FROM shadow_comments WHERE tracker_id = %1").arg(trackerId);
+    q.exec(commentQuery);
+    if (q.next())
+    {
+        if (q.value(0).toInt() > 0)
+            return true;
+    }
+
+    return false;
+}
+
 // sqlite starts autoincrementing primary keys at 1,
 // so it's safe to use this function as both a boolean check and an
 // ID lookup
@@ -417,10 +465,12 @@ SqlUtilities::hasShadowBug(const QString &tableName,
                   .arg(bugId)
                   .arg(trackerId);
     QSqlQuery q;
+    int val;
     q.exec(sql);
-    q.next();
-    int val = q.value(0).toInt();
-    qDebug() << "Val: " << val;
+    if (q.next())
+        val = q.value(0).toInt();
+    else
+        val = 0;
     return val;
 }
 
@@ -515,6 +565,7 @@ SqlUtilities::createTables(int dbVersion)
                                               "product TEXT,"
                                               "bug_type TEXT,"
                                               "bug_state TEXT,"
+                                              "resolution TEXT,"
                                               "last_modified TEXT)";
 
     QString createTracSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
@@ -553,6 +604,7 @@ SqlUtilities::createTables(int dbVersion)
                                               "os_version TEXT,"
                                               "bug_type TEXT,"
                                               "bug_state TEXT,"
+                                              "resolution TEXT,"
                                               "last_modified TEXT)";
 
     QString createCommentsSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
@@ -808,7 +860,8 @@ SqlUtilities::bugzillaBugDetail(const QString &rowId)
             "coalesce(shadow_bugzilla.status, bugzilla.status),"
             "coalesce(shadow_bugzilla.summary, bugzilla.summary), "
             "coalesce(shadow_bugzilla.product, bugzilla.product), "
-            "coalesce(shadow_bugzilla.component, bugzilla.component) "
+            "coalesce(shadow_bugzilla.component, bugzilla.component), "
+            "coalesce(shadow_bugzilla.resolution, bugzilla.resolution) "
             "from bugzilla left outer join shadow_bugzilla ON bugzilla.bug_id = shadow_bugzilla.bug_id "
             "join trackers ON bugzilla.tracker_id = trackers.id WHERE bugzilla.id = :id";
 
@@ -840,6 +893,7 @@ SqlUtilities::bugzillaBugDetail(const QString &rowId)
     ret["summary"] = q.value(8).toString().remove(removeFont);
     ret["product"] = q.value(9).toString().remove(removeFont);
     ret["component"] = q.value(10).toString().remove(removeFont);
+    ret["resolution"] = q.value(11).toString().remove(removeFont);
     return ret;
 }
 
@@ -860,7 +914,8 @@ SqlUtilities::mantisBugDetail(const QString &rowId)
                    "coalesce(shadow_mantis.reproducibility, mantis.reproducibility),"
                    "coalesce(shadow_mantis.assigned_to, mantis.assigned_to),"
                    "coalesce(shadow_mantis.status, mantis.status),"
-                   "coalesce(shadow_mantis.summary, mantis.summary) "
+                   "coalesce(shadow_mantis.summary, mantis.summary), "
+                   "coalesce(shadow_mantis.resolution, mantis.resolution) "
                    "from mantis left outer join shadow_mantis ON mantis.bug_id = shadow_mantis.bug_id "
                    "join trackers ON mantis.tracker_id = trackers.id WHERE mantis.id = :id";
 
@@ -896,6 +951,7 @@ SqlUtilities::mantisBugDetail(const QString &rowId)
     ret["assigned_to"] = q.value(12).toString().remove(removeFont);
     ret["status"] = q.value(13).toString().remove(removeFont);
     ret["summary"] = q.value(14).toString();
+    ret["resolution"] = q.value(15).toString();
 
     return ret;
 }
@@ -949,7 +1005,8 @@ SqlUtilities::getCommentsChangelog()
     QString commentsQuery = "SELECT trackers.name, "
                             "shadow_comments.bug_id, "
                             "shadow_comments.comment, "
-                            "shadow_comments.id "
+                            "shadow_comments.id, "
+                            "shadow_comments.private "
                             "from shadow_comments join trackers ON shadow_comments.tracker_id = trackers.id";
     QSqlQuery q(commentsQuery);
     if (!q.exec())
@@ -964,16 +1021,17 @@ SqlUtilities::getCommentsChangelog()
         entry["bug_id"] = q.value(1).toString();
         entry["comment"] = q.value(2).toString();
         entry["id"] = q.value(3).toString();
+        entry["private"] = q.value(4).toString();
         ret << entry;
     }
 
     return ret;
 }
 
-QList< QMap<QString, QString> >
+QVariantList
 SqlUtilities::getTracChangelog()
 {
-    QList< QMap<QString, QString> > ret;
+    QVariantList retVal;
     QString bugsQuery = "SELECT trackers.name, "
                    "shadow_trac.bug_id, "
                    "trac.severity, "
@@ -1002,14 +1060,16 @@ SqlUtilities::getTracChangelog()
     {
         qDebug() << "getTracChangelog error: " << q.lastError().text();
         qDebug() << "getTracChangelog error: " << q.lastQuery();
-        return ret;
+        return retVal;
     }
 
     while (q.next())
     {
+        QVariantList ret;
         if (!q.value(3).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Severity",
@@ -1019,7 +1079,8 @@ SqlUtilities::getTracChangelog()
 
         if (!q.value(5).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Priority",
@@ -1029,7 +1090,8 @@ SqlUtilities::getTracChangelog()
 
         if (!q.value(7).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Assigned To",
@@ -1039,7 +1101,8 @@ SqlUtilities::getTracChangelog()
 
         if (!q.value(9).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Status",
@@ -1049,7 +1112,8 @@ SqlUtilities::getTracChangelog()
 
         if (!q.value(11).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Summary",
@@ -1059,7 +1123,8 @@ SqlUtilities::getTracChangelog()
 
         if (!q.value(13).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Component",
@@ -1069,7 +1134,8 @@ SqlUtilities::getTracChangelog()
 
         if (!q.value(15).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Milestone",
@@ -1079,7 +1145,8 @@ SqlUtilities::getTracChangelog()
 
         if (!q.value(17).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Version",
@@ -1089,22 +1156,26 @@ SqlUtilities::getTracChangelog()
 
         if (!q.value(19).isNull())
         {
-            ret << newChangelogEntry(q.value(20).toString(),
+            ret << newChangelogEntry("shadow_trac",
+                                     q.value(20).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Resolution",
                                      q.value(18).toString(),
                                      q.value(19).toString());
         }
+
+        if (ret.size() > 0)
+            retVal.prepend(ret);
     }
 
-    return(ret);
+    return(retVal);
 }
 
-QList< QMap<QString, QString> >
+QVariantList
 SqlUtilities::getBugzillaChangelog()
 {
-    QList< QMap<QString, QString> > ret;
+    QVariantList retVal;
     QString bugsQuery = "SELECT trackers.name, "
                    "shadow_bugzilla.bug_id, "
                    "bugzilla.severity, "
@@ -1121,7 +1192,9 @@ SqlUtilities::getBugzillaChangelog()
                    "shadow_bugzilla.component,"
                    "bugzilla.product,"
                    "shadow_bugzilla.product,"
-                   "shadow_bugzilla.id "
+                   "shadow_bugzilla.id, "
+                   "bugzilla.resolution,"
+                   "shadow_bugzilla.resolution "
                    "from shadow_bugzilla left outer join bugzilla on shadow_bugzilla.bug_id = bugzilla.bug_id AND shadow_bugzilla.tracker_id = bugzilla.tracker_id "
                    "join trackers ON shadow_bugzilla.tracker_id = trackers.id";
     QSqlQuery q(bugsQuery);
@@ -1129,14 +1202,16 @@ SqlUtilities::getBugzillaChangelog()
     {
         qDebug() << "getBugzillaChangelog error: " << q.lastError().text();
         qDebug() << "getBugzillaChangelog error: " << q.lastQuery();
-        return ret;
+        return retVal;
     }
 
     while (q.next())
     {
+        QVariantList ret;
         if (!q.value(3).isNull())
         {
-            ret << newChangelogEntry(q.value(16).toString(),
+            ret << newChangelogEntry("shadow_bugzilla",
+                                     q.value(16).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Severity",
@@ -1146,7 +1221,8 @@ SqlUtilities::getBugzillaChangelog()
 
         if (!q.value(5).isNull())
         {
-            ret << newChangelogEntry(q.value(16).toString(),
+            ret << newChangelogEntry("shadow_bugzilla",
+                                     q.value(16).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Priority",
@@ -1156,7 +1232,8 @@ SqlUtilities::getBugzillaChangelog()
 
         if (!q.value(7).isNull())
         {
-            ret << newChangelogEntry(q.value(16).toString(),
+            ret << newChangelogEntry("shadow_bugzilla",
+                                     q.value(16).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Assigned To",
@@ -1166,7 +1243,8 @@ SqlUtilities::getBugzillaChangelog()
 
         if (!q.value(9).isNull())
         {
-            ret << newChangelogEntry(q.value(16).toString(),
+            ret << newChangelogEntry("shadow_bugzilla",
+                                     q.value(16).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Status",
@@ -1176,7 +1254,8 @@ SqlUtilities::getBugzillaChangelog()
 
         if (!q.value(11).isNull())
         {
-            ret << newChangelogEntry(q.value(16).toString(),
+            ret << newChangelogEntry("shadow_bugzilla",
+                                     q.value(16).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Summary",
@@ -1186,7 +1265,8 @@ SqlUtilities::getBugzillaChangelog()
 
         if (!q.value(13).isNull())
         {
-            ret << newChangelogEntry(q.value(16).toString(),
+            ret << newChangelogEntry("shadow_bugzilla",
+                                     q.value(16).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Component",
@@ -1196,31 +1276,39 @@ SqlUtilities::getBugzillaChangelog()
 
         if (!q.value(15).isNull())
         {
-            ret << newChangelogEntry(q.value(16).toString(),
+            ret << newChangelogEntry("shadow_bugzilla",
+                                     q.value(16).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Product",
                                      q.value(14).toString(),
                                      q.value(15).toString());
         }
+
+        if (!q.value(18).isNull())
+        {
+            ret << newChangelogEntry("shadow_bugzilla",
+                                     q.value(16).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Resolution",
+                                     q.value(17).toString(),
+                                     q.value(18).toString());
+        }
+
+        if (ret.size() > 0)
+            retVal.prepend(ret);
+
     }
 
-    return(ret);
+    return(retVal);
 
 }
 
-QList< QMap<QString, QString> >
+QVariantList
 SqlUtilities::getMantisChangelog()
 {
-#if 0
-                                              "os TEXT,"
-                                              "os_version TEXT,"
-                                              "bug_type TEXT,"
-                                              "bug_state TEXT,"
-                                              "last_modified TEXT)";
-#endif
-
-    QList< QMap<QString, QString> > ret;
+    QVariantList retVal;
     QString bugsQuery = "SELECT trackers.name, "
                    "shadow_mantis.bug_id, "
                    "mantis.severity, "
@@ -1245,7 +1333,9 @@ SqlUtilities::getMantisChangelog()
                    "shadow_mantis.os, "
                    "mantis.os_version,"
                    "shadow_mantis.os_version,"
-                   "shadow_mantis.id "
+                   "shadow_mantis.id, "
+                   "mantis.resolution,"
+                   "shadow_mantis.resolution "
                    "from shadow_mantis left outer join mantis on shadow_mantis.bug_id = mantis.bug_id AND shadow_mantis.tracker_id = mantis.tracker_id "
                    "join trackers ON shadow_mantis.tracker_id = trackers.id";
     QSqlQuery q(bugsQuery);
@@ -1253,14 +1343,16 @@ SqlUtilities::getMantisChangelog()
     {
         qDebug() << "getMantisChangelog error: " << q.lastError().text();
         qDebug() << "getMantisChangelog error: " << q.lastQuery();
-        return ret;
+        return retVal;
     }
 
     while (q.next())
     {
+        QVariantList ret;
         if (!q.value(3).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Severity",
@@ -1270,7 +1362,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(5).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Priority",
@@ -1280,7 +1373,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(7).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Assigned To",
@@ -1290,7 +1384,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(9).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Status",
@@ -1300,7 +1395,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(11).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Summary",
@@ -1310,7 +1406,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(13).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Category",
@@ -1320,7 +1417,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(15).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Project",
@@ -1330,7 +1428,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(17).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Product Version",
@@ -1340,7 +1439,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(19).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "Reproducibility",
@@ -1350,7 +1450,8 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(21).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "OS",
@@ -1360,32 +1461,163 @@ SqlUtilities::getMantisChangelog()
 
         if (!q.value(23).isNull())
         {
-            ret << newChangelogEntry(q.value(24).toString(),
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
                                      q.value(0).toString(),
                                      q.value(1).toString(),
                                      "OS Version",
                                      q.value(22).toString(),
                                      q.value(23).toString());
         }
+
+        if (!q.value(26).isNull())
+        {
+            ret << newChangelogEntry("shadow_mantis",
+                                     q.value(24).toString(),
+                                     q.value(0).toString(),
+                                     q.value(1).toString(),
+                                     "Resolution",
+                                     q.value(25).toString(),
+                                     q.value(26).toString());
+        }
+
+        if (ret.size() > 0)
+            retVal.prepend(ret);
+
     }
 
-    return(ret);
+    return(retVal);
 }
 
-QMap<QString, QString>
-SqlUtilities::newChangelogEntry(const QString &id,
+void
+SqlUtilities::simpleDelete(const QString &rowId,
+                           const QString &tableName)
+{
+    QSqlQuery q;
+    QString query = QString("DELETE FROM %1 WHERE id=%2")
+                            .arg(tableName)
+                            .arg(rowId);
+    q.exec(query);
+}
+
+QVariantMap
+SqlUtilities::newChangelogEntry(const QString &trackerTable,
+                                const QString &id,
                                 const QString &trackerName,
                                 const QString &bugId,
                                 const QString &columnName,
                                 const QString &oldValue,
                                 const QString &newValue)
 {
-    QMap<QString, QString> ret;
+    QVariantMap ret;
     ret["id"] = id;
+    ret["tracker_table"] = trackerTable;
     ret["tracker_name"] = trackerName;
     ret["bug_id"] = bugId;
     ret["column_name"] = columnName;
     ret["from"] = (oldValue.isEmpty()) ? "(none)" : oldValue;
     ret["to"] = newValue;
     return(ret);
+}
+
+void
+SqlUtilities::removeTracker(const QString &trackerId, const QString &trackerName)
+{
+    QSqlQuery q;
+    q.exec(QString("DELETE FROM trackers WHERE id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM comments WHERE tracker_id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM shadow_comments WHERE tracker_id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM trac WHERE tracker_id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM shadow_trac WHERE tracker_id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM bugzilla WHERE tracker_id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM shadow_bugzilla WHERE tracker_id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM mantis WHERE tracker_id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM shadow_mantis WHERE tracker_id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM search_results WHERE tracker_name=\'%1\'").arg(trackerName));
+}
+
+void
+SqlUtilities::renameSearchTracker(const QString &oldName,
+                                  const QString &newName)
+{
+    QString query = "UPDATE search_results SET tracker_name = :new_name WHERE tracker_name = :old_name";
+    QSqlQuery q(query);
+    q.bindValue(":new_name", newName);
+    q.bindValue(":old_name", oldName);
+    q.exec();
+}
+
+bool
+SqlUtilities::renameTracker(const QString &id,
+                            const QString &name,
+                            const QString &username,
+                            const QString &password)
+{
+    QString query = "UPDATE trackers SET name=:name,username=:username,password=:password WHERE id=:id";
+    QSqlQuery q;
+    q.prepare(query);
+    q.bindValue(":name", name);
+    q.bindValue(":username", username);
+    q.bindValue(":password", password);
+    q.bindValue(":id", id);
+
+    if (!q.exec())
+    {
+        qDebug() << "Error renaming tracker: " << q.lastError().text();
+        return false;
+    }
+
+    return true;
+}
+
+void
+SqlUtilities::removeShadowBug(const QString &shadowTable,
+                              const QString &bugId,
+                              const QString &trackerId)
+{
+    QString query = QString("DELETE FROM %1 WHERE bug_id = :bug_id AND tracker_id = :tracker_id").arg(shadowTable);
+    QSqlQuery q;
+    q.prepare(query);
+    q.bindValue(":bug_id", bugId);
+    q.bindValue(":tracker_id", trackerId);
+    if (!q.exec())
+    {
+        qDebug() << "removeShadowBug failed: " << q.lastError().text();
+    }
+}
+
+void
+SqlUtilities::removeShadowComment(const QString &bugId,
+                                const QString &trackerId)
+{
+    QString query = "DELETE FROM shadow_comments WHERE bug_id = :bug_id AND tracker_id = :tracker_id";
+    QSqlQuery q;
+    q.prepare(query);
+    q.bindValue(":bug_id", bugId);
+    q.bindValue(":tracker_id", trackerId);
+    if (!q.exec())
+    {
+        qDebug() << "removeShadowComment failed: " << q.lastError().text();
+    }
+}
+
+QStringList
+SqlUtilities::getChangedBugzillaIds(const QString &trackerId)
+{
+    qDebug() << "getChangedBugzillaIds";
+    QStringList ret;
+    QString query = QString("SELECT bug_id FROM shadow_bugzilla WHERE tracker_id = %1").arg(trackerId);
+    QSqlQuery q;
+    if (!q.exec(query))
+    {
+        qDebug() << "SqlUtilities::getChangedBugzillaIds SELECT failed: " << q.lastError().text();
+        return ret;
+    }
+
+    while (q.next())
+    {
+        ret << q.value(0).toString();
+    }
+    qDebug() << "bugzilla ids: " << ret;
+    return ret;
 }

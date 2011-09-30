@@ -18,6 +18,7 @@ public:
     void setSeverities(const QString &selected, QStringList severities);
     void setPriorities(const QString &selected, QStringList priorities);
     void setStatuses(const QString &selected, QStringList statuses);
+    void setResolutions(const QString &selected, QStringList resolutions);
     void setProduct(const QString &selected);
     void setComponent(const QString &selected);
     QMap<QString, QString> fieldDetails();
@@ -25,7 +26,7 @@ public:
 private:
     Ui::BugzillaDetails *ui;
     // These are used to see if a combo box is set to a new value
-    QString mSeverity, mPriority, mStatus;
+    QString mSeverity, mPriority, mStatus, mResolution;
 
 };
 

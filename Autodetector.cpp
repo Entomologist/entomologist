@@ -81,8 +81,8 @@ Autodetector::checkVersion(Backend *b)
     qDebug() << "Check version";
     connect(b, SIGNAL(versionChecked(QString)),
             this, SLOT(versionChecked(QString)));
-    connect(b, SIGNAL(fieldsFound()),
-            this, SLOT(fieldsFound()));
+    //connect(b, SIGNAL(fieldsFound()),
+    //        this, SLOT(fieldsFound()));
     connect(b, SIGNAL(backendError(QString)),
             this, SLOT(handleError(QString)));
     b->checkVersion();

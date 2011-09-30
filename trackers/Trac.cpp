@@ -1,4 +1,4 @@
-/*
+g/*
  *  Copyright (c) 2011 Novell, Inc.
  *  All Rights Reserved.
  *
@@ -19,6 +19,8 @@
  *
  *  Author: Matt Barringer <mbarringer@suse.de>
  */
+
+#include <QVariant>
 
 #include "Trac.h"
 #include "SqlUtilities.h"
@@ -128,7 +130,6 @@ Trac::sync()
                     .arg(monitorString)
                     .arg(mLastSync.toString("yyyy-MM-dd"));
     args << query;
-    qDebug() << args;
     pClient->call("ticket.query", args, this, SLOT(monitoredComponentsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
 
@@ -256,7 +257,7 @@ Trac::checkFields()
 void
 Trac::uploadAll()
 {
-    if (!hasPendingChanges())
+    if (!SqlUtilities::hasPendingChanges("shadow_trac", mId))
     {
         emit bugsUpdated();
         return;
@@ -266,17 +267,19 @@ Trac::uploadAll()
     QVariantMap commentActionMap;
     commentActionMap["action"] = "leave";
 
-    QString sql = QString("SELECT bug_id, severity, priority, assigned_to, status, summary FROM shadow_bugs where tracker_id=%1")
-                       .arg(mId);
-    QString commentSql = QString("SELECT bug_id, comment, private FROM shadow_comments WHERE tracker_id=%1")
-                         .arg(mId);
-    QSqlQuery comment(commentSql);
-    while (comment.next())
+    QVariantList changeList = SqlUtilities::getTracChangelog();
+    QList< QMap<QString, QString> > commentList = SqlUtilities::getCommentsChangelog();
+    int i, j;
+    for (i = 0; i < commentList.size(); ++i)
     {
+        QMap<QString, QString> comment = commentList.at(i);
+        if (comment["tracker_name"] != mName)
+            continue;
+
         QVariantMap newMethod;
         QVariantList newParams;
-        newParams.append(comment.value(0).toInt());
-        newParams.append(comment.value(1).toString());
+        newParams.append(comment["bug_id"].toInt());
+        newParams.append(comment["comment"]);
         newParams.append(commentActionMap);
         newParams.append(false);
         newParams.append(mUsername);
@@ -285,48 +288,54 @@ Trac::uploadAll()
         methodList.append(newMethod);
     }
 
-    QSqlQuery q(sql);
-    while (q.next())
+    for (i = 0; i < changeList.size(); ++i)
     {
+        QVariantList changes = changeList.at(i).toList();
         QVariantMap actionMap;
-        actionMap["action"] = "leave";
-        if (!q.value(1).isNull())
-            actionMap["type"] = q.value(1).toString().remove(QRegExp("<[^>]*>"));
-        if (!q.value(2).isNull())
-            actionMap["priority"] = q.value(2).toString().remove(QRegExp("<[^>]*>"));
-
-        if (!q.value(3).isNull())
+        for (j = 0; j < changes.size(); ++j)
         {
-            actionMap["action"] = "reassign";
-            actionMap["owner"] = q.value(3).toString().remove(QRegExp("<[^>]*>"));
-        }
-        else if (!q.value(4).isNull())
-        {
-            actionMap["status"] = q.value(4).toString().remove(QRegExp("<[^>]*>"));
-            if (actionMap["status"] == "accepted")
-            {
-                actionMap["action"] = "accept";
-            }
-            else if (actionMap["status"] == "assigned")
-            {
-                actionMap.remove("action");
-                actionMap["owner"] = mUsername;
-            }
-        }
+            QVariantMap newChange = changes.at(j).toMap();
+            if (newChange.value("tracker_name").toString() != mName)
+                break;
 
-        if (!q.value(5).isNull())
-            actionMap["summary"] = q.value(5).toString().remove(QRegExp("<[^>]*>"));
+            actionMap["action"] = "leave";
+            QString column = newChange.value("column_name").toString();
+            if (column == "Severity")
+                actionMap["type"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Priority")
+                actionMap["priority"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Status")
+            {
+                actionMap["status"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+                if (actionMap.value("status").toString() == "accepted")
+                {
+                    actionMap["action"] = "accept";
+                }
+                else if (actionMap.value("status").toString() == "assigned")
+                {
+                    actionMap.remove("action");
+                    actionMap["owner"] = mUsername;
+                }
+                else if (actionMap.value("status").toString() == "closed")
+                {
+                    actionMap["action"] = "resolve";
+                }
+            }
+            else if (column == "Resolution")
+                actionMap["resolution"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
 
-        QVariantMap newMethod;
-        QVariantList newParams;
-        newParams.append(q.value(0).toInt());
-        newParams.append("");
-        newParams.append(actionMap);
-        newParams.append(false);
-        newParams.append(mUsername);
-        newMethod.insert("methodName", "ticket.update");
-        newMethod.insert("params", newParams);
-        methodList.append(newMethod);
+            qDebug() << "pushing " << actionMap;
+            QVariantMap newMethod;
+            QVariantList newParams;
+            newParams.append(newChange.value("bug_id").toInt());
+            newParams.append("");
+            newParams.append(actionMap);
+            newParams.append(false);
+            newParams.append(mUsername);
+            newMethod.insert("methodName", "ticket.update");
+            newMethod.insert("params", newParams);
+            methodList.append(newMethod);
+        }
     }
 
     args.insert(0, methodList);;
@@ -343,17 +352,21 @@ void
 Trac::uploadFinished(QVariant &arg)
 {
     QSqlQuery sql;
+    qDebug() << "uploadFinished: ";
     QVariantList bugList = arg.toList();
     for (int i = 0; i < bugList.size(); ++i)
     {
-        qDebug() << i;
-        QString bugId = bugList.at(i).toList().at(0).toList().at(0).toString();
-        sql.exec(QString("DELETE FROM shadow_comments WHERE bug_id=\'%1\' AND tracker_id=%2")
-                        .arg(bugId)
-                        .arg(mId));
-        sql.exec(QString("DELETE FROM shadow_bugs WHERE bug_id=\'%1\' AND tracker_id=%2")
-                        .arg(bugId)
-                        .arg(mId));
+        QVariantList returnList = bugList.at(i).toList();
+        QString bugId = returnList.at(0).toList().at(0).toString();
+        qDebug() << "Removing bug for " << bugId;
+        QVariantMap statusMap = returnList.at(0).toList().at(3).toMap();
+        if (statusMap.value("status").toString() == "closed")
+        {
+            qDebug() << "Removing main bug";
+            SqlUtilities::removeShadowBug("trac", bugId, mId);
+        }
+        SqlUtilities::removeShadowBug("shadow_trac", bugId, mId);
+        SqlUtilities::removeShadowComment(bugId, mId);
     }
 
     sync();
@@ -557,6 +570,7 @@ Trac::bugDetailsRpcResponse(QVariant &arg)
         // It's QVariantLists all the way down...
         QVariantList infoList = bugList.at(i).toList().at(0).toList();
         QString bugId = infoList.at(0).toString();
+        qDebug() << "Updating " << infoList.size() << " bugs...";
         for (int j = 0; j < infoList.size(); ++j )
         {
             if (infoList.at(j).type() == QVariant::Map)
@@ -586,11 +600,11 @@ Trac::bugDetailsRpcResponse(QVariant &arg)
                 newBug["last_modified"] = bug.value("changetime")
                                              .toDateTime()
                                              .toString("yyyy-MM-dd hh:mm:ss");
-                if (bug.value("status").toString() == "closed")
-                    newBug["bug_state"] = "closed";
-                else
+                if (bug.value("status").toString() != "closed")
+                {
                     newBug["bug_state"] = "open";
-                insertList << newBug;
+                    insertList << newBug;
+                }
             }
         }
     }
@@ -765,7 +779,7 @@ Trac::versionRpcResponse(QVariant &arg)
 
     // Minor doesn't matter
     int minor = list.at(2).toInt();
-    qDebug() << list;
+    qDebug() << "Trac version: " << list;
     if ((epoch == 0) || (major != 1))
     {
         emit backendError("The version of Trac is too low.  Trac 0.12 or higher is required.");

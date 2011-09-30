@@ -50,6 +50,7 @@ public:
     void checkValidSeverities();
     void checkValidStatuses();
     void checkValidComponents();
+    void checkValidResolutions();
     void checkFields();
     void checkValidComponentsForProducts(const QString &product);
 
@@ -88,6 +89,7 @@ public slots:
     void productsResponse(QVariant &arg);
     void productComponentResponse(QVariant &arg);
     void productNamesResponse(QVariant &arg);
+    void resolutionResponse(QVariant &arg);
     void addCommentResponse(QVariant &arg);
 
     void statusResponse(QVariant &arg);
@@ -101,7 +103,6 @@ protected:
     void postComment();
     void doUploading();
     void parseBuglistCSV(const QString &csv, const QString &bugType);
-    QMap<QString, QString> getShadowValues(const QString &id);
     QVariantMap mProductMap;
     QString mCurrentProduct;
     QVariantMap mBugs;

@@ -114,7 +114,6 @@ SearchTab::searchButtonClicked()
             || (b->name() == selected))
         {
             mSearchCount++;
-            qDebug() << "mSearchCount: " << mSearchCount;
             b->search(search);
         }
      }
@@ -124,6 +123,7 @@ void
 SearchTab::addTracker(Backend *b)
 {
     if (!b) return;
+
     mIdMap[b->id()] = b;
 
     if (ui->trackerCombo->count() == 1)
@@ -133,6 +133,40 @@ SearchTab::addTracker(Backend *b)
     connect(b, SIGNAL(backendError(QString)),
             this, SLOT(searchFinished()));
     ui->trackerCombo->addItem(b->name());
+}
+
+void
+SearchTab::removeTracker(Backend *b)
+{
+    for (int i = 0; i < ui->trackerCombo->count(); ++i)
+    {
+        if (b->name() == ui->trackerCombo->itemText(i))
+        {
+            ui->trackerCombo->removeItem(i);
+            mIdMap.remove(b->id());
+            if (ui->trackerCombo->count() == 2)
+                ui->trackerCombo->removeItem(1); // Remove the separator
+            break;
+        }
+    }
+
+    pModel->select();
+}
+
+void
+SearchTab::renameTracker(const QString &oldName,
+                         const QString &newName)
+{
+    for (int i = 0; i < ui->trackerCombo->count(); ++i)
+    {
+        if (oldName == ui->trackerCombo->itemText(i))
+        {
+            ui->trackerCombo->setItemText(i, newName);
+            SqlUtilities::renameSearchTracker(oldName, newName);
+            break;
+        }
+    }
+    pModel->select();
 }
 
 void SearchTab::changeEvent(QEvent *e)

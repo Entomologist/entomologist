@@ -53,8 +53,8 @@ ChangelogWindow::loadChangelog()
 {
     ui->listWidget->clear();
     QList< QMap<QString, QString> > commentsChangelist;
-    QList< QMap<QString, QString> > bugChangelist;
-
+    QVariantList bugChangelist;
+    QString id, table;
     qDebug() << "Loading changelog";
     QString line;
     QString entry = tr("<b>%1</b> bug <font color=\"blue\"><u>%2</u></font>: Change "
@@ -65,18 +65,25 @@ ChangelogWindow::loadChangelog()
     bugChangelist = SqlUtilities::getTracChangelog();
     bugChangelist << SqlUtilities::getBugzillaChangelog();
     bugChangelist << SqlUtilities::getMantisChangelog();
-
     for (int i = 0; i < bugChangelist.size(); ++i)
     {
-        QMap<QString,QString> newChange = bugChangelist.at(i);
-        line = QString(entry).arg(newChange["tracker_name"],
-                                  newChange["bug_id"],
-                                  newChange["column_name"],
-                                  newChange["from"],
-                                  newChange["to"]);
+        line = "";
+        QVariantList changes = bugChangelist.at(i).toList();
+        for (int j = 0; j < changes.size(); ++j)
+        {
+            QVariantMap newChange = changes.at(j).toMap();
+            qDebug() << newChange;
+            id = newChange.value("id").toString();
+            table = newChange.value("tracker_table").toString();
+            line += QString(entry).arg(newChange.value("tracker_name").toString(),
+                                      newChange.value("bug_id").toString(),
+                                      newChange.value("column_name").toString(),
+                                      newChange.value("from").toString(),
+                                      newChange.value("to").toString());
+        }
         QListWidgetItem *newItem = new QListWidgetItem();
         newItem->setText(line);
-        newItem->setData(Qt::UserRole, QString("bug:%1").arg(newChange["id"]));
+        newItem->setData(Qt::UserRole, QString("bug:%1:tracker_table:%2").arg(id).arg(table));
         ui->listWidget->addItem(newItem);
     }
 
@@ -99,8 +106,6 @@ ChangelogWindow::loadChangelog()
 void
 ChangelogWindow::revertButtonClicked()
 {
-    QSqlQuery q;
-
     QList<QListWidgetItem *> list = ui->listWidget->selectedItems();
     if (list.count() == 0) return;
 
@@ -115,11 +120,11 @@ ChangelogWindow::revertButtonClicked()
             QStringList idList = item->data(Qt::UserRole).toString().split(":");
             if (idList.at(0) == "bug")
             {
-                q.exec(QString("DELETE FROM shadow_bugs WHERE id=%1").arg(idList.at(1)));
+                SqlUtilities::simpleDelete(idList.at(1), idList.at(3));
             }
             else
             {
-                q.exec(QString("DELETE FROM shadow_comments WHERE id=%1").arg(idList.at(1)));
+                SqlUtilities::simpleDelete(idList.at(1),"shadow_comments");
             }
 
             ui->listWidget->takeItem(ui->listWidget->row(item));
