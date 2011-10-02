@@ -41,11 +41,11 @@
 #include <qjson/json_parser.hh>
 #include "ToDoItem.h"
 
-RememberTheMilk::RememberTheMilk(QString service, bool state)
+RememberTheMilk::RememberTheMilk(const QString &service, bool state)
     : serviceName(service),
       loginState(state)
 {
-    serviceType_ = "Remember The Milk";
+    mServiceType = "Remember The Milk";
     apiKey = "7714673fe0ea7961dd885fb6c895aa79";
     secret = "0aecb45bfbd2cab5";
     manager = new QNetworkAccessManager();
@@ -448,7 +448,7 @@ RememberTheMilk::getListsResponse()
 }
 
 bool
-RememberTheMilk::reservedList(QString name)
+RememberTheMilk::reservedList(const QString &name)
 {
     QStringList reserved;
     reserved << "Inbox"  << "Sent" << "All Tasks" << "Work";
@@ -457,7 +457,7 @@ RememberTheMilk::reservedList(QString name)
 }
 
 bool
-RememberTheMilk::listExists(QString name)
+RememberTheMilk::listExists(const QString &name)
 {
     bool exists = false;
 
@@ -587,7 +587,7 @@ void RememberTheMilk::deleteList()
 
     QNetworkRequest req = QNetworkRequest(QUrl(mURL));
     QNetworkReply* res = manager->post(req,query.toAscii());
-    connect(res,SIGNAL(finished()),this,SLOT(deleteListResponse()));
+    connect(res,SIGNAL(finished()),this,SLOT(Response()));
 }
 
 
@@ -749,6 +749,7 @@ RememberTheMilk::addTaskResponse()
         QVariant id = task["id"];
         currentItem->setRTMTaskID(id.toString());
         updateItemID(currentItem,serviceName);
+
     }
 
     reply->close();
@@ -757,7 +758,7 @@ RememberTheMilk::addTaskResponse()
 
 // TODO: Connect this to serviceTasks table so we can keep a track of service task ids.
 void
-RememberTheMilk::insertTaskID(ToDoItem *item,QString itemID)
+RememberTheMilk::insertTaskID(ToDoItem *item,const QString &itemID)
 {
     Q_UNUSED(item);
     Q_UNUSED(itemID);
@@ -981,7 +982,7 @@ RememberTheMilk::updateDateResponse()
 
 // Utility functions
 QStringList
-RememberTheMilk::getTaskID(QString taskName)
+RememberTheMilk::getTaskID(const QString &taskName)
 {
     QStringList taskid;
     foreach(ToDoItem* t, syncTasks)
@@ -997,10 +998,30 @@ RememberTheMilk::getTaskID(QString taskName)
 
     return taskid;
 }
+void
+RememberTheMilk::updateItemID(ToDoItem *item, const QString &serviceName)
+{
+
+    QSqlQuery query("UPDATE service_tasks SET item_id = :id WHERE service_name = :name AND task_id = :taskid");
+
+    query.bindValue(":id",item->RTMTaskID());
+    query.bindValue(":name",serviceName);
+    query.bindValue(":taskid",item->bugID());
+
+    if(!query.exec())
+    {
+        qDebug() << "Error on Query";
+        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
+        qDebug() << query.lastQuery();
+
+    }
+
+
+}
 
 
 bool
-RememberTheMilk::compareTaskDates(QString task1, QString task2)
+RememberTheMilk::compareTaskDates(const QString &task1, const QString &task2)
 {
     Q_UNUSED(task1);
     Q_UNUSED(task2);
@@ -1009,7 +1030,7 @@ RememberTheMilk::compareTaskDates(QString task1, QString task2)
 }
 
 void
-RememberTheMilk::insertListID(QString listName, QString listID)
+RememberTheMilk::insertListID(const QString &listName, const QString &listID)
 {
 
     QSqlQuery query("UPDATE todolist SET rtm_listid = :listID WHERE name = :listName");

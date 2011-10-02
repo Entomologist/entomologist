@@ -461,7 +461,7 @@ SqlUtilities::createTables(int dbVersion)
     QString createTodoListSql = "CREATE TABLE todolist (id INTEGER PRIMARY KEY,"
                                                        "name TEXT,"
                                                        "rtm_listid TEXT,"
-                                                        "google_listid TEXT,"
+                                                       "google_listid TEXT,"
                                                        "sync_services TEXT)";
 
     QString createServicesSql = "CREATE TABLE services (id INTEGER PRIMARY KEY,"

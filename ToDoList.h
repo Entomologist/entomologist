@@ -19,7 +19,7 @@ public:
     void setListStatus(listStatus newStatus) { mStatus = newStatus; }
     void setSyncCount(int sync) { mSyncCount = sync; }
     void setServices(const QString &service) { mServices.append(service); }
-    void setmGoogleTasksListID(const QString &id) { mGoogleTasksListID = id; }
+    void setGoogleTasksListID(const QString &id) { mGoogleTasksListID = id; }
     bool syncNeeded() {  return mSyncCount < mServices.length(); }
 private:
     QString mListName;

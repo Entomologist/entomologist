@@ -1,12 +1,12 @@
 #ifndef GOOGLECALENDAR_H
 #define GOOGLECALENDAR_H
-#include <QNetworkAccessManager>
 #include "ServicesBackend.h"
+
 class GoogleTasks : public ServicesBackend
 {
     Q_OBJECT
 public:
-    GoogleTasks(QString service,bool state);
+    GoogleTasks(QString service);
     ~GoogleTasks();
     void login();
     void setupList();
@@ -19,31 +19,40 @@ public:
     void getLists();
     void setList(ToDoList* List);
     void deleteList();
+    void updateItemID(ToDoItem *item, const QString &serviceName);
 
 private:
     void insertKey(QString token, QString item);
-    QNetworkAccessManager* pManager;
     void reRequestToken();
-    QString mApiUrl;
+    QString mAuthURL;
     QString mAccessToken,mRefreshToken, mToken, mSecret;
     QString mRedirectURL,mScope,mClientID;
     QString mUrl,mService;
-    bool mState;
     QString getTaskIDFromDB(const QString &taskID,const QString &serviceName);
-    QString mGrantType;
     ToDoList* mTodoList;
+    ToDoItem* mCurrentItem;
     QList<ToDoList*> remoteLists;
     void addList();
-    void createToDoList();
     bool listExists(QString name);
+    void insertListID(QString listName, QString listID);
+    QString mRFC3339DateFormat;
+    QString mRFC3339TimeFormat;
+    QString mDateFormat;
+    void getTasksList();
+    QMap<QString,QVariant> mTasksList;
+    void updateList();
 
 private slots:
     void getSwapToken();
     void getListRepsonse();
     void addListResponse();
     void deleteListResponse();
-
-
+    void addTaskResponse();
+    void deleteTaskResponse();
+    void updateDateResponse();
+    void getTasksListResponse();
+    void updateCompletedResponse();
+    void updateListResponse();
 };
 
 #endif // GOOGLECALENDAR_H

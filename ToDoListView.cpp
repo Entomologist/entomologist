@@ -63,7 +63,7 @@
  *
  * TODO:
  *
- * -WebDAV/Pull Data from Remote services if the date/completed status have changed.
+ * - WebDAV/Pull Data from Remote services if the date/completed status have changed.
  *
  */
 
@@ -77,7 +77,7 @@ ToDoListView::ToDoListView(QWidget *parent) :
     restoreGeometry(settings.value("todo-window-geometry", "").toByteArray());
 
     // Add ToDoLists, if there aren't any, add a DEFAULT todolist
-    QSqlQuery query("SELECT name, list_id, id, sync_services FROM todolist");
+    QSqlQuery query("SELECT name, rtm_listid, google_listid, id FROM todolist");
     query.exec();
     if(!query.next())
     {
@@ -92,7 +92,7 @@ ToDoListView::ToDoListView(QWidget *parent) :
     }
 
     ui->bugTreeWidget->expandAll();
-    ui->bugTreeWidget->hideColumn(1); // Hide the 'Data' Column so the internal bug ID isn't shown to the user.
+
 
     BugTreeItemDelegate* bug = new BugTreeItemDelegate;
     ui->bugTreeWidget->setItemDelegate(bug);
@@ -134,11 +134,12 @@ ToDoListView::findItems()
 
     while(query.next())
     {
+
         addItem(query.value(0).toInt(),
                 query.value(1).toInt(),
                 query.value(2).toInt(),
                 query.value(3).toString(),
-                query.value(4).toInt() -1,
+                query.value(4).toInt(),
                 query.value(5).toString(),
                 query.value(6).toInt(),
                 false);
@@ -146,7 +147,7 @@ ToDoListView::findItems()
 }
 
 void
-ToDoListView::toDoListAdded(const QString &name,const QString &listID,const QString &googleID, const QString &dbId, bool isNew)
+ToDoListView::toDoListAdded(const QString &name,const QString &rtmID,const QString &googleID, const QString &dbId, bool isNew)
 {
 
     QTreeWidgetItem* item = new QTreeWidgetItem(ui->bugTreeWidget->invisibleRootItem(), 1);
@@ -162,8 +163,8 @@ ToDoListView::toDoListAdded(const QString &name,const QString &listID,const QStr
     }
     else
     {
-        list->setmRTMListID(listID);
-        list->setmGoogleTasksListID(googleID);
+        list->setmRTMListID(rtmID);
+        list->setGoogleTasksListID(googleID);
         QStringList services = currentServices(list->listName());
         foreach(QString service,services)
             list->setServices(service);
@@ -222,7 +223,7 @@ ToDoListView::bugAdded(const QString &data,
     query.bindValue(":tracker_id", trackerID);
     query.bindValue(":tracker_table", trackerTable);
     query.bindValue(":bug_id", bugID);
-    query.bindValue(":parent",(parent + 1));
+    query.bindValue(":parent",ui->bugTreeWidget->topLevelItem(parent)->data(0,Qt::UserRole));
     query.bindValue(":date",date);
     query.bindValue(":completed",completed);
     query.bindValue(":modified",QDateTime::currentDateTime().toString());
@@ -248,6 +249,7 @@ ToDoListView::addItem(int bugID,
                       int completed,
                       bool isNew)
 {
+
     int offset = 2; // The offset we need to add to the right columns
     QTreeWidgetItem* item = new QTreeWidgetItem;
     item->setText(1, QString::number(bugID));
@@ -273,7 +275,20 @@ ToDoListView::addItem(int bugID,
 
     item->setText(item->columnCount(), date);
     item->setIcon(0, QIcon(iconPath));
-    ui->bugTreeWidget->topLevelItem((parent))->addChild(item);
+    QTreeWidgetItem* topLevel;
+    if(isNew)
+    {
+        topLevel = ui->bugTreeWidget->topLevelItem(parent);
+        topLevel->addChild(item);
+    }
+    else
+    {
+        qDebug() << "Parent: " << parent;
+        topLevel = findTopLevelItemIndex(parent);
+        topLevel->addChild(item);
+
+    }
+
     item->setCheckState(item->columnCount(),Qt::CheckState(completed));
 
     setDateColor(item);
@@ -282,7 +297,7 @@ ToDoListView::addItem(int bugID,
         ui->bugTreeWidget->resizeColumnToContents(i);
 
     qDebug() << "Adding bugID: " << bugID;
-    ToDoItem* newItem = new ToDoItem(ui->bugTreeWidget->topLevelItem(parent)->text(0),
+    ToDoItem* newItem = new ToDoItem(topLevel->text(0),
                                      QString::number(bugID),
                                      bugData.at(0),
                                      bugData.at(2),
@@ -295,6 +310,26 @@ ToDoListView::addItem(int bugID,
 
     connect(ui->bugTreeWidget, SIGNAL(itemClicked(QTreeWidgetItem*,int)),
             this, SLOT(checkStateChanged(QTreeWidgetItem*,int)));
+}
+
+QTreeWidgetItem*
+ToDoListView::findTopLevelItemIndex(int id)
+{
+    QSqlQuery query("SELECT name FROM todolist WHERE id=:id");
+    query.bindValue("id",id);
+
+    if(!query.exec())
+    {
+        qDebug() << query.lastQuery() << "Bound Values: " <<  query.boundValues();
+        qDebug() << query.lastError();
+
+    }
+    query.next();
+    QString name = query.value(0).toString();
+    QList<QTreeWidgetItem*> list = ui->bugTreeWidget->findItems(name,Qt::MatchExactly,0);
+
+    return list.at(0);
+
 }
 
 QStringList
@@ -468,16 +503,15 @@ ToDoListView::deleteItem()
     if(itemIndex != -1)
     {
         QList<QTreeWidgetItem*> children;
-        children = ui->bugTreeWidget->topLevelItem(itemIndex)->takeChildren();
-        QString listId = ui->bugTreeWidget->topLevelItem(itemIndex)->data(0, Qt::UserRole).toString();
-        qDebug() << "ListID: " << listId;
-        QList<ToDoItem*> updatedItems = items.values(ui->bugTreeWidget->topLevelItem(itemIndex)->text(0));
+        QTreeWidgetItem* parent = ui->bugTreeWidget->topLevelItem(itemIndex);
+        children = parent->takeChildren();
+        QList<ToDoItem*> updatedItems = items.values(parent->text(0));
 
         foreach(QTreeWidgetItem* child, children)
         {
             query.prepare("DELETE FROM todolistbugs WHERE bug_id = :bugID AND todolist_id = :list_id");
             query.bindValue(":bugID", child->text(1));
-            query.bindValue(":list_id", listId);
+            query.bindValue(":list_id", parent->data(0,Qt::UserRole));
             query.exec();
 
             int itemNo = findItem(child->text(1),updatedItems);
@@ -488,11 +522,10 @@ ToDoListView::deleteItem()
         }
 
         query.prepare("DELETE FROM todolist WHERE id = :id");
-        //query.bindValue(":name",ui->bugTreeWidget->topLevelItem(itemIndex)->text(0));
-        query.bindValue(":id", listId);
+        query.bindValue(":id", parent->data(0,Qt::UserRole));
         query.exec();
 
-        lists.value(ui->bugTreeWidget->topLevelItem(itemIndex)->text(0))->setListStatus(ToDoList::DELETED);
+        lists.value(parent->text(0))->setListStatus(ToDoList::DELETED);
         ui->bugTreeWidget->takeTopLevelItem(itemIndex);
     }
     else
@@ -598,13 +631,12 @@ ToDoListView::editTopLevelItem()
 
         oldName = topLevelItem->text(0);
         topLevelItem->setText(0,itemName);
-
         QSqlQuery query("UPDATE todolist SET name = :newName WHERE name= :oldName");
 
         query.bindValue(":newName",itemName);
         query.bindValue(":oldName",oldName);
         query.exec();
-        ToDoList* list = lists.value(oldName);
+        ToDoList* list = lists[oldName];
         list->setListName(itemName);
         list->setListStatus(ToDoList::UPDATED);
 
@@ -632,7 +664,6 @@ ToDoListView::syncAll()
     syncLists.clear();
     QMap<QString,QString> syncServices = getExports();
     syncLists = lists.values();
-
     QMapIterator<QString,QString> iter(syncServices);
     while(iter.hasNext())
     {
@@ -678,7 +709,7 @@ ToDoListView::createService(QString serviceType,QString serviceName)
 
     else if(serviceType.compare("Google Tasks") == 0)
     {
-        GoogleTasks* gc = new GoogleTasks(serviceName,isLoginOnly);
+        GoogleTasks* gc = new GoogleTasks(serviceName);
         connect(gc,SIGNAL(serviceError(QString)),this,SLOT(serviceError(QString)));
         connect(gc,SIGNAL(loginWaiting()),this,SLOT(loginWaiting()));
         connect(gc,SIGNAL(authCompleted()),this,SLOT(authCompleted()));
@@ -686,7 +717,10 @@ ToDoListView::createService(QString serviceType,QString serviceName)
         gc->login();
     }
     else if(serviceType.compare("Generic WebDAV") == 0)
+    {
         GenericWebDav* gd = new GenericWebDav();
+        Q_UNUSED(gd);
+    }
 
 }
 
@@ -784,6 +818,7 @@ ToDoListView::authCompleted()
         if(syncLists.isEmpty() == false)
         {
             currentList = syncLists.takeFirst();
+
             syncItems = items.values(currentList->listName());
             if(hasBeenSynced(currentList) == false)
             {
@@ -869,9 +904,10 @@ ToDoListView::syncItem()
         {
             ToDoItem* t = syncItems.takeFirst();
 
-
             if(isNew || (t->status() == ToDoItem::NEW && t->status() != ToDoItem::DELETED))
+            {
                 obj->addTask(t);
+            }
             else
             {
                 if(t->status() == ToDoItem::DATECHANGED)

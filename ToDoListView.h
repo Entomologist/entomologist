@@ -110,6 +110,7 @@ private:
     QTimer* timer;
     QProgressDialog* progress;
     void insertAuthToken(GoogleTasks*);
+    QTreeWidgetItem* findTopLevelItemIndex(int itemID);
 };
 
 #endif // TODOLISTVIEW_H
