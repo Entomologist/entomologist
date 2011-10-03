@@ -434,7 +434,7 @@ RememberTheMilk::getListsResponse()
     }
 
     reply->close();
-    if(!listExists(todoList->listName()) || todoList->status()== ToDoList::NEW)
+    if(!listExists(todoList->rtmListID()) || todoList->status()== ToDoList::NEW)
         createToDoList();
 
     else if(todoList->status() == ToDoList::UPDATED)
@@ -457,12 +457,12 @@ RememberTheMilk::reservedList(const QString &name)
 }
 
 bool
-RememberTheMilk::listExists(const QString &name)
+RememberTheMilk::listExists(const QString &listID)
 {
     bool exists = false;
 
     foreach(ToDoList* list, remoteLists)
-        if(list->listName().compare(name) == 0)
+        if(list->rtmListID().compare(listID) == 0)
             exists = true;
 
 
@@ -1044,7 +1044,7 @@ RememberTheMilk::insertListID(const QString &listName, const QString &listID)
         qDebug() << query.lastQuery();
 
     }
-
+    qDebug() << "List ID for RTM" << listID;
     todoList->setmRTMListID(listID);
 
 }

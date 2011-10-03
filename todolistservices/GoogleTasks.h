@@ -22,7 +22,7 @@ public:
     void updateItemID(ToDoItem *item, const QString &serviceName);
 
 private:
-    void insertKey(QString token, QString item);
+    void insertKey(const QString &token, const QString &item);
     void reRequestToken();
     QString mAuthURL;
     QString mAccessToken,mRefreshToken, mToken, mSecret;
@@ -33,13 +33,14 @@ private:
     ToDoItem* mCurrentItem;
     QList<ToDoList*> remoteLists;
     void addList();
-    bool listExists(QString name);
-    void insertListID(QString listName, QString listID);
+    bool listExists(const QString &name);
+    void insertListID(const QString &listName,const QString &listID);
     QString mRFC3339DateFormat;
     QString mRFC3339TimeFormat;
     QString mDateFormat;
     void getTasksList();
     QMap<QString,QVariant> mTasksList;
+    QMap<QString,QVariant> mRemoteListsAsJSON;
     void updateList();
 
 private slots:

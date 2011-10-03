@@ -159,10 +159,10 @@ GoogleTasks::getSwapToken()
             {
                 insertKey(refreshToken,"refresh_token");
                 mRefreshToken = refreshToken;
+                emit regSuccess();
             }
         }
 
-        emit regSuccess();
         emit authCompleted();
 
     }
@@ -199,7 +199,9 @@ GoogleTasks::getLists()
 {
 
     QString url = "https://www.googleapis.com/tasks/v1/users/@me/lists?pp=1&access_token="
-            + mAccessToken + "&key=" + this->mToken;
+            + mAccessToken
+            + "&key="
+            + this->mToken;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply* rep = pManager->get(req);
     connect(rep,SIGNAL(finished()),this,SLOT(getListRepsonse()));
@@ -229,10 +231,10 @@ GoogleTasks::getListRepsonse()
                 ToDoList* newItem = new ToDoList(item["title"].toString());
                 newItem->setGoogleTasksListID(item["id"].toString());
                 remoteLists.append(newItem);
+                mRemoteListsAsJSON.insert(item["id"].toString(),i);
 
             }
-
-            if(!listExists(mTodoList->listName()) || mTodoList->status() == ToDoList::NEW)
+            if(!listExists(mTodoList->googleTasksListID()) || mTodoList->status() == ToDoList::NEW)
                 addList();
 
             else if(mTodoList->status() == ToDoList::UPDATED)
@@ -252,12 +254,12 @@ GoogleTasks::getListRepsonse()
 }
 
 bool
-GoogleTasks::listExists(QString name)
+GoogleTasks::listExists(const QString &listID)
 {
     bool exists = false;
 
     foreach(ToDoList* list, remoteLists)
-        if(list->listName().compare(name) == 0)
+        if(list->googleTasksListID().compare(listID) == 0)
             exists = true;
 
     return exists;
@@ -351,13 +353,14 @@ GoogleTasks::deleteListResponse()
 void
 GoogleTasks::updateList()
 {
-    qDebug() << "Updating List";
-    QVariantMap title;
-    title.insert("title",mTodoList->listName());
+    QVariantMap listJSON = mRemoteListsAsJSON.value(mTodoList->googleTasksListID()).toMap();
+    listJSON["title"] = mTodoList->listName();
     QJson::Serializer serializer;
-    QByteArray json = serializer.serialize(title);
+    QByteArray json = serializer.serialize(listJSON);
+
     QString url = "https://www.googleapis.com/tasks/v1/users/@me/lists/" + mTodoList->googleTasksListID() + "?pp=1&key=" + mToken + "&access_token=" + mAccessToken;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
+    req.setHeader(QNetworkRequest::ContentTypeHeader, "application/json");
 
     QNetworkReply* rep = pManager->put(req,json);
     connect(rep,SIGNAL(finished()),this,SLOT(updateListResponse()));
@@ -369,6 +372,7 @@ GoogleTasks::updateListResponse()
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
 
     QString reply = rep->readAll();
+    qDebug() << reply;
 
 }
 
@@ -528,7 +532,7 @@ GoogleTasks::deleteTaskResponse()
 }
 
 void
-GoogleTasks::insertListID(QString listName, QString listID)
+GoogleTasks::insertListID(const QString &listName, const QString &listID)
 {
 
     QSqlQuery query("UPDATE todolist SET google_listid = :listID WHERE name = :listName");
@@ -549,7 +553,7 @@ GoogleTasks::insertListID(QString listName, QString listID)
 
 
 void
-GoogleTasks::insertKey(QString token, QString item)
+GoogleTasks::insertKey(const QString &token, const QString &item)
 {
     QSqlQuery query;
     if(item.compare("auth_key") == 0)

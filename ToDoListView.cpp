@@ -147,7 +147,11 @@ ToDoListView::findItems()
 }
 
 void
-ToDoListView::toDoListAdded(const QString &name,const QString &rtmID,const QString &googleID, const QString &dbId, bool isNew)
+ToDoListView::toDoListAdded(const QString &name,
+                            const QString &rtmID,
+                            const QString &googleID,
+                            const QString &dbId,
+                            bool isNew)
 {
 
     QTreeWidgetItem* item = new QTreeWidgetItem(ui->bugTreeWidget->invisibleRootItem(), 1);
@@ -581,7 +585,7 @@ ToDoListView::newTopLevelItem()
         if(checkUniqueList(itemName))
         {
             QString newId = toDoListInsert(itemName);
-            toDoListAdded(itemName, "","", newId, true);
+            toDoListAdded(itemName, "","",newId, true);
         }
         else
         {
@@ -637,8 +641,10 @@ ToDoListView::editTopLevelItem()
         query.bindValue(":oldName",oldName);
         query.exec();
         ToDoList* list = lists[oldName];
+        lists.remove(oldName);
         list->setListName(itemName);
         list->setListStatus(ToDoList::UPDATED);
+        lists.insert(list->listName(),list);
 
     }
 }
@@ -679,6 +685,7 @@ ToDoListView::syncList()
     syncLists.clear();
     isLoginOnly = false;
     syncSingle = true;
+
     syncLists.append(lists.value(findParent(ui->bugTreeWidget->currentItem())->text(0)));
     QMap<QString,QString> syncServices = getExports();
     QMapIterator<QString,QString> iter(syncServices);
@@ -694,6 +701,7 @@ void
 ToDoListView::createService(QString serviceType,QString serviceName)
 {
     syncName = serviceName;
+
     if(serviceType.compare("Remember The Milk") == 0)
     {
         RememberTheMilk* rm = new RememberTheMilk(serviceName,isLoginOnly);
@@ -712,6 +720,7 @@ ToDoListView::createService(QString serviceType,QString serviceName)
         GoogleTasks* gc = new GoogleTasks(serviceName);
         connect(gc,SIGNAL(serviceError(QString)),this,SLOT(serviceError(QString)));
         connect(gc,SIGNAL(loginWaiting()),this,SLOT(loginWaiting()));
+        connect(gc,SIGNAL(regSuccess()),this,SLOT(regSuccess()));
         connect(gc,SIGNAL(authCompleted()),this,SLOT(authCompleted()));
         connect(gc,SIGNAL(readyToAddItems()),this,SLOT(readyToAddItems()));
         gc->login();
@@ -789,12 +798,14 @@ ToDoListView::loginWaiting()
 void
 ToDoListView::regSuccess()
 {
+
     QMessageBox success(this);
     success.setWindowTitle("Authorisation complete");
     success.setText("Entomologist has been authorised");
-    success.setInformativeText(QString("Entomologist has been successfully authorised for %1."
-                                       "You can revoke this authorisation at any time by removing it from the list of authorised applications. "
-                                       "If this was done as part of an export, Entomologist will now proceed with exporting your tasks.").arg(syncName));
+    success.setInformativeText(QString("Entomologist has been successfully "
+                                       "authorised for user with %1.\n To remove"
+                                       "this authorisation you may do it by removing "
+                                       "Entomologist from the list of authorised services").arg(syncName));
 
     success.setIcon(QMessageBox::Information);
     success.setDefaultButton(QMessageBox::Ok);
@@ -815,35 +826,51 @@ ToDoListView::authCompleted()
     if(!isLoginOnly)
     {
 
-        if(syncLists.isEmpty() == false)
+        if(!syncLists.isEmpty())
         {
             currentList = syncLists.takeFirst();
-
+            qDebug() << currentList->listName();
             syncItems = items.values(currentList->listName());
-            if(hasBeenSynced(currentList) == false)
+
+            if(!hasBeenSynced(currentList))
             {
                 currentList->setListStatus(ToDoList::NEW);
-            }
+                addServiceToList(syncName,currentList);
 
+            }
             foreach(ToDoItem* item, syncItems)
                 if(item->status() == ToDoItem::UNCHANGED)
                 {
                     syncItems.removeAt((syncItems.indexOf(item)));
                 }
 
+
             if(syncItems.length() > 0)
             {
-
-                progress = new QProgressDialog(QString("Syncing %1").arg(currentList->listName()),0,0,syncItems.length(),this);
+                mIgnoreItemSync = false;
+                progress = new QProgressDialog(QString("Syncing %1 to %2")
+                                               .arg(currentList->listName())
+                                               .arg(syncName)
+                                               ,0
+                                               ,0
+                                               ,syncItems.length(),
+                                               this);
                 numberofItemsToSync = syncItems.length();
                 progress->setWindowModality(Qt::WindowModal);
                 progress->show();
+
+                obj->setList(currentList);
+                obj->setupList();
+
+            }
+            else {
+
                 obj->setList(currentList);
                 obj->setupList();
                 currentList->setSyncCount(1);
+                mIgnoreItemSync = true;
+
             }
-            else //Can assume that there aren't any items to sync for this list so get a new one.
-                authCompleted();
 
         }
     }
@@ -880,12 +907,15 @@ void
 ToDoListView::readyToAddItems()
 {
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender());
-    timerCount = syncItems.length();
-    timer = new QTimer(obj);
-    timer->setInterval(1000);
-    connect(timer,SIGNAL(timeout()),this,SLOT(syncItem()));
-    if(!timer->isActive())
-        timer->start();
+    if(!mIgnoreItemSync)
+    {
+        timerCount = syncItems.length();
+        timer = new QTimer(obj);
+        timer->setInterval(1000);
+        connect(timer,SIGNAL(timeout()),this,SLOT(syncItem()));
+        if(!timer->isActive())
+            timer->start();
+    }
 }
 
 void
@@ -944,7 +974,6 @@ ToDoListView::syncItem()
 
         if(!currentList->syncNeeded())
             currentList->setListStatus(ToDoList::UNCHANGED);
-        addServiceToList(syncName,currentList);
         authCompleted();
     }
 }
@@ -985,6 +1014,7 @@ ToDoListView::addServiceToList(QString serviceName,ToDoList* list)
     {
         current.append(serviceName);
         list->setServices(serviceName);
+        qDebug() << serviceName;
         query.prepare("UPDATE todolist SET sync_services = :sync WHERE name= :name");
         query.bindValue(":sync",current.join(","));
         query.bindValue(":name",list->listName());
