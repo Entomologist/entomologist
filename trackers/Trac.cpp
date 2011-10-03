@@ -1,4 +1,4 @@
-g/*
+/*
  *  Copyright (c) 2011 Novell, Inc.
  *  All Rights Reserved.
  *
