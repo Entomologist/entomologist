@@ -116,8 +116,8 @@ Bugzilla::sync()
     QVariantMap params;
     params["login"] = QVariant(mUsername);
     params["password"] = QVariant(mPassword);
+    args << params;
     pClient->call("User.login", args, this, SLOT(loginSyncRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
-
 }
 
 void
@@ -606,6 +606,7 @@ Bugzilla::checkValidComponentsForProducts(const QString &product)
 void
 Bugzilla::rpcError(int error, const QString &message)
 {
+    qDebug() << "Bugzilla::rpcError";
     QString e = QString("Error %1: %2").arg(error).arg(message);
     emit backendError(e);
 }
@@ -737,6 +738,14 @@ void Bugzilla::bugRpcResponse(QVariant &arg)
             newBug["bug_state"] = "closed";
         else
             newBug["bug_state"] = "open";
+
+        if ((newBug["status"].toUpper() == "RESOLVED")
+            ||(newBug["status"].toUpper() == "CLOSED"))
+        {
+            SqlUtilities::removeShadowBug("bugzilla", newBug["bug_id"], mId);
+            continue;
+        }
+
         // Bugs from RPC come in in ISO format (YYYY-MM-DDTHH:MM:SS) so convert
         // to an easier to read format
         newBug["last_modified"] = friendlyTime(responseMap.value("last_change_time").toString());
@@ -1038,7 +1047,11 @@ Bugzilla::userBugListFinished()
         newBug["last_modified"] = responseMap.value("last_change_time").toString();
         if ((newBug["status"].toUpper() == "RESOLVED")
             ||(newBug["status"].toUpper() == "CLOSED"))
-                newBug["bug_state"] = "closed";
+        {
+            SqlUtilities::removeShadowBug("bugzilla", newBug["bug_id"], mId);
+            continue;
+        }
+
         insertList << newBug;
     }
 
