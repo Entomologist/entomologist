@@ -90,7 +90,7 @@ ToDoListPreferences::addService()
     ToDoListServiceAdd* a;
     a = new ToDoListServiceAdd(this);
     QStringList services;
-    services<< "Generic Web Dav" << "Google Tasks" << "Remember The Milk";
+    services << "Google Tasks" << "Remember The Milk";
     a->setServiceCombo(services);
     if(a->exec() == QDialog::Accepted)
         insertData(a);
@@ -130,7 +130,6 @@ ToDoListPreferences::insertData(ToDoListServiceAdd* a)
     query.exec();
     ui->serviceList->clear();
     populateServices();
-    //emit registerUser(data.at(0), data.at(1));
 }
 
 

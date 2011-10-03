@@ -30,6 +30,7 @@
 #include <QDateEdit>
 #include <QTreeWidgetItem>
 #include <QProgressDialog>
+#include <QStack>
 #include "todolistservices/RememberTheMilk.h"
 #include "todolistservices/GoogleTasks.h"
 #include "ToDoItem.h"
@@ -46,7 +47,15 @@ class ToDoListView : public QDialog
 {
     Q_OBJECT
 
+
 public:
+
+    // POD for services
+    typedef struct serviceData {
+           QString serviceName;
+           QString serviceType;
+    } serviceData_t;
+
     explicit ToDoListView(QWidget *parent = 0);
     ~ToDoListView();
     void toDoListAdded(const QString &name,
@@ -66,9 +75,9 @@ public slots:
     void deleteItem();
     void newTopLevelItem();
     void editTopLevelItem();
-    void syncAll();
-    void syncList();
-    void createService(QString servicetype,QString serviceName);
+    void syncAll(bool callback);
+    void syncList(bool callback);
+    void createService(serviceData_t service);
     void toDoListPreferences();
     void serviceError(const QString &message);
     void loginWaiting();
@@ -76,9 +85,11 @@ public slots:
     void authCompleted();
     void readyToAddItems();
     void syncItem();
+    void startSync();
+
 
 private:
-    QMap<QString,QString> getExports();
+    QStack<serviceData_t> getExports();
     QStringList bugDataItems(int bugID,
                              int trackerID,
                              const QString &trackerTable);
@@ -97,7 +108,6 @@ private:
     QString dateFormat;
     void setDateColor(QTreeWidgetItem* current);
     QTreeWidgetItem* findParent(QTreeWidgetItem* current);
-    bool isLoginOnly;
     void addServiceToList(QString serviceName,ToDoList* list);
     QString syncName;
     QMap<QString,ToDoList*> lists;
@@ -111,10 +121,13 @@ private:
     int findItem(QString targetName,QList<ToDoItem*> list);
     int timerCount;
     int numberofItemsToSync;
+    QStack<serviceData_t> mSyncServices;
     QTimer* timer;
+    bool mNeedExports;
     QProgressDialog* progress;
     void insertAuthToken(GoogleTasks*);
     QTreeWidgetItem* findTopLevelItemIndex(int itemID);
+    bool mNewSync;
     bool mIgnoreItemSync;
 };
 

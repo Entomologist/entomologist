@@ -114,11 +114,10 @@ ToDoListView::ToDoListView(QWidget *parent) :
     delKey->setContext(Qt::WindowShortcut);
     delBack = new QShortcut(QKeySequence(Qt::Key_Backspace),this);
     delBack->setContext(Qt::WindowShortcut);
-    connect(ui->syncAllButton,SIGNAL(clicked()),this,SLOT(syncAll()));
+    connect(ui->syncAllButton,SIGNAL(clicked()),this,SLOT(startSync()));
     connect(delKey,SIGNAL(activated()),this,SLOT(deleteItem()));
     connect(delBack,SIGNAL(activated()),this,SLOT(deleteItem()));
     findItems(); // Find the items already added to the ToDo List.
-    isLoginOnly = false;
 }
 
 ToDoListView::~ToDoListView()
@@ -469,7 +468,7 @@ ToDoListView::customContextMenuRequested(const QPoint &pos)
             QAction* editToDoListName = menu.addAction("Edit Name");
             connect(editToDoListName,SIGNAL(triggered()),this,SLOT(editTopLevelItem()));
             QAction* exportToCalendar = menu.addAction("Export List to Calendar");
-            connect(exportToCalendar,SIGNAL(triggered()),this,SLOT(syncList()));
+            connect(exportToCalendar,SIGNAL(triggered()),this,SLOT(startSync()));
         }
     }
     else
@@ -649,12 +648,12 @@ ToDoListView::editTopLevelItem()
     }
 }
 
-QMap<QString,QString>
+QStack<ToDoListView::serviceData_t>
 ToDoListView::getExports()
 {
 
     ToDoListExport* ex;
-    QMap<QString,QString> selectedItems;
+    QStack<serviceData_t> selectedItems;
     ex = new ToDoListExport(this);
     if(ex->exec() == QDialog::Accepted)
         selectedItems = ex->getData();
@@ -663,61 +662,74 @@ ToDoListView::getExports()
 }
 
 void
-ToDoListView::syncAll()
+ToDoListView::startSync()
 {
-    isLoginOnly = false;
-    syncSingle = false;
-    syncLists.clear();
-    QMap<QString,QString> syncServices = getExports();
+    mSyncServices = getExports();
+
+    if(sender()->inherits("QWidget")) syncAll(false);
+    else
+        syncList(false);
+}
+
+void
+ToDoListView::syncAll(bool callback)
+{
+
+
+    if(!callback)
+    {
+        syncSingle = false;
+        syncLists.clear();
+    }
     syncLists = lists.values();
-    QMapIterator<QString,QString> iter(syncServices);
-    while(iter.hasNext())
-    {
-        iter.next();
-        createService(iter.key(),iter.value());
-    }
+
+
+    if(mSyncServices.size() > 0)
+        createService(mSyncServices.pop());
+
+
 
 }
 
-void
-ToDoListView::syncList()
-{
-    syncLists.clear();
-    isLoginOnly = false;
-    syncSingle = true;
 
+
+void
+ToDoListView::syncList(bool callback)
+{
+    if(!callback)
+    {
+        syncSingle = true;
+        syncLists.clear();
+    }
     syncLists.append(lists.value(findParent(ui->bugTreeWidget->currentItem())->text(0)));
-    QMap<QString,QString> syncServices = getExports();
-    QMapIterator<QString,QString> iter(syncServices);
 
-    while(iter.hasNext())
-    {
-        iter.next();
-        createService(iter.key(),iter.value());
-    }
+
+    if (mSyncServices.size() > 0)
+        createService(mSyncServices.pop());
+
 }
 
 void
-ToDoListView::createService(QString serviceType,QString serviceName)
+ToDoListView::createService(serviceData_t service)
 {
-    syncName = serviceName;
+    syncName = service.serviceName;
 
-    if(serviceType.compare("Remember The Milk") == 0)
+    if(service.serviceType.compare("Remember The Milk") == 0)
     {
-        RememberTheMilk* rm = new RememberTheMilk(serviceName,isLoginOnly);
-        rm->login();
-
+        RememberTheMilk* rm = new RememberTheMilk(service.serviceName);
         connect(rm,SIGNAL(serviceError(QString)),this,SLOT(serviceError(QString)));
         connect(rm,SIGNAL(loginWaiting()),this,SLOT(loginWaiting()));
         connect(rm,SIGNAL(regSuccess()),this,SLOT(regSuccess()));
         connect(rm,SIGNAL(authCompleted()),this,SLOT(authCompleted()));
         connect(rm,SIGNAL(readyToAddItems()),this,SLOT(readyToAddItems()));
+        rm->login();
+
     }
 
 
-    else if(serviceType.compare("Google Tasks") == 0)
+    else if(service.serviceType.compare("Google Tasks") == 0)
     {
-        GoogleTasks* gc = new GoogleTasks(serviceName);
+        GoogleTasks* gc = new GoogleTasks(service.serviceName);
         connect(gc,SIGNAL(serviceError(QString)),this,SLOT(serviceError(QString)));
         connect(gc,SIGNAL(loginWaiting()),this,SLOT(loginWaiting()));
         connect(gc,SIGNAL(regSuccess()),this,SLOT(regSuccess()));
@@ -725,7 +737,7 @@ ToDoListView::createService(QString serviceType,QString serviceName)
         connect(gc,SIGNAL(readyToAddItems()),this,SLOT(readyToAddItems()));
         gc->login();
     }
-    else if(serviceType.compare("Generic WebDAV") == 0)
+    else if(service.serviceType.compare("Generic WebDAV") == 0)
     {
         GenericWebDav* gd = new GenericWebDav();
         Q_UNUSED(gd);
@@ -742,9 +754,7 @@ ToDoListView::toDoListPreferences()
     t->show();
     t->raise();
     t->activateWindow();
-    isLoginOnly = true;
-    connect(t,SIGNAL(registerUser(QString,QString)),this,
-            SLOT(createService(QString,QString)));
+
 }
 
 
@@ -774,8 +784,6 @@ void
 ToDoListView::loginWaiting()
 {
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender());
-
-
     QMessageBox login(this);
     login.setWindowTitle("Authorisation required");
     login.setText(QString("Authorisation Required for %1.").arg(syncName));
@@ -821,59 +829,53 @@ ToDoListView::authCompleted()
     else
         obj = static_cast<ServicesBackend*>(sender()->parent());
 
-
-
-    if(!isLoginOnly)
+    if(!syncLists.isEmpty())
     {
+        currentList = syncLists.takeFirst();
 
-        if(!syncLists.isEmpty())
+        syncItems = items.values(currentList->listName());
+        if(!hasBeenSynced(currentList))
         {
-            currentList = syncLists.takeFirst();
-            qDebug() << currentList->listName();
-            syncItems = items.values(currentList->listName());
-
-            if(!hasBeenSynced(currentList))
+            currentList->setListStatus(ToDoList::NEW);
+            addServiceToList(syncName,currentList);
+        }
+        foreach(ToDoItem* item, syncItems)
+            if(item->status() == ToDoItem::UNCHANGED)
             {
-                currentList->setListStatus(ToDoList::NEW);
-                addServiceToList(syncName,currentList);
-
+                syncItems.removeAt((syncItems.indexOf(item)));
             }
-            foreach(ToDoItem* item, syncItems)
-                if(item->status() == ToDoItem::UNCHANGED)
-                {
-                    syncItems.removeAt((syncItems.indexOf(item)));
-                }
 
+        if(syncItems.length() > 0)
+        {
+            mIgnoreItemSync = false;
+            progress = new QProgressDialog(QString("Syncing %1 to %2")
+                                           .arg(currentList->listName())
+                                           .arg(syncName)
+                                           ,0
+                                           ,0
+                                           ,syncItems.length(),
+                                           this);
+            numberofItemsToSync = syncItems.length();
+            progress->setWindowModality(Qt::WindowModal);
+            progress->show();
 
-            if(syncItems.length() > 0)
-            {
-                mIgnoreItemSync = false;
-                progress = new QProgressDialog(QString("Syncing %1 to %2")
-                                               .arg(currentList->listName())
-                                               .arg(syncName)
-                                               ,0
-                                               ,0
-                                               ,syncItems.length(),
-                                               this);
-                numberofItemsToSync = syncItems.length();
-                progress->setWindowModality(Qt::WindowModal);
-                progress->show();
+            obj->setList(currentList);
+            obj->setupList();
 
-                obj->setList(currentList);
-                obj->setupList();
-
-            }
-            else {
-
-                obj->setList(currentList);
-                obj->setupList();
-                currentList->setSyncCount(1);
-                mIgnoreItemSync = true;
-
-            }
+            mNewSync = !hasBeenSynced(currentList);
+            currentList->setServices(syncName);
 
         }
+        else {
+
+            obj->setList(currentList);
+            obj->setupList();
+            mIgnoreItemSync = true;
+
+        }
+
     }
+
 }
 
 // Specific to Google Task as it opens a browser window but doesn't send anything back to us.
@@ -916,6 +918,10 @@ ToDoListView::readyToAddItems()
         if(!timer->isActive())
             timer->start();
     }
+    else
+        if(syncSingle) authCompleted();
+        else authCompleted();
+
 }
 
 void
@@ -923,8 +929,6 @@ ToDoListView::syncItem()
 {
 
     ServicesBackend* obj = static_cast<ServicesBackend*>(sender()->parent());
-    bool isNew = !hasBeenSynced(currentList);
-
     if(timerCount >= 0)
     {
 
@@ -934,7 +938,7 @@ ToDoListView::syncItem()
         {
             ToDoItem* t = syncItems.takeFirst();
 
-            if(isNew || (t->status() == ToDoItem::NEW && t->status() != ToDoItem::DELETED))
+            if(mNewSync || (t->status() == ToDoItem::NEW && t->status() != ToDoItem::DELETED))
             {
                 obj->addTask(t);
             }
@@ -944,11 +948,11 @@ ToDoListView::syncItem()
                     obj->updateDate(t);
                 else if(t->status() == ToDoItem::COMPLETEDCHANGED)
                     obj->updateCompleted(t);
-                else if(t->status() == ToDoItem::DELETED && !isNew)
+                else if(t->status() == ToDoItem::DELETED && !mNewSync)
                 {
                     obj->deleteTask(t);
 
-                    if(currentList->syncNeeded() == false)
+                    if(!currentList->syncNeeded())
                     {
                         items.remove(currentList->listName(),t);
                         delete t;
@@ -974,7 +978,10 @@ ToDoListView::syncItem()
 
         if(!currentList->syncNeeded())
             currentList->setListStatus(ToDoList::UNCHANGED);
-        authCompleted();
+
+        currentList->setSyncCount(1);
+        if(syncSingle) syncList(true);
+        else syncAll(true);
     }
 }
 

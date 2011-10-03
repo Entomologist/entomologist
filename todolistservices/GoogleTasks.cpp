@@ -139,7 +139,6 @@ GoogleTasks::getSwapToken()
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
     QString response = rep->readAll();
     rep->deleteLater();
-
     bool ok;
     QJson::Parser parser;
     QVariantMap json = parser.parse(response.toAscii(),&ok).toMap();
@@ -150,6 +149,7 @@ GoogleTasks::getSwapToken()
         {
             reRequestToken();
         }
+
         mAccessToken = json["access_token"].toString();
         QString refreshToken = json["refresh_token"].toString();
 
@@ -253,18 +253,6 @@ GoogleTasks::getListRepsonse()
 
 }
 
-bool
-GoogleTasks::listExists(const QString &listID)
-{
-    bool exists = false;
-
-    foreach(ToDoList* list, remoteLists)
-        if(list->googleTasksListID().compare(listID) == 0)
-            exists = true;
-
-    return exists;
-}
-
 void
 GoogleTasks::setList(ToDoList *list)
 {
@@ -303,6 +291,9 @@ GoogleTasks::addListResponse()
     QString response = rep->readAll();
 
     rep->deleteLater();
+
+    if(response.contains("error") || rep->error())
+        emit serviceError("Could not add list: " + response);
     bool ok;
     QJson::Parser parser;
     QVariantMap json = parser.parse(response.toAscii(),&ok).toMap();
@@ -345,7 +336,7 @@ GoogleTasks::deleteListResponse()
     QString reply = rep->readAll();
     rep->deleteLater();
 
-    if(!reply.contains("200 OK"))
+    if(!reply.contains("error") || rep->error())
         emit serviceError("Could not delete list: " + reply);
 
 }
@@ -372,8 +363,9 @@ GoogleTasks::updateListResponse()
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
 
     QString reply = rep->readAll();
-    qDebug() << reply;
-
+    rep->deleteLater();
+    if(!reply.contains("error") || rep->error())
+        emit serviceError("Failed to update list" + reply);
 }
 
 void
@@ -396,7 +388,8 @@ GoogleTasks::getTasksListResponse()
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
     QString response = rep->readAll();
     rep->deleteLater();
-
+    if(response.contains("error") || rep->error())
+        emit serviceError("Could Not get tasks: " + response);
     bool ok;
     QJson::Parser parser;
     QVariantMap json = parser.parse(response.toAscii(),&ok).toMap();
@@ -446,9 +439,11 @@ GoogleTasks::addTaskResponse()
 
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
     QString response = rep->readAll();
+    rep->deleteLater();
+    if(response.contains("error") || rep->error())
+        emit serviceError("Could not add task: " + response);
     bool ok;
     QJson::Parser parser;
-    qDebug() << response;
     QVariantMap json = parser.parse(response.toAscii(),&ok).toMap();
 
     if(ok)
@@ -458,49 +453,6 @@ GoogleTasks::addTaskResponse()
         updateItemID(mCurrentItem,mService);
     }
 
-}
-
-void
-GoogleTasks::updateItemID(ToDoItem *item, const QString &serviceName)
-{
-
-    QSqlQuery query("UPDATE service_tasks SET item_id = :id WHERE service_name = :name AND task_id = :taskid");
-
-    query.bindValue(":id",item->googleTaskID());
-    query.bindValue(":name",serviceName);
-    query.bindValue(":taskid",item->bugID());
-
-    if(!query.exec())
-    {
-        qDebug() << "Error on Query";
-        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
-        qDebug() << query.lastQuery();
-
-    }
-
-
-}
-
-QString
-GoogleTasks::getTaskIDFromDB(const QString &taskID, const QString &serviceName)
-{
-    QString itemID;
-    QSqlQuery query("SELECT item_id FROM service_tasks WHERE task_id = :taskName AND service_name = :serviceName");
-    query.bindValue(":taskName",taskID);
-    query.bindValue(":serviceName",serviceName);
-
-    if(!query.exec())
-    {
-        qDebug() << "Error on Query";
-        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
-        qDebug() << query.lastQuery();
-
-    }
-
-    while(query.next())
-        itemID = query.value(0).toString();
-
-    return itemID;
 }
 
 void
@@ -524,51 +476,13 @@ GoogleTasks::deleteTaskResponse()
 {
 
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
-    if(rep->error())
-        emit serviceError(rep->errorString());
+    QString response = rep->readAll();
+    if(response.contains("error") || rep->error())
+        emit serviceError("failed to delete task:" + response);
     rep->deleteLater();
-    // We don't seem to need to do anything here.
 
 }
 
-void
-GoogleTasks::insertListID(const QString &listName, const QString &listID)
-{
-
-    QSqlQuery query("UPDATE todolist SET google_listid = :listID WHERE name = :listName");
-    query.bindValue(":listid",listID);
-    query.bindValue(":listName",listName);
-
-    if(!query.exec())
-    {
-        qDebug() << "Error on Query";
-        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
-        qDebug() << query.lastQuery();
-
-    }
-
-    mTodoList->setGoogleTasksListID(listID);
-
-}
-
-
-void
-GoogleTasks::insertKey(const QString &token, const QString &item)
-{
-    QSqlQuery query;
-    if(item.compare("auth_key") == 0)
-        query.prepare("UPDATE services SET auth_key=:key WHERE name=:name");
-    else
-    {
-        query.prepare("UPDATE services SET refresh_token=:key WHERE name=:name");
-    }
-
-    query.bindValue(":key",token);
-    query.bindValue(":name",mService);
-    query.exec();
-
-
-}
 void
 GoogleTasks::updateCompleted(ToDoItem* item)
 {
@@ -619,7 +533,7 @@ GoogleTasks::updateCompletedResponse()
 
     QString response = rep->readAll();
 
-    if(response.contains("error"))
+    if(response.contains("error") || rep->error())
         emit serviceError("failed to update task completed:" + response);
     rep->deleteLater();
 }
@@ -659,7 +573,104 @@ GoogleTasks::updateDateResponse()
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
     QString response = rep->readAll();
     rep->deleteLater();
-    if(response.contains("error"))
+    if(response.contains("error") || rep->error())
         emit serviceError("Could not update date:" + response);
 
 }
+
+void
+GoogleTasks::insertListID(const QString &listName, const QString &listID)
+{
+
+    QSqlQuery query("UPDATE todolist SET google_listid = :listID WHERE name = :listName");
+    query.bindValue(":listid",listID);
+    query.bindValue(":listName",listName);
+
+    if(!query.exec())
+    {
+        qDebug() << "Error on Query";
+        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
+        qDebug() << query.lastQuery();
+
+    }
+
+    mTodoList->setGoogleTasksListID(listID);
+
+}
+
+void
+GoogleTasks::insertKey(const QString &token, const QString &item)
+{
+    QSqlQuery query;
+    if(item.compare("auth_key") == 0)
+        query.prepare("UPDATE services SET auth_key=:key WHERE name=:name");
+    else
+    {
+        query.prepare("UPDATE services SET refresh_token=:key WHERE name=:name");
+    }
+
+    query.bindValue(":key",token);
+    query.bindValue(":name",mService);
+    query.exec();
+
+
+}
+
+void
+GoogleTasks::updateItemID(ToDoItem *item, const QString &serviceName)
+{
+
+    QSqlQuery query("UPDATE service_tasks SET item_id = :id WHERE service_name = :name AND task_id = :taskid");
+
+    query.bindValue(":id",item->googleTaskID());
+    query.bindValue(":name",serviceName);
+    query.bindValue(":taskid",item->bugID());
+
+    if(!query.exec())
+    {
+
+        qDebug() << "Error on Query";
+        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
+        qDebug() << query.lastQuery();
+
+    }
+
+
+}
+
+QString
+GoogleTasks::getTaskIDFromDB(const QString &taskID, const QString &serviceName)
+{
+    QString itemID;
+    QSqlQuery query("SELECT item_id FROM service_tasks WHERE task_id = :taskName "
+                    "AND service_name = :serviceName");
+    query.bindValue(":taskName",taskID);
+    query.bindValue(":serviceName",serviceName);
+
+    if(!query.exec())
+    {
+
+        qDebug() << "Error on Query";
+        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
+        qDebug() << query.lastQuery();
+
+    }
+
+    while(query.next())
+        itemID = query.value(0).toString();
+
+    return itemID;
+}
+
+bool
+GoogleTasks::listExists(const QString &listID)
+{
+    bool exists = false;
+
+    foreach(ToDoList* list, remoteLists)
+        if(list->googleTasksListID().compare(listID) == 0)
+            exists = true;
+
+    return exists;
+}
+

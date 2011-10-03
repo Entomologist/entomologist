@@ -41,9 +41,8 @@
 #include <qjson/json_parser.hh>
 #include "ToDoItem.h"
 
-RememberTheMilk::RememberTheMilk(const QString &service, bool state)
-    : serviceName(service),
-      loginState(state)
+RememberTheMilk::RememberTheMilk(const QString &service)
+    : serviceName(service)
 {
     mServiceType = "Remember The Milk";
     apiKey = "7714673fe0ea7961dd885fb6c895aa79";
@@ -61,31 +60,20 @@ RememberTheMilk::setList(ToDoList *list)
 void
 RememberTheMilk::login()
 {
-    if(!loginState)
+
+    QSqlQuery query("SELECT auth_key FROM services WHERE name=:name");
+    query.bindValue(":name",serviceName);
+
+    query.exec();
+
+    while(query.next())
     {
-        QSqlQuery query("SELECT auth_key FROM services WHERE name=:name");
-        query.bindValue(":name",serviceName);
-
-        query.exec();
-
-        while(query.next())
-        {
-            authToken = query.value(0).toString();
-        }
-        if(!authToken.isEmpty())
-            checkToken();
-        else
-        {
-            loginState=true;
-            login();
-        }
+        authToken = query.value(0).toString();
     }
+    if(!authToken.isEmpty())
+        checkToken();
     else
-    {
-
-        loginState = false;
         generateFrob();
-    }
 }
 
 void
@@ -201,8 +189,7 @@ RememberTheMilk::tokenResponse()
             checkToken();
 
         }
-        else
-            login();
+
 
     }
     else
@@ -266,19 +253,9 @@ RememberTheMilk::checkResponse()
     QVariant outerMap = frob.toMap().value("rsp");
     QString status = outerMap.toMap().value("stat").toString();
 
-    if(status.compare("fail") == 0)
-    {
+    if(status.compare("fail") == 0) login();
 
-        loginState = true;
-        login();
-
-    }
-    else
-    {
-        loginState = false;
-        emit authCompleted();
-
-    }
+    else emit authCompleted();
 
 }
 

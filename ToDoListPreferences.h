@@ -20,9 +20,6 @@ public slots:
     void customContextMenuRequested(const QPoint &pos);
     void editService();
     void deleteService();
-signals:
-    void registerUser(QString serviceType,QString serviceName);
-
 private:
     void populateServices();
     void insertData(ToDoListServiceAdd* service);

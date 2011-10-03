@@ -16,7 +16,7 @@ class RememberTheMilk : public ServicesBackend
     Q_OBJECT
 
 public:
-    RememberTheMilk(const QString &toDoList,bool loginState);
+    RememberTheMilk(const QString &toDoList);
 
     void login();
     void newUser();
@@ -54,7 +54,6 @@ private:
     QString timeline;
     QList<ToDoItem*> syncTasks;
     QNetworkAccessManager *manager;
-    bool loginState;
     void generateToken();
     void createTimeline();
     void regUser();
