@@ -51,6 +51,7 @@ public:
     void checkValidStatuses();
     void checkValidComponents();
     void checkValidResolutions();
+    void checkTimezoneOffset();
     void checkFields();
     void checkValidComponentsForProducts(const QString &product);
 
@@ -87,6 +88,7 @@ public slots:
     void severityResponse(QVariant &arg);
     void componentsResponse(QVariant &arg);
     void productsResponse(QVariant &arg);
+    void timezoneResponse(QVariant &arg);
     void productComponentResponse(QVariant &arg);
     void productNamesResponse(QVariant &arg);
     void resolutionResponse(QVariant &arg);
@@ -111,6 +113,7 @@ protected:
     QList< QMap<QString, QString> > mCommentQueue;
     QString mActiveCommentId;
     bool mUploading;
+    int mTimezoneOffset;
     void getUserEmail();
     void getUserBugs();
     void getReportedBugs();

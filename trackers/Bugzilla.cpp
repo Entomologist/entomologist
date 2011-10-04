@@ -110,6 +110,9 @@ Bugzilla::sync()
 {
     mUpdateCount = 0;
     mUploading = false;
+    SqlUtilities::clearRecentBugs("bugzilla");
+    mTimezoneOffset = SqlUtilities::getTimezoneOffset(mId);
+    qDebug() << "Offset: " << mTimezoneOffset;
     qDebug() << "Bugzilla::sync for " << name() << " at " << mLastSync;
     qDebug() << "Logging into " << mUrl + "/xmlrpc.cgi";
     QVariantList args;
@@ -262,7 +265,7 @@ Bugzilla::getUserBugs()
         params["assigned_to"] = usernameArgs;
         if (mLastSync.date().year() == 1970)
             params["resolution"] = ""; // Only show open bugs
-        params["last_change_time"] = mLastSync.addDays(-1).toString("yyyy-MM-ddThh:mm:ss");
+        params["last_change_time"] = mLastSync.addSecs(mTimezoneOffset);
         args << params;
         qDebug() << params;
         pClient->call("Bug.search", args, this, SLOT(bugRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
@@ -304,8 +307,9 @@ Bugzilla::getReportedBugs()
             params["creator"] = usernameArgs;
         if (mLastSync.date().year() == 1970)
             params["resolution"] = ""; // Only show open bugs
-        params["last_change_time"] = mLastSync.addDays(-1).toString("yyyy-MM-ddThh:mm:ss");
+        params["last_change_time"] = mLastSync.addSecs(mTimezoneOffset);
         args << params;
+        qDebug() << params;
         pClient->call("Bug.search", args, this, SLOT(reportedRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
 }
@@ -475,8 +479,15 @@ void Bugzilla::addCommentResponse(QVariant &arg)
     QSqlQuery q(sql);
     if (!q.exec())
         qDebug () << "Could not delete comment id " << mActiveCommentId;
-    mCommentQueue.takeAt(0);
-    postComment();
+    if (mCommentQueue.size() > 0)
+    {
+        mCommentQueue.takeAt(0);
+        postComment();
+    }
+    else
+    {
+        sync();
+    }
 }
 
 void
@@ -582,6 +593,23 @@ Bugzilla::checkValidComponents()
     }
 }
 
+// For Bugzilla 3.4, time inputs are in the server's local timezone.  3.6+ assumes
+// a UTC timezone.
+void
+Bugzilla::checkTimezoneOffset()
+{
+    if (mVersion != "3.2")
+    {
+        QVariantList args;
+        pClient->call("Bugzilla.time", args, this, SLOT(timezoneResponse(QVariant&)),
+                      this, SLOT(rpcError(int,QString)));
+    }
+    else
+    {
+        checkValidResolutions();
+    }
+}
+
 void
 Bugzilla::checkValidComponentsForProducts(const QString &product)
 {
@@ -606,7 +634,7 @@ Bugzilla::checkValidComponentsForProducts(const QString &product)
 void
 Bugzilla::rpcError(int error, const QString &message)
 {
-    qDebug() << "Bugzilla::rpcError";
+    qDebug() << "Bugzilla::rpcError: " << message;
     QString e = QString("Error %1: %2").arg(error).arg(message);
     emit backendError(e);
 }
@@ -692,6 +720,7 @@ void Bugzilla::reportedRpcResponse(QVariant &arg)
 {
     qDebug() << "REPORTED_BUGS";
     QVariantList bugList = arg.toMap().value("bugs").toList();
+    qDebug() << bugList;
     for (int i = 0; i < bugList.size(); ++i)
     {
         QVariantMap responseMap = bugList.at(i).toMap();
@@ -704,6 +733,7 @@ void Bugzilla::reportedRpcResponse(QVariant &arg)
 void Bugzilla::bugRpcResponse(QVariant &arg)
 {
     qDebug() << "USER_BUGS";
+    qDebug() << arg;
     QVariantList bugList = arg.toMap().value("bugs").toList();
     QVariantList idList;
     QVariantMap responseMap;
@@ -734,6 +764,9 @@ void Bugzilla::bugRpcResponse(QVariant &arg)
         newBug["product"] = responseMap.value("product").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
         newBug["description"] = responseMap.value("description").toString();
+        if (mLastSync.date().year() != 1970)
+            newBug["highlight_type"] = QString::number(SqlUtilities::HIGHLIGHT_RECENT);
+
         if (responseMap.value("resolution").toString() != "")
             newBug["bug_state"] = "closed";
         else
@@ -872,6 +905,54 @@ Bugzilla::severityResponse(QVariant &arg)
     }
 
     pSqlWriter->multiInsert("fields", fieldList);
+    checkTimezoneOffset();
+}
+
+void
+Bugzilla::timezoneResponse(QVariant &arg)
+{
+    int offset = 0;
+    bool ok[4];
+    bool negOffset = false;
+    QString offsetStr = arg.toMap().value("tz_offset").toString();
+    QDateTime now = QDateTime::currentDateTimeUtc();
+    QDateTime serverTime = arg.toMap().value("db_time").toDateTime();
+
+    // Taken from KDE's KDateTime code
+    QRegExp rx = QRegExp(QLatin1String("^([+-])(\\d\\d)(\\d\\d)$"));
+    if (!offsetStr.indexOf(rx))
+    {
+        QStringList parts = rx.capturedTexts();
+        qDebug() << "Parts: " << parts;
+        offset = parts[2].toInt(&ok[0]) * 3600;
+        int offsetMin = parts[3].toInt(&ok[1]);
+        if (!ok[0] || !ok[1] || offsetMin > 59)
+        {
+            qDebug() << "Error parsing timezone offset: " << offsetStr;
+            offset = 0;
+        }
+        else
+        {
+            offset += offsetMin * 60;
+            negOffset = (parts[1] == QLatin1String("-"));
+            if (negOffset)
+                offset = -offset;
+        }
+    }
+
+    serverTime.setUtcOffset(offset);
+    int serverDiff = now.secsTo(serverTime);
+    offset += serverDiff;
+
+    if (offset != 0)
+    {
+        QMap<QString, QString> val;
+        QMap<QString, QString> params;
+        val["timezone_offset_in_seconds"] = QString::number(offset);
+        params["id"] = mId;
+        SqlUtilities::simpleUpdate("trackers", val, params);
+    }
+
     checkValidResolutions();
 }
 
@@ -1045,6 +1126,9 @@ Bugzilla::userBugListFinished()
         newBug["product"] = responseMap.value("product").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
         newBug["last_modified"] = responseMap.value("last_change_time").toString();
+        if (mLastSync.date().year() != 1970)
+            newBug["highlight_type"] = QString::number(SqlUtilities::HIGHLIGHT_RECENT);
+
         if ((newBug["status"].toUpper() == "RESOLVED")
             ||(newBug["status"].toUpper() == "CLOSED"))
         {

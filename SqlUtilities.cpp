@@ -513,7 +513,8 @@ SqlUtilities::createTables(int dbVersion)
                                                       "last_sync TEXT,"
                                                       "version TEXT,"
                                                       "monitored_components TEXT,"
-                                                      "auto_cache_comments INTEGER)";
+                                                      "auto_cache_comments INTEGER,"
+                                                      "timezone_offset_in_seconds INTEGER DEFAULT 0)";
 
     QString createFieldsSql = "CREATE TABLE fields (id INTEGER PRIMARY KEY,"
                                                    "tracker_id INTEGER,"
@@ -1619,5 +1620,24 @@ SqlUtilities::getChangedBugzillaIds(const QString &trackerId)
         ret << q.value(0).toString();
     }
     qDebug() << "bugzilla ids: " << ret;
+    return ret;
+}
+
+int
+SqlUtilities::getTimezoneOffset(const QString &trackerId)
+{
+    QString query = QString("SELECT timezone_offset_in_seconds FROM trackers WHERE id = %1").arg(trackerId);
+    QSqlQuery q;
+    int ret = 0;
+    if (!q.exec(query))
+    {
+        qDebug() << "SqlUtilities::getTimezoneOffset failed: " << q.lastError().text();
+        return(0);
+    }
+
+    if (q.next())
+    {
+        ret = q.value(0).toInt();
+    }
     return ret;
 }

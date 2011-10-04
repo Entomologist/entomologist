@@ -95,10 +95,8 @@ QDomElement MaiaObject::toXml(QVariant arg) {
 		return tagValue;
 
 	} case QVariant::DateTime: {
-	
-		QString textValue = arg.toDateTime().toString("yyyyMMddThh:mm:ss");
-
-		QDomElement tag = doc.createElement("datetime.iso8601"); 
+                QString textValue = arg.toDateTime().toString("yyyyMMddThh:mm:ss");
+                QDomElement tag = doc.createElement("dateTime.iso8601");
 		QDomText text = doc.createTextNode(textValue);
 		
 		tagValue.appendChild(tag);

@@ -809,9 +809,8 @@ void
 MainWindow::syncNextTracker()
 {
     if (mBackendList.empty())
-    {
         return;
-    }
+
     Backend *b = mBackendList.at(mSyncPosition);
     ui->syncingLabel->setText(QString("Syncing %1...").arg(b->name()));
     mSyncPosition++;

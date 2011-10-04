@@ -99,8 +99,15 @@ TrackerTableView::mouseMoveEvent(QMouseEvent *event)
 void TrackerTableView::performDrag()
 {
     QModelIndex index = this->currentIndex();
+    if (!index.isValid())
+        return;
+
     const QAbstractItemModel * model = index.model();
-    int bugID = model->data(model->index(index.row(), 2), Qt::DisplayRole).toInt();
+    QModelIndex dragIndex = model->index(index.row(), 2);
+    if (!dragIndex.isValid())
+        return;
+
+    int bugID = model->data(dragIndex, Qt::DisplayRole).toInt();
 
     QMimeData* mimeData = new QMimeData;
     QString data = QString("%1:%2:%3")
@@ -113,5 +120,3 @@ void TrackerTableView::performDrag()
     drag->setPixmap(QPixmap(":/bug")); // Set the drag icon to the default Bug Icon.
     drag->exec();
 }
-
-

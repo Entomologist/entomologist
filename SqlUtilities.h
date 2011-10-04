@@ -98,6 +98,7 @@ public:
     static QVariantList getBugzillaChangelog();
     static QVariantList getMantisChangelog();
     static QStringList getChangedBugzillaIds(const QString &trackerId);
+    static int getTimezoneOffset(const QString &trackerId);
 
     // Deletes all entries in the search table
     static void clearSearch();
