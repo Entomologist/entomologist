@@ -666,9 +666,12 @@ ToDoListView::startSync()
 {
     mSyncServices = getExports();
 
-    if(sender()->inherits("QWidget")) syncAll(false);
-    else
-        syncList(false);
+    if(sender()->inherits("QWidget")) {
+
+        syncAll(false);
+
+    }
+    else syncList(false);
 }
 
 void
@@ -682,7 +685,6 @@ ToDoListView::syncAll(bool callback)
         syncLists.clear();
     }
     syncLists = lists.values();
-
 
     if(mSyncServices.size() > 0)
         createService(mSyncServices.pop());
@@ -875,6 +877,9 @@ ToDoListView::authCompleted()
         }
 
     }
+    else
+        if(syncSingle) syncList(true);
+        else syncAll(true);
 
 }
 
@@ -919,8 +924,9 @@ ToDoListView::readyToAddItems()
             timer->start();
     }
     else
-        if(syncSingle) authCompleted();
-        else authCompleted();
+       authCompleted();
+
+
 
 }
 
@@ -980,8 +986,7 @@ ToDoListView::syncItem()
             currentList->setListStatus(ToDoList::UNCHANGED);
 
         currentList->setSyncCount(1);
-        if(syncSingle) syncList(true);
-        else syncAll(true);
+        authCompleted();
     }
 }
 
