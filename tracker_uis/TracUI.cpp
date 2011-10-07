@@ -283,7 +283,6 @@ TracUI::sortIndicatorChanged(int logicalIndex, Qt::SortOrder order)
 void
 TracUI::reloadFromDatabase()
 {
-    qDebug() << "TracUI reloading...";
     QString showMy, showRep, showCC, showMonitored;
     if (mShowMyBugs)
         showMy = "Assigned";
@@ -314,5 +313,4 @@ TracUI::reloadFromDatabase()
     mActiveQuery = mBaseQuery + " " + tempQuery +" AND" + mWhereQuery + mSortQuery;
 
     pBugModel->setQuery(mActiveQuery);
-    qDebug() << pBugModel->query().lastQuery();
 }

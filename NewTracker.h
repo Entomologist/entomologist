@@ -46,10 +46,12 @@ public slots:
     void serverFocusOut();
     void hostTextChanged(const QString &text);
     void okClicked();
+
 protected:
     void changeEvent(QEvent *e);
 
 private:
+    QString checkHost();
     Ui::NewTracker *ui;
 };
 

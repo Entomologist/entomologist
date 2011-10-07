@@ -47,8 +47,8 @@ SqlWriterThread::run()
     qDebug() << "SqlWriterThread starting up...";
     qRegisterMetaType< QMap<QString,QString> >("QMap<QString,QString>");
     qRegisterMetaType< QList<QMap<QString,QString> > >("QList<QMap<QString,QString> >");
-    connect(this, SIGNAL(multiRowInsert(QString, QList<QMap<QString,QString> >)),
-            pWriter, SLOT(multiInsert(QString, QList<QMap<QString,QString> >)));
+    connect(this, SIGNAL(multiRowInsert(QString, QList<QMap<QString,QString> >, int)),
+            pWriter, SLOT(multiInsert(QString, QList<QMap<QString,QString> >, int)));
     connect(this, SIGNAL(bugsInsert(QString,QList<QMap<QString,QString> >, QString)),
             pWriter, SLOT(insertBugs(QString,QList<QMap<QString,QString> >, QString)));
     connect(this, SIGNAL(newComments(QList<QMap<QString,QString> >)),
@@ -63,8 +63,8 @@ SqlWriterThread::run()
             pWriter, SLOT(saveCredentials(int,QString,QString)));
     connect(pWriter, SIGNAL(failure(QString)),
             this, SIGNAL(failure(QString)));
-    connect(pWriter, SIGNAL(success()),
-            this, SIGNAL(success()));
+    connect(pWriter, SIGNAL(success(int)),
+            this, SIGNAL(success(int)));
     connect(pWriter, SIGNAL(commentFinished()),
             this, SIGNAL(commentFinished()));
     connect(pWriter, SIGNAL(bugsFinished(QStringList)),
@@ -75,10 +75,10 @@ SqlWriterThread::run()
 // Utility functions to keep the backends from caring about the
 // signal/slot implementation
 void
-SqlWriterThread::multiInsert(const QString &table, QList<QMap<QString, QString> > list)
+SqlWriterThread::multiInsert(const QString &table, QList<QMap<QString, QString> > list, int operation)
 {
     qDebug() << "Emit: multiInsert";
-    emit multiRowInsert(table, list);
+    emit multiRowInsert(table, list, operation);
 }
 void
 SqlWriterThread::insertBugs(const QString &table, QList<QMap<QString, QString> > list, const QString &trackerId)

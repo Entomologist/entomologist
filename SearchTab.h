@@ -23,6 +23,8 @@ public:
     void removeTracker(Backend *b);
     void renameTracker(const QString &oldName,
                        const QString &newName);
+    void refreshResults();
+
 signals:
     void openSearchedBug(const QString &trackerName,
                          const QString &bugId);

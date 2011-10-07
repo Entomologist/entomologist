@@ -138,7 +138,7 @@ Bugzilla::getSearchedBug(const QString &bugId)
 void
 Bugzilla::checkVersion()
 {
-    qDebug() << "Checking version";
+    qDebug() << "Checking Bugzilla version...";
     QVariantList args;
     pClient->call("Bugzilla.version", args, this, SLOT(versionRpcResponse(QVariant&)), this, SLOT(versionError(int, const QString &)));
 }
@@ -643,25 +643,26 @@ void
 Bugzilla::versionError(int error, const QString &message)
 {
     Q_UNUSED(error);
-    Q_UNUSED(message);
-    emit versionChecked("-1");
+    emit versionChecked("-1", message);
 }
 
 void
 Bugzilla::versionRpcResponse(QVariant &arg)
 {
     QString version = arg.toMap().value("version").toString();
+    QString message = "";
     qDebug() << "Bugzilla version response: " << version;
     if (version.count('.') > 1)
         version = version.remove(version.lastIndexOf('.'), version.length() + 1);
     if (version.toFloat() < 3.2)
     {
         qDebug() << "Version is too low: " << version.toFloat();
+        message = QString("Version %1 is not supported.").arg(version.toFloat());
         version = "-1";
     }
-    qDebug() << "Emitting versionChecked";
+
     mVersion = version;
-    emit versionChecked(version);
+    emit versionChecked(version, message);
 }
 
 void Bugzilla::loginRpcResponse(QVariant &arg)
@@ -732,12 +733,8 @@ void Bugzilla::reportedRpcResponse(QVariant &arg)
 
 void Bugzilla::bugRpcResponse(QVariant &arg)
 {
-    qDebug() << "USER_BUGS";
-    qDebug() << arg;
     QVariantList bugList = arg.toMap().value("bugs").toList();
-    QVariantList idList;
     QVariantMap responseMap;
-    mUpdateCount = bugList.size();
     for (int i = 0; i < bugList.size(); ++i)
     {
         responseMap = bugList.at(i).toMap();
@@ -777,6 +774,10 @@ void Bugzilla::bugRpcResponse(QVariant &arg)
         {
             SqlUtilities::removeShadowBug("bugzilla", newBug["bug_id"], mId);
             continue;
+        }
+        else
+        {
+            mUpdateCount++;
         }
 
         // Bugs from RPC come in in ISO format (YYYY-MM-DDTHH:MM:SS) so convert
@@ -1068,7 +1069,6 @@ Bugzilla::searchCallFinished()
     QList< QMap<QString,QString> > insertList;
     QVariantMap responseMap;
     QMapIterator<QString, QVariant> i(mBugs);
-    mUpdateCount = mBugs.count();
     while (i.hasNext())
     {
         i.next();
@@ -1109,7 +1109,6 @@ Bugzilla::userBugListFinished()
     QList< QMap<QString,QString> > insertList;
     QVariantMap responseMap;
     QMapIterator<QString, QVariant> i(mBugs);
-    mUpdateCount = mBugs.count();
     while (i.hasNext())
     {
         i.next();
@@ -1134,6 +1133,10 @@ Bugzilla::userBugListFinished()
         {
             SqlUtilities::removeShadowBug("bugzilla", newBug["bug_id"], mId);
             continue;
+        }
+        else
+        {
+            mUpdateCount++;
         }
 
         insertList << newBug;

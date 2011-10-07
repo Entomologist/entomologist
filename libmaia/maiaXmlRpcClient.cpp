@@ -132,7 +132,6 @@ MaiaXmlRpcClient::authenticationRequired(QNetworkReply* reply,
 
 void MaiaXmlRpcClient::replyFinished(QNetworkReply* reply) {
 	QString response;
-    qDebug() << "MaiaXmlRpcClient: replyfinished";
 	if(!callmap.contains(reply))
 		return;
 

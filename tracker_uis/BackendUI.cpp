@@ -172,7 +172,6 @@ BackendUI::saveNewShadowItems(const QString &tableName,
                               QMap<QString, QString> shadowBug,
                               const QString &newComment)
 {
-    qDebug() << "I'll save " << shadowBug;
     int shadow_id;
     QString isPrivate = shadowBug["private_comment"];
     shadowBug.remove("private_comment");

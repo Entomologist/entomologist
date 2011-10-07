@@ -35,7 +35,6 @@ public:
     void sync();
     void login();
     void checkVersion();
-
 public slots:
     void finished();
     void syncFinished();

@@ -33,6 +33,7 @@ Trac::Trac(const QString &url,
            QObject *parent) :
     Backend(url)
 {
+    Q_UNUSED(parent);
     mUsername = username;
     mPassword = password;
     QUrl myUrl(url + "/login/xmlrpc");
@@ -54,8 +55,8 @@ Trac::Trac(const QString &url,
             this, SLOT(commentInsertionFinished()));
     connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
             this, SLOT(bugsInsertionFinished(QStringList)));
-    connect(pSqlWriter, SIGNAL(success()),
-            this, SLOT(searchInsertionFinished()));
+    connect(pSqlWriter, SIGNAL(success(int)),
+            this, SLOT(multiInsertSuccess(int)));
 }
 
 Trac::~Trac()
@@ -105,30 +106,34 @@ void
 Trac::sync()
 {
     qDebug() << "Syncing monitored components...";
-
-    if (mMonitorComponents.empty())
+    if (mMonitorComponents.isEmpty())
     {
         QStringList none;
         QVariant empty(none);
         qDebug() << "No monitored components for this Trac instance";
         monitoredComponentsRpcResponse(empty);
+        return;
     }
 
     SqlUtilities::clearRecentBugs("trac");
     QVariantList args;
     QString closed = "";
+    mUpdateCount = 0;
     if (mLastSync.date().year() == 1970)
         closed = "status!=closed&";
+    else
+        closed = "status=closed&status=new&status=accepted&status=assigned&status=reopened&";
 
     QString monitorString;
     for (int i = 0; i < mMonitorComponents.size(); ++i)
     {
         monitorString += QString("component=%1&").arg(mMonitorComponents.at(i));
     }
+
     QString query = QString("%1%2max=0&modified=%3..")
                     .arg(closed)
                     .arg(monitorString)
-                    .arg(mLastSync.toString("yyyy-MM-dd"));
+                    .arg(mLastSync.addSecs(-3600).toString("yyyy-MM-ddThh:mm")); // -1 hour to accommodate for clock drift
     args << query;
     pClient->call("ticket.query", args, this, SLOT(monitoredComponentsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -169,8 +174,8 @@ Trac::login()
 void
 Trac::checkVersion()
 {
+    qDebug() << "Checking trac version...";
     QUrl url(mUrl + "/login/xmlrpc");
-    qDebug() << "Check version for " << url;
     QString concatenated = mUsername + ":" + mPassword;
     QByteArray data = concatenated.toLocal8Bit().toBase64();
     QString headerData = "Basic " + data;
@@ -191,7 +196,7 @@ Trac::headFinished()
     {
         qDebug() << "headFinished: Not a trac instance: " << reply->errorString();
         reply->deleteLater();
-        emit versionChecked("-1");
+        emit versionChecked("-1", "Not a trac instance!");
         return;
     }
     // Mantis seems to report 301 FOUND for any and all URLs.
@@ -351,8 +356,6 @@ Trac::buildBugUrl(const QString &id)
 void
 Trac::uploadFinished(QVariant &arg)
 {
-    QSqlQuery sql;
-    qDebug() << "uploadFinished: ";
     QVariantList bugList = arg.toList();
     for (int i = 0; i < bugList.size(); ++i)
     {
@@ -407,6 +410,7 @@ Trac::searchedTicketResponse(QVariant &arg)
     else
         newBug["bug_state"] = "open";
     insertList << newBug;
+    qDebug() << "searchedTicketResponse: insertBugs";
     pSqlWriter->insertBugs("trac", insertList);
     emit searchResultFinished(newBug);
 }
@@ -425,10 +429,13 @@ Trac::monitoredComponentsRpcResponse(QVariant &arg)
     QString closed = "";
     if (mLastSync.date().year() == 1970)
         closed = "status!=closed&";
+    else
+        closed = "status=closed&status=new&status=accepted&status=assigned&status=reopened&";
+
     QString query = QString("%1cc=%2&max=0&modified=%3..")
                     .arg(closed)
                     .arg(mUsername)
-                    .arg(mLastSync.toString("yyyy-MM-dd"));
+                    .arg(mLastSync.addSecs(-3600).toString("yyyy-MM-ddThh:mm")); // -1 hour to accommodate for clock drift
     args << query;
     pClient->call("ticket.query", args, this, SLOT(ccRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -446,10 +453,13 @@ Trac::ccRpcResponse(QVariant &arg)
     QString closed = "";
     if (mLastSync.date().year() == 1970)
         closed = "status!=closed&";
+    else
+        closed = "status=closed&status=new&status=accepted&status=assigned&status=reopened&";
+
     QString query = QString("%1reporter=%2&max=0&modified=%3..")
                     .arg(closed)
                     .arg(mUsername)
-                    .arg(mLastSync.toString("yyyy-MM-dd"));
+                    .arg(mLastSync.addSecs(-3600).toString("yyyy-MM-ddThh:mm")); // -1 hour to accommodate for clock drift
     args << query;
     pClient->call("ticket.query", args, this, SLOT(reporterRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -467,10 +477,13 @@ Trac::reporterRpcResponse(QVariant &arg)
     QString closed = "";
     if (mLastSync.date().year() == 1970)
         closed = "status!=closed&";
+    else
+        closed = "status=closed&status=new&status=accepted&status=assigned&status=reopened&";
+
     QString query = QString("%1owner=%2&max=0&modified=%3..")
                     .arg(closed)
                     .arg(mUsername)
-                    .arg(mLastSync.toString("yyyy-MM-dd"));
+                    .arg(mLastSync.addSecs(-3600).toString("yyyy-MM-ddThh:mm")); // -1 hour to accommodate for clock drift
     args << query;
     pClient->call("ticket.query", args, this, SLOT(ownerRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -520,13 +533,17 @@ Trac::searchRpcResponse(QVariant &arg)
         bug["summary"] = result.at(1).toString();
         insertList << bug;
     }
-    pSqlWriter->multiInsert("search_results", insertList);
+    pSqlWriter->multiInsert("search_results", insertList, SqlUtilities::MULTI_INSERT_SEARCH);
 }
 
 void
-Trac::searchInsertionFinished()
+Trac::multiInsertSuccess(int operation)
 {
-   emit searchFinished();
+    if (operation == SqlUtilities::MULTI_INSERT_SEARCH)
+        emit searchFinished();
+    else if (operation == SqlUtilities::MULTI_INSERT_COMPONENTS)
+        emit fieldsFound();
+
 }
 
 void
@@ -570,7 +587,6 @@ Trac::bugDetailsRpcResponse(QVariant &arg)
         // It's QVariantLists all the way down...
         QVariantList infoList = bugList.at(i).toList().at(0).toList();
         QString bugId = infoList.at(0).toString();
-        qDebug() << "Updating " << infoList.size() << " bugs...";
         for (int j = 0; j < infoList.size(); ++j )
         {
             if (infoList.at(j).type() == QVariant::Map)
@@ -600,15 +616,21 @@ Trac::bugDetailsRpcResponse(QVariant &arg)
                 newBug["last_modified"] = bug.value("changetime")
                                              .toDateTime()
                                              .toString("yyyy-MM-dd hh:mm:ss");
-                if (bug.value("status").toString() != "closed")
+                if (bug.value("status").toString() == "closed")
+                {
+                    SqlUtilities::removeShadowBug("trac", newBug["bug_id"], mId);
+                }
+                else
                 {
                     newBug["bug_state"] = "open";
+                    mUpdateCount++;
                     insertList << newBug;
                 }
             }
         }
     }
 
+    qDebug() << "bugDetailsResponse: inserting bugs";
     pSqlWriter->insertBugs("trac", insertList);
 }
 
@@ -717,10 +739,10 @@ Trac::componentRpcResponse(QVariant &arg)
         fieldList << fieldMap;
     }
 
-    pSqlWriter->multiInsert("fields", fieldList);
+    SqlUtilities::removeFieldValues(mId, "component");
+    pSqlWriter->multiInsert("fields", fieldList, SqlUtilities::MULTI_INSERT_COMPONENTS);
     if (pDisplayWidget != NULL)
         pDisplayWidget->loadFields();
-    emit fieldsFound();
 }
 
 void
@@ -790,14 +812,15 @@ Trac::versionRpcResponse(QVariant &arg)
         version = QString("0.%1%2").arg(major).arg(minor);
     }
 
-    emit versionChecked(version);
+    emit versionChecked(version, "");
 }
 
 void Trac::versionRpcError(int error,
                            const QString &message)
 {
+    Q_UNUSED(error);
     qDebug()<< "Trac versionRpcError: " << message;
-    emit versionChecked("-1");
+    emit versionChecked("-1", message);
 }
 
 void
@@ -818,7 +841,7 @@ Trac::commentInsertionFinished()
 void
 Trac::bugsInsertionFinished(QStringList idList)
 {
-    qDebug() << "Bug insertion is finished";
+    Q_UNUSED(idList);
     updateSync();
     emit bugsUpdated();
 }
@@ -826,6 +849,6 @@ Trac::bugsInsertionFinished(QStringList idList)
 void
 Trac::handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors)
 {
-    qDebug() << "Ssl error: " << errors;
+    Q_UNUSED(errors);
     reply->ignoreSslErrors();
 }

@@ -64,6 +64,16 @@ SearchTab::~SearchTab()
 }
 
 void
+SearchTab::refreshResults()
+{
+    pModel->select();
+    QSettings settings("Entomologist");
+    QString lastQuery = settings.value("last-search-query", "").toString();
+    ui->searchQuery->setText(lastQuery);
+}
+
+
+void
 SearchTab::itemDoubleClicked(const QModelIndex &index)
 {
     // First, find the tracker

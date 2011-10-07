@@ -47,7 +47,7 @@ SqlUtilities::openDb(const QString &dbPath)
     QSqlDatabase db = QSqlDatabase::addDatabase("QSQLITE");
     if (!db.isValid())
     {
-        qDebug() << "Couldn't create the database connection";
+        qDebug() << "openDb: Couldn't create the database connection";
         ErrorHandler::handleError("Couldn't create the database.", "");
         exit(1);
     }
@@ -71,12 +71,12 @@ SqlUtilities::closeDb()
 
 void
 SqlUtilities::multiInsert(const QString &tableName,
-                         QList< QMap<QString, QString> > list)
+                         QList< QMap<QString, QString> > list,
+                          int operation)
 {
-    qDebug() << "SqlUtilities::multiInsert";
     if (list.size() == 0)
     {
-        emit success();
+        emit success(operation);
         return;
     }
 
@@ -95,7 +95,7 @@ SqlUtilities::multiInsert(const QString &tableName,
 
     if (!q.prepare(query))
     {
-        qDebug() << "Could not prepare " << query << " :" << q.lastError().text();
+        qDebug() << "multiInsert: Could not prepare " << query << " :" << q.lastError().text();
         emit failure(q.lastError().text());
         return;
     }
@@ -110,7 +110,7 @@ SqlUtilities::multiInsert(const QString &tableName,
         }
         if (!q.exec())
         {
-            qDebug() << "multiRowInsert failed: " << q.lastError().text();
+            qDebug() << "multiInsert failed: " << q.lastError().text();
             qDebug() << q.lastQuery();
             emit failure(q.lastError().text());
             error = true;
@@ -121,7 +121,7 @@ SqlUtilities::multiInsert(const QString &tableName,
     if (!error)
     {
         mDatabase.commit();
-        emit success();
+        emit success(operation);
     }
     else
     {
@@ -160,47 +160,47 @@ SqlUtilities::insertBugs(const QString &tableName,
 
     if (!q.prepare(query))
     {
-        qDebug() << "Could not prepare " << query << " :" << q.lastError().text();
+        qDebug() << "insertBugs: Could not prepare " << query << " :" << q.lastError().text();
         emit failure(q.lastError().text());
         return;
     }
 
     if (!bugQuery.prepare(bugDeleteSql))
     {
-        qDebug() << "Could not prepare " << bugDeleteSql << " :" << bugQuery.lastError().text();
+        qDebug() << "insertBugs: Could not prepare " << bugDeleteSql << " :" << bugQuery.lastError().text();
         emit failure(bugQuery.lastError().text());
         return;
     }
 
     if (!commentQuery.prepare(commentDeleteSql))
     {
-        qDebug() << "Could not prepare " << commentDeleteSql << " :" << commentQuery.lastError().text();
+        qDebug() << "insertBugs: Could not prepare " << commentDeleteSql << " :" << commentQuery.lastError().text();
         emit failure(commentQuery.lastError().text());
         return;
     }
     mDatabase.transaction();
     if (trackerId != "-1")
     {
-        qDebug() << "Going to delete a bunch of things in " << tableName << " for " << trackerId;
+        qDebug() << "insertBugs: Going to delete a bunch of things in " << tableName << " for " << trackerId;
         QSqlQuery rmShadow;
 
         if (!rmShadow.exec(QString("DELETE FROM %1 WHERE tracker_id = %2").arg(tableName).arg(trackerId)))
         {
-            qDebug() << "Couldn't delete mantis bugs: " << rmShadow.lastError().text();
+            qDebug() << "insertBugs: Couldn't delete mantis bugs: " << rmShadow.lastError().text();
         }
         if (!rmShadow.exec(QString("DELETE FROM shadow_%1 WHERE tracker_id = %2").arg(tableName).arg(trackerId)))
         {
-            qDebug() << "Couldn't delete shadow_mantis bugs: " << rmShadow.lastError().text();
+            qDebug() << "insertBugs: Couldn't delete shadow_mantis bugs: " << rmShadow.lastError().text();
         }
 
         if (!rmShadow.exec(QString("DELETE FROM comments WHERE tracker_id = %1").arg(trackerId)))
         {
-            qDebug() << "Couldn't delete comments: " << rmShadow.lastError().text();
+            qDebug() << "insertBugs: Couldn't delete comments: " << rmShadow.lastError().text();
         }
 
         if (!rmShadow.exec(QString("DELETE FROM shadow_comments WHERE tracker_id = %2").arg(trackerId)))
         {
-            qDebug() << "Couldn't delete shadow_comments: " << rmShadow.lastError().text();
+            qDebug() << "insertBugs: Couldn't delete shadow_comments: " << rmShadow.lastError().text();
         }
 
     }
@@ -217,7 +217,7 @@ SqlUtilities::insertBugs(const QString &tableName,
         {
             if (!bugQuery.exec())
             {
-                qDebug() << "multiRowInsert bugQuery failed: " << q.lastError().text();
+                qDebug() << "insertBugs: bugQuery failed: " << q.lastError().text();
                 emit failure(q.lastError().text());
                 error = true;
                 break;
@@ -225,7 +225,7 @@ SqlUtilities::insertBugs(const QString &tableName,
 
             if (!commentQuery.exec())
             {
-                qDebug() << "multiRowInsert commentQuery failed: " << q.lastError().text();
+                qDebug() << "insertBugs: commentQuery failed: " << q.lastError().text();
                 emit failure(q.lastError().text());
                 error = true;
                 break;
@@ -237,7 +237,7 @@ SqlUtilities::insertBugs(const QString &tableName,
         }
         if (!q.exec())
         {
-            qDebug() << "multiRowInsert bugs failed: " << q.lastError().text();
+            qDebug() << "insertBugs failed: " << q.lastError().text();
             qDebug() << q.lastQuery();
             emit failure(q.lastError().text());
             error = true;
@@ -328,7 +328,6 @@ SqlUtilities::simpleUpdate(const QString &tableName, QMap<QString, QString> upda
     {
         i.next();
         QString u = QString(":%1").arg(i.key());
-        qDebug() << "Binding " << u << " to " << i.value();
         q.bindValue(u, i.value());
     }
 
@@ -337,7 +336,6 @@ SqlUtilities::simpleUpdate(const QString &tableName, QMap<QString, QString> upda
     {
         j.next();
         QString u = QString(":%1").arg(j.key());
-        qDebug() << "Binding " << u << " to " << j.value();
         q.bindValue(u, j.value());
     }
 
@@ -347,7 +345,6 @@ SqlUtilities::simpleUpdate(const QString &tableName, QMap<QString, QString> upda
         qDebug() << q.lastQuery();
         return false;
     }
-        qDebug() << q.lastQuery();
 
     return true;
 }
@@ -372,6 +369,19 @@ SqlUtilities::fieldValues(const QString &tracker_id, const QString &fieldName)
     }
 
     return(ret);
+}
+void
+SqlUtilities::removeFieldValues(const QString &trackerId,
+                                const QString &fieldName)
+{
+    QSqlQuery q;
+    q.prepare("DELETE FROM fields WHERE tracker_id = :tracker AND field_name = :name");
+    q.bindValue(":tracker", trackerId);
+    q.bindValue(":name", fieldName);
+    if (!q.exec())
+    {
+        qDebug() << "removeFieldValues error: " << q.lastError().text();
+    }
 }
 
 int
@@ -653,7 +663,6 @@ SqlUtilities::clearRecentBugs(const QString &tableName)
     QString sql = QString("UPDATE %1 SET highlight_type = 0 WHERE highlight_type = %2")
                   .arg(tableName)
                   .arg(QString::number(HIGHLIGHT_RECENT));
-    qDebug() << "clearRecentBugs: " << sql;
     directExec(db, sql);
 }
 
@@ -663,8 +672,8 @@ SqlUtilities::directExec(QSqlDatabase db, const QString &sql)
     QSqlQuery query(db);
     if (!query.exec(sql))
     {
-        qDebug() << "Database error: " << db.lastError().text();
-        qDebug() << "Failed SQL: " << sql;
+        qDebug() << "directExec failed: " << db.lastError().text();
+        qDebug() << "directExec: Failed SQL: " << sql;
         ErrorHandler::handleError("Couldn't execute SQL.", db.lastError().text());
         exit(1);
     }
@@ -682,7 +691,7 @@ SqlUtilities::saveCredentials(int id,
     q.bindValue(":password", password);
     if (!q.exec())
     {
-        qDebug() << "Couldn't update credentials: " << q.lastError().text();
+        qDebug() << "saveCredentials: Couldn't update credentials: " << q.lastError().text();
         emit failure(q.lastError().text());
     }
 }
@@ -728,7 +737,7 @@ SqlUtilities::insertBugComments(QList<QMap<QString, QString> >commentList)
 void
 SqlUtilities::insertComments(QList<QMap<QString, QString> > commentList)
 {
-    qDebug() << "Going to write " << commentList.count() << " comments";
+    qDebug() << "insertComments: Going to write " << commentList.count() << " comments";
 
     QSqlQuery q;
     QString sql = "INSERT INTO comments (tracker_id, bug_id, comment_id, author, comment, timestamp, private)"
@@ -818,16 +827,16 @@ SqlUtilities::tracBugDetail(const QString &rowId)
     QSqlQuery q;
     if (!q.prepare(details))
     {
-        qDebug() << q.lastQuery();
         qDebug() << "Could not prepare tracBugDetails: " << q.lastError().text();
+        qDebug() << q.lastQuery();
         return ret;
     }
 
     q.bindValue(":id", rowId);
     if (!q.exec())
     {
-        qDebug() << q.lastQuery();
         qDebug() << "Could not exec tracBugDetails: " << q.lastError().text();
+        qDebug() << q.lastQuery();
         return ret;
     }
 
@@ -869,16 +878,18 @@ SqlUtilities::bugzillaBugDetail(const QString &rowId)
     QSqlQuery q;
     if (!q.prepare(details))
     {
-        qDebug() << q.lastQuery();
         qDebug() << "Could not prepare bugzillaBugDetails: " << q.lastError().text();
+        qDebug() << q.lastQuery();
+
         return ret;
     }
 
     q.bindValue(":id", rowId);
     if (!q.exec())
     {
-        qDebug() << q.lastQuery();
         qDebug() << "Could not exec bugzillaBugDetails: " << q.lastError().text();
+        qDebug() << q.lastQuery();
+
         return ret;
     }
 
@@ -923,16 +934,16 @@ SqlUtilities::mantisBugDetail(const QString &rowId)
     QSqlQuery q;
     if (!q.prepare(details))
     {
-        qDebug() << q.lastQuery();
         qDebug() << "Could not prepare mantisBugDetails: " << q.lastError().text();
+        qDebug() << q.lastQuery();
         return ret;
     }
 
     q.bindValue(":id", rowId);
     if (!q.exec())
     {
-        qDebug() << q.lastQuery();
         qDebug() << "Could not exec mantisBugDetails: " << q.lastError().text();
+        qDebug() << q.lastQuery();
         return ret;
     }
 
@@ -1602,16 +1613,45 @@ SqlUtilities::removeShadowComment(const QString &bugId,
     }
 }
 
+QString
+SqlUtilities::getMonitoredComponents(const QString &trackerId)
+{
+    QString ret;
+    QString query = "SELECT monitored_components FROM trackers WHERE id=:id";
+    QSqlQuery q;
+    q.prepare(query);
+    q.bindValue(":id", trackerId);
+    if (!q.exec())
+    {
+        qDebug() << "getMonitoredComponents failed: " << q.lastError().text();
+        return(ret);
+    }
+    if (q.next())
+    {
+        ret = q.value(0).toString();
+    }
+    return(ret);
+}
+
+void
+SqlUtilities::clearBugs(const QString &tableName,
+                        const QString &trackerId)
+{
+    QString query = QString("DELETE FROM %1 WHERE tracker_id = %2").arg(tableName).arg(trackerId);
+    QSqlQuery q;
+    if (!q.exec(query))
+        qDebug() << "SqlUtilities::clearBugs: " << q.lastError().text();
+}
+
 QStringList
 SqlUtilities::getChangedBugzillaIds(const QString &trackerId)
 {
-    qDebug() << "getChangedBugzillaIds";
     QStringList ret;
     QString query = QString("SELECT bug_id FROM shadow_bugzilla WHERE tracker_id = %1").arg(trackerId);
     QSqlQuery q;
     if (!q.exec(query))
     {
-        qDebug() << "SqlUtilities::getChangedBugzillaIds SELECT failed: " << q.lastError().text();
+        qDebug() << "getChangedBugzillaIds SELECT failed: " << q.lastError().text();
         return ret;
     }
 
@@ -1619,7 +1659,6 @@ SqlUtilities::getChangedBugzillaIds(const QString &trackerId)
     {
         ret << q.value(0).toString();
     }
-    qDebug() << "bugzilla ids: " << ret;
     return ret;
 }
 

@@ -297,7 +297,6 @@ MantisUI::sortIndicatorChanged(int logicalIndex, Qt::SortOrder order)
 void
 MantisUI::reloadFromDatabase()
 {
-    qDebug() << "Mantis reloading...";
     QString showMy, showRep, showCC, showMonitored;
     if (mShowMyBugs)
         showMy = "Assigned";
@@ -328,5 +327,4 @@ MantisUI::reloadFromDatabase()
     mActiveQuery = mBaseQuery + " " + tempQuery +" AND" + mWhereQuery + mSortQuery;
 
     pBugModel->setQuery(mActiveQuery);
-    qDebug() << pBugModel->query().lastQuery();
 }

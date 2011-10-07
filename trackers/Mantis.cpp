@@ -203,6 +203,7 @@ Mantis::getSearchedBug(const QString &bugId)
     request.addMethodArgument("issue_id", "", bugId.toInt());
     searchTransport->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
 }
+
 void
 Mantis::handleCSV(const QString &csv, const QString &bugType)
 {
@@ -469,7 +470,7 @@ Mantis::response()
             qDebug() << "Mantis version: " << version;
         }
 
-        emit versionChecked(QString("%1").arg(version));
+        emit versionChecked(QString("%1").arg(version), "");
     }
     else if (messageName == "mc_enum_prioritiesResponse")
     {
@@ -808,7 +809,7 @@ Mantis::headFinished()
     {
         qDebug() << "headFinished: Not a Mantis instance";
         reply->deleteLater();
-        emit versionChecked("-1");
+        emit versionChecked("-1", "Not a Mantis instance!");
         return;
     }
 
@@ -1111,7 +1112,6 @@ void Mantis::assignedResponse()
     QList< QMap<QString,QString> > insertList;
     QVariantMap responseMap;
     QMapIterator<QString, QVariant> i(mBugs);
-    mUpdateCount = mBugs.count();
     while (i.hasNext())
     {
         i.next();
@@ -1184,13 +1184,11 @@ Mantis::searchResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "searchResponse: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
         return;
     }
 
-    qDebug() << "searchResponse";
     QString rep = QString::fromUtf8(reply->readAll());
     reply->deleteLater();
     handleCSV(rep, "Searched");
@@ -1198,7 +1196,6 @@ Mantis::searchResponse()
     QList< QMap<QString,QString> > insertList;
     QVariantMap responseMap;
     QMapIterator<QString, QVariant> i(mBugs);
-    mUpdateCount = mBugs.count();
     while (i.hasNext())
     {
         i.next();

@@ -120,7 +120,7 @@ signals:
     void searchResultFinished(QMap<QString, QString> resultMap);
     void bugsUpdated();
     void commentsCached();
-    void versionChecked(QString version);
+    void versionChecked(const QString &version, const QString &message);
     void componentsFound(QStringList components);
     void fieldsFound();
     void backendError(const QString &message);

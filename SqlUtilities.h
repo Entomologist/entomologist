@@ -41,6 +41,11 @@ public:
         HIGHLIGHT_TODO
     };
 
+    enum {
+        MULTI_INSERT_COMPONENTS = 1,
+        MULTI_INSERT_SEARCH
+    };
+
     SqlUtilities();
     ~SqlUtilities();
 
@@ -92,7 +97,8 @@ public:
                            const QString &sql);
     static QStringList fieldValues(const QString &tracker_id,
                                    const QString &fieldName);
-
+    static void removeFieldValues(const QString &trackerId,
+                                  const QString &fieldName);
     static QList< QMap<QString, QString> > getCommentsChangelog();
     static QVariantList getTracChangelog();
     static QVariantList getBugzillaChangelog();
@@ -107,19 +113,21 @@ public:
                               const QString &name,
                               const QString &username,
                               const QString &password);
+
     // Clears the highlight_type when highlight_type is HIGHLIGHT_RECENT
     static void clearRecentBugs(const QString &tableName);
     static void removeTracker(const QString &trackerId,
                               const QString &trackerName);
+    static void clearBugs(const QString &tableName, const QString &trackerId);
+    static QString getMonitoredComponents(const QString &trackerId);
 
     // Tracker-specific SELECT calls
     static QMap<QString, QString> tracBugDetail(const QString &rowId);
     static QMap<QString, QString> mantisBugDetail(const QString &rowId);
     static QMap<QString, QString> bugzillaBugDetail(const QString &rowId);
 
-
 signals:
-    void success();
+    void success(int operation);
     void failure(QString message);
     void commentFinished();
     void bugsFinished(QStringList idList);
@@ -127,7 +135,7 @@ signals:
 public slots:
     void deleteBugs(const QString &trackerId);
     void insertBugs(const QString &tableName, QList< QMap<QString, QString> > list, const QString &trackerId);
-    void multiInsert(const QString &tableName, QList< QMap<QString, QString> > list);
+    void multiInsert(const QString &tableName, QList< QMap<QString, QString> > list, int operation);
 
     // insertComments inserts comments for a number of different bugs.
     // insertBugComments inserts comments for just one bug

@@ -69,6 +69,7 @@ signals:
 public slots:
     void quitEvent();
     void fieldsChecked();
+    void versionChecked(const QString &version, const QString &message);
     void handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors);
     void trayActivated(QSystemTrayIcon::ActivationReason reason);
@@ -109,7 +110,7 @@ private:
     void syncTracker(Backend *tracker);
     void setupTrayIcon();
     void notifyUser();
-
+    void checkVersion(Backend *b);
     void startAnimation();
     void stopAnimation();
     void loadTrackers();
@@ -132,6 +133,7 @@ private:
     QString mDbPath;
     bool mDbUpdated;
     Backend *pActiveBackend;
+    Backend *pNewTracker;
     QString mActiveBugId, mActivePriority, mActiveStatus, mActiveSeverity;
     bool mLoadingDetails;
     QMovie *pSpinnerMovie;
@@ -146,9 +148,6 @@ private:
     ToDoListView *pTodoListView;
     Ui::MainWindow *ui;
     QList<BackendUI*> trackerTabsList;
-    int mStartup;
-    int workingTab;
-
 };
 
 #endif // MAINWINDOW_H

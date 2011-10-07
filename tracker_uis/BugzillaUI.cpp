@@ -260,7 +260,6 @@ BugzillaUI::sortIndicatorChanged(int logicalIndex, Qt::SortOrder order)
 void
 BugzillaUI::reloadFromDatabase()
 {
-    qDebug() << "BugzillaUI reloading...";
     QString showMy, showRep, showCC, showMonitored;
     if (mShowMyBugs)
         showMy = "Assigned";
@@ -291,5 +290,4 @@ BugzillaUI::reloadFromDatabase()
     mActiveQuery = mBaseQuery + " " + tempQuery +" AND" + mWhereQuery + mSortQuery;
 
     pBugModel->setQuery(mActiveQuery);
-    qDebug() << pBugModel->query().lastQuery();
 }

@@ -22,8 +22,11 @@
  */
 
 #include <QMessageBox>
+#include <QUrl>
+#include <QHostInfo>
 
 #include "NewTracker.h"
+#include "SqlUtilities.h"
 #include "ui_NewTracker.h"
 
 NewTracker::NewTracker(QWidget *parent, bool edit) :
@@ -34,7 +37,12 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
     ui->hintLabel->setText("");
     ui->saveButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
     ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
-
+    QStringList trackers;
+    trackers << "Select the tracker type"
+             << "Bugzilla"
+             << "Trac"
+             << "Mantis";
+    ui->trackerTypeCombo->addItems(trackers);
     connect(ui->urlEdit, SIGNAL(lostFocus()),
             this, SLOT(serverFocusOut()));
     connect(ui->urlEdit, SIGNAL(textChanged(QString)),
@@ -43,7 +51,7 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
             this, SLOT(close()));
     connect(ui->saveButton, SIGNAL(clicked()),
             this, SLOT(okClicked()));
-    ui->urlEdit->setPlaceholderText(tr("For example: bugzilla.novell.com or bugs.example.com/bugtracker/"));
+    ui->urlEdit->setPlaceholderText(tr("For example: bugzilla.example.com or example.com/mantis/"));
     if (edit)
     {
         ui->urlEdit->setEnabled(false);
@@ -60,12 +68,19 @@ void
 NewTracker::okClicked()
 {
     QString text = "";
+    QString msg;
     if (ui->nameEdit->text().isEmpty())
         text = "You must assign a name for your tracker.";
-    if (ui->urlEdit->isEmpty())
+    else if (ui->trackerTypeCombo->currentText() == "Select the tracker type")
+        text = "I need to know what type of tracker this is.";
+    else if (ui->urlEdit->isEmpty())
         text = "I need a URL in order to proceed.";
-    if (ui->userEdit->text().isEmpty())
+    else if (ui->userEdit->text().isEmpty())
         text = "I need a username in order to proceed.";
+    else if (SqlUtilities::trackerNameExists(ui->nameEdit->text()))
+        text = QString("You already have a tracker named \"%1\"").arg(ui->nameEdit->text());
+    else if ((msg = checkHost()) != "")
+        text = msg;
 
     if (!text.isEmpty())
     {
@@ -79,6 +94,22 @@ NewTracker::okClicked()
     {
         accept();
     }
+}
+
+QString
+NewTracker::checkHost()
+{
+    QString msg;
+    QString url = ui->urlEdit->text();
+    if (!url.startsWith("http"))
+        url = "https://" + url;
+    QString host = QUrl(url).host();
+    qDebug() << "Checking " << host;
+    QHostInfo hostInfo = QHostInfo::fromName(host);
+    if (hostInfo.error())
+        msg = hostInfo.errorString();
+
+    return(msg);
 }
 
 void
@@ -99,6 +130,7 @@ NewTracker::data()
     info["url"] = ui->urlEdit->text();
     info["username"] = ui->userEdit->text();
     info["password"] = ui->passEdit->text();
+    info["tracker_type"] = ui->trackerTypeCombo->currentText();
     info["last_sync"] = "1970-01-01T00:00:00";
     return(info);
 }

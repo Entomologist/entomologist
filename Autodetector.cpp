@@ -53,6 +53,7 @@ Autodetector::detect(QMap<QString, QString> data)
     {
         temp = temp.prepend("https://");
     }
+
     mData["url"]  = temp;
     mUrl = QUrl(temp);
     if (mUrl.host().toLower() == "bugzilla.novell.com")

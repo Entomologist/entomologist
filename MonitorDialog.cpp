@@ -31,7 +31,7 @@
 #include "trackers/Bugzilla.h"
 #include "trackers/Mantis.h"
 #include "trackers/Trac.h"
-
+#include "SqlUtilities.h"
 #include "ErrorHandler.h"
 #include "MonitorDialog.h"
 #include "ui_MonitorDialog.h"
@@ -74,15 +74,15 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
     {
         QMap<QString, QString> t;
         t = trackerList.at(i);
-        if (t["type"] == "Bugzilla")
+        if (t["type"] == "bugzilla")
         {
             setupBackend(new Bugzilla(t["url"]), t);
         }
-        else if (t["type"] == "Trac")
+        else if (t["type"] == "trac")
         {
             setupBackend(new Trac(t["url"], t["username"], t["password"], this), t);
         }
-        else if (t["type"] == "Mantis")
+        else if (t["type"] == "mantis")
         {
             setupBackend(new Mantis(t["url"]), t);
         }
@@ -146,7 +146,7 @@ MonitorDialog::insertMonitorList(const QString &trackerName,
     q.bindValue(":name", trackerName);
     if (!q.exec())
     {
-        qDebug() << "insertTracker failed: " << q.lastError().text();
+        qDebug() << "insertMonitorList failed: " << q.lastError().text();
         ErrorHandler::handleError("Could not update the monitored components list!", q.lastError().text());
     }
 }
@@ -192,19 +192,20 @@ MonitorDialog::setupBackend(Backend *b, QMap<QString, QString> tracker)
     b->setPassword(tracker["password"]);
     b->setVersion(tracker["version"]);
     b->setParent(this);
-    connect(b, SIGNAL(componentsFound(QStringList)),
-            this, SLOT(componentFound(QStringList)));
+    connect(b, SIGNAL(fieldsFound()),
+            this, SLOT(componentsFound()));
     connect(b, SIGNAL(backendError(QString)),
             this, SLOT(backendError(QString)));
     mRequests++;
+    qDebug() << "Checking components for " << b->name() << "...";
     b->checkValidComponents();
 }
 
 void
-MonitorDialog::componentFound(QStringList components)
+MonitorDialog::componentsFound()
 {
-    qDebug() << "Components have been found: " << components;
     Backend *backend = qobject_cast<Backend*>(sender());
+    QStringList components = SqlUtilities::fieldValues(backend->id(), "component");
     QVariant backendVariant;
     backendVariant.setValue(backend);
     QString type = backend->type();

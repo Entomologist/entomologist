@@ -44,18 +44,18 @@ public:
     void insertBugs(const QString &table, QList<QMap<QString, QString> > list, const QString &trackerId = "-1");
     void insertComments(QList<QMap<QString, QString> > commentList);
     void insertBugComments(QList<QMap<QString, QString> > commentList);
-    void multiInsert(const QString &table, QList<QMap<QString, QString> > bugList);
+    void multiInsert(const QString &table, QList<QMap<QString, QString> > bugList, int operation = 0);
     void updateSync(int id, const QString &timestamp);
     void updateCredentials(int id, const QString &username, const QString &password);
 
 signals:
-    void success();
+    void success(int operation);
     void failure(QString message);
     void commentFinished();
     void bugsFinished(QStringList idList);
     void deleteBugs(const QString &trackerId);
     void bugsInsert(const QString &table, QList<QMap<QString, QString> > bugList, const QString &trackerId);
-    void multiRowInsert(const QString &table, QList<QMap<QString, QString> > bugList);
+    void multiRowInsert(const QString &table, QList<QMap<QString, QString> > bugList, int operation);
     void newComments(QList<QMap<QString, QString> > commentList);
     void newBugComments(QList<QMap<QString, QString> > commentList);
     void syncDB(int id, const QString &timestamp);

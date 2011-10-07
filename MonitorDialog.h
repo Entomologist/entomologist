@@ -29,7 +29,7 @@ public:
 
 public slots:
     void itemExpanded(QTreeWidgetItem *item);
-    void componentFound(QStringList components);
+    void componentsFound();
     void backendError(const QString &msg);
     void okClicked();
 

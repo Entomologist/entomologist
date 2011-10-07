@@ -67,7 +67,7 @@ public slots:
     void componentRpcResponse(QVariant &arg);
     void milestonesRpcResponse(QVariant &arg);
     void searchRpcResponse(QVariant &arg);
-    void searchInsertionFinished();
+    void multiInsertSuccess(int operation);
     void statusRpcResponse(QVariant &arg);
     void typeRpcResponse(QVariant &arg);
     void ccRpcResponse(QVariant &arg);

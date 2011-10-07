@@ -175,8 +175,6 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->trackerTab->removeTab(0);
     ui->trackerTab->removeTab(0);
 
-    mStartup = 0;
-
     // And finally set up the various other widgets
     connect(ui->refreshButton, SIGNAL(clicked()),
             this, SLOT(resync()));
@@ -276,10 +274,6 @@ MainWindow::loadTrackers()
         info["auto_cache_comments"] = record.value(9).toString();
         addTracker(info);
     }
-    // Populate the "All" Tab after loading the trackers.
-    mStartup = 1;
-//    populateCurrentTab(0);
-
 }
 
 // This adds trackers to the database (when called from the New Tracker window)
@@ -305,17 +299,17 @@ MainWindow::addTracker(QMap<QString,QString> info)
 //        Google *newBug = new Google(info["url"]);
 //        setupTracker(newBug, info);
 //    }
-    else if (info["type"] == "Bugzilla")
+    else if (info["type"] == "bugzilla")
     {
         Bugzilla *newBug = new Bugzilla(info["url"]);
         setupTracker(newBug, info);
     }
-    else if (info["type"] == "Mantis")
+    else if (info["type"] == "mantis")
     {
         Mantis *newBug = new Mantis(info["url"]);
         setupTracker(newBug, info);
     }
-    else if (info["type"] == "Trac")
+    else if (info["type"] == "trac")
     {
         Trac *newBug = new Trac(info["url"], info["username"], info["password"]);
         setupTracker(newBug, info);
@@ -333,12 +327,12 @@ MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
     newBug->setPassword(info["password"]);
     newBug->setLastSync(info["last_sync"]);
     newBug->setVersion(info["version"]);
-    newBug->setMonitorComponents(info["monitored_components"].split(","));
+    if (!info["monitored_components"].isEmpty())
+        newBug->setMonitorComponents(info["monitored_components"].split(","));
     connect(newBug, SIGNAL(bugsUpdated()),
             this, SLOT(bugsUpdated()));
     connect(newBug, SIGNAL(backendError(QString)),
             this, SLOT(backendError(QString)));
-    mStartup = 1;
 
     // If this was called after the user used the Add Tracker window,
     // insert the data into the DB
@@ -360,13 +354,10 @@ MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
     }
 }
 
-// Adds a tracker to the tracker list on the left
-// side of the screen
 void
 MainWindow::addTrackerToList(Backend *newTracker, bool sync)
 {
     qDebug() << "Adding tracker to list";
-
     if (pDetectorProgress != NULL)
     {
         pDetectorProgress->reset();
@@ -380,8 +371,8 @@ MainWindow::addTrackerToList(Backend *newTracker, bool sync)
     connect(newTracker->displayWidget(), SIGNAL(bugChanged()),
             this, SLOT(toggleButtons()));
     int newIndex = ui->trackerTab->insertTab(0, newTracker->displayWidget(), newTracker->name());
-    trackerTabsList.append(newTracker->displayWidget());
     pSearchTab->addTracker(newTracker);
+    filterTable();
 
     QString iconPath = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
     iconPath.append(QDir::separator()).append("entomologist");
@@ -402,8 +393,9 @@ MainWindow::addTrackerToList(Backend *newTracker, bool sync)
 void
 MainWindow::bugsUpdated()
 {
-    qDebug() << "mSyncRequests is: " << mSyncRequests;
     mSyncRequests--;
+    qDebug() << "bugsUpdated: mSyncRequests is now: " << mSyncRequests;
+
     if (mSyncRequests == 0)
     {
         if (mSyncPosition == mBackendList.size())
@@ -462,9 +454,9 @@ MainWindow::startAnimation()
     ui->refreshButton->setEnabled(false);
     ui->splitter_2->setEnabled(false);
 
-    for(int i = 0; i < trackerTabsList.length(); i++)
+    for(int i = 0; i < ui->trackerTab->count(); i++)
     {
-        trackerTabsList.at(i)->setEnabled(false);
+        ui->trackerTab->setTabEnabled(i, false);
     }
     pSpinnerMovie->start();
 }
@@ -482,10 +474,9 @@ MainWindow::stopAnimation()
     ui->syncingLabel->hide();
     ui->splitter_2->setEnabled(true);
 
-    for(int i = 0; i < trackerTabsList.length(); i++)
+    for(int i = 0; i < ui->trackerTab->count(); i++)
     {
-        trackerTabsList.at(i)->setEnabled(true);
-
+        ui->trackerTab->setTabEnabled(i, true);
     }
 
     toggleButtons();
@@ -566,7 +557,8 @@ MainWindow::iconDownloaded()
             icon.save(savePath, "PNG");
             QFileInfo info(savePath);
             int tabIndex = compareTabName(info.baseName());
-            ui->trackerTab->setTabIcon(tabIndex, QIcon(QPixmap::fromImage(icon)));
+            if (tabIndex != -1)
+                ui->trackerTab->setTabIcon(tabIndex, QIcon(QPixmap::fromImage(icon)));
         }
     }
     else
@@ -646,13 +638,15 @@ MainWindow::htmlIconDownloaded()
 void
 MainWindow::syncTracker(Backend *tracker)
 {
-    qDebug() << "Syncing tracker...";
     if (!isOnline())
         return;
 
+    qDebug() << "Syncing " << tracker->name();
+    ui->syncingLabel->setText(QString("Syncing %1...").arg(tracker->name()));
     if (mSyncRequests == 0)
         startAnimation();
-
+    else
+        qDebug() << "Outstanding sync requests: " << mSyncRequests;
     mSyncRequests++;
     tracker->sync();
 }
@@ -661,7 +655,6 @@ MainWindow::syncTracker(Backend *tracker)
 void
 MainWindow::addTrackerTriggered()
 {
-
     if (!isOnline())
     {
         QMessageBox box;
@@ -674,30 +667,63 @@ MainWindow::addTrackerTriggered()
     if (t.exec() == QDialog::Accepted)
     {
         QMap<QString, QString> info = t.data();
-
-        if (SqlUtilities::trackerNameExists(info["name"]))
+        QString cleanUrl = cleanupUrl(info["url"]);
+        info["url"] = cleanUrl;
+#if 0
+        if (pDetectorProgress == NULL)
+            pDetectorProgress = new QProgressDialog(tr("Detecting tracker version..."), tr("Cancel"), 0, 0);
+        pDetectorProgress->setWindowModality(Qt::ApplicationModal);
+        pDetectorProgress->setMinimumDuration(0);
+        pDetectorProgress->setValue(2);
+#endif
+        ui->syncingLabel->setText("Detecting tracker version...");
+        startAnimation();
+        if (info["tracker_type"] == "Bugzilla")
+        {
+            if (QUrl(cleanUrl).host().toLower() == "bugzilla.novell.com")
+                pNewTracker = new NovellBugzilla(cleanUrl);
+            else
+                pNewTracker = new Bugzilla(cleanUrl);
+        }
+        else if (info["tracker_type"] == "Mantis")
+        {
+            pNewTracker = new Mantis(cleanUrl);
+        }
+        else if (info["tracker_type"] == "Trac")
+        {
+            pNewTracker = new Trac(cleanUrl, info["username"], info["password"]);
+        }
+        else
         {
             QMessageBox box;
-            box.setText(QString("You already have a tracker named \"%1\"").arg(info["name"]));
+            box.setText(tr("Something has gone horribly wrong.  I have no idea what tracker you want to add!"));
             box.exec();
             return;
         }
 
-        QString cleanUrl = cleanupUrl(info["url"]);
-        info["url"] = cleanUrl;
-        if (pDetectorProgress == NULL)
-            pDetectorProgress = new QProgressDialog(tr("Detecting tracker type..."), tr("Cancel"), 0, 0);
-        pDetectorProgress->setWindowModality(Qt::ApplicationModal);
-        pDetectorProgress->setMinimumDuration(0);
-        pDetectorProgress->setValue(1);
-
+        pNewTracker->setName(info["name"]);
+        pNewTracker->setUsername(info["username"]);
+        pNewTracker->setPassword(info["password"]);
+        checkVersion(pNewTracker);
+#if 0
         Autodetector *detector = new Autodetector();
         connect(detector, SIGNAL(finishedDetecting(QMap<QString,QString>)),
                 this, SLOT(finishedDetecting(QMap<QString,QString>)));
         connect(detector, SIGNAL(backendError(QString)),
                 this, SLOT(backendError(QString)));
         detector->detect(info);
+#endif
     }
+}
+
+void
+MainWindow::checkVersion(Backend *b)
+{
+    connect(b, SIGNAL(versionChecked(QString, QString)),
+            this, SLOT(versionChecked(QString, QString)));
+    connect(b, SIGNAL(backendError(QString)),
+            this, SLOT(backendError(QString)));
+    b->checkVersion();
 }
 
 QString
@@ -726,12 +752,37 @@ MainWindow::cleanupUrl(QString &url)
     return(cleanUrl);
 }
 
+void
+MainWindow::versionChecked(const QString &version,
+                           const QString &message)
+{
+    pNewTracker->deleteLater();
+    if (version == "-1")
+    {
+        ErrorHandler::handleError("This tracker is not valid.", message);
+        stopAnimation();
+    }
+
+    // TODO: Refactor the addTracker(...) call to take a Backend object
+    // directly
+    QMap<QString, QString> info;
+    info["id"] = "-1";
+    info["url"] = pNewTracker->url();
+    info["name"] = pNewTracker->name();
+    info["type"] = pNewTracker->type();
+    info["username"] = pNewTracker->username();
+    info["password"] = pNewTracker->password();
+    info["version"] = version;
+    addTracker(info);
+}
+
 // Signal called after the autodetector is finished
 void
 MainWindow::finishedDetecting(QMap<QString, QString> data)
 {
     qDebug() << "Finished detecting";
     Autodetector *detector = qobject_cast<Autodetector*>(sender());
+    stopAnimation();
 
     if (pDetectorProgress->wasCanceled())
         return;
@@ -812,11 +863,11 @@ MainWindow::syncNextTracker()
         return;
 
     Backend *b = mBackendList.at(mSyncPosition);
-    ui->syncingLabel->setText(QString("Syncing %1...").arg(b->name()));
     mSyncPosition++;
     if (mUploading)
     {
         mSyncRequests++;
+        ui->syncingLabel->setText(QString("Uploading changes to %1").arg(b->name()));
         b->uploadAll();
     }
     else
@@ -964,30 +1015,40 @@ void
 MainWindow::showEditMonitoredComponents()
 {
     MonitorDialog d;
+    QMap<QString, QString> componentMap;
+    // First get the list of monitored components for each tracker, so
+    // we can compare later.
+    QMapIterator<QString, Backend *> i(mBackendMap);
+    while (i.hasNext())
+    {
+        i.next();
+        componentMap[i.key()] = SqlUtilities::getMonitoredComponents(i.key());
+    }
+
     // When the user modifies the monitored components,
     // we want to update the affected trackers, and then
     // we need to set the last sync time to 1970 in order
     // to fetch the appropriate components.
     if (d.exec() == QDialog::Accepted)
     {
-        qDebug() << "Going to do a sync";
-        QSqlQuery q("SELECT name, monitored_components FROM trackers WHERE monitored_components !=\"\"");
-        while (q.next())
+        i.toFront();
+        while (i.hasNext())
         {
-            QString id = QString::number(SqlUtilities::trackerNameExists(q.value(0).toString()));
-            qDebug() << "Looking up backend for ID " << id;
+            i.next();
+            QString components =  SqlUtilities::getMonitoredComponents(i.key());
+            qDebug() << "Components for " << i.key() << " are now " << components;
 
-            Backend *b = mBackendMap.value(id, NULL);
-            if (b != NULL)
+            if (componentMap[i.key()] != components)
             {
-                qDebug() << "Setting monitor components and resyncing";
-                b->setMonitorComponents(q.value(1).toString().split(","));
+                Backend *b = i.value();
+                // Remove all of the bugs for this tracker, and resync
+                SqlUtilities::clearBugs(b->type(), i.key());
+                b->setMonitorComponents(components.split(","));
                 b->setLastSync("1970-01-01T12:13:14");
                 mSyncPosition = mBackendList.size();
                 syncTracker(b);
             }
         }
-
     }
 }
 
@@ -1175,10 +1236,8 @@ MainWindow::deleteTracker(const QString &id)
     QString name = b->name();
     SqlUtilities::removeTracker(b->id(), name);
     pSearchTab->removeTracker(b);
-    delete b;
+    delete b; // This removes the tab as well, as the widget is destroyed
 
-    ui->trackerTab->removeTab(workingTab);
-    trackerTabsList.removeAt(workingTab);
     QSettings settings("Entomologist");
     settings.remove(QString("%1-sort-column").arg(name));
     settings.remove(QString("%1-sort-order").arg(name));
@@ -1227,12 +1286,24 @@ MainWindow::setupTrayIcon()
 void
 MainWindow::showMenu(int tabIndex)
 {
-    // No point in showing the context menu for the search tab
+    QMenu contextMenu(tr("Context menu"), this);
+    QAction *a;
+    // Show a different context menu for the search tab
     int searchIndex = ui->trackerTab->indexOf(pSearchTab);
     if (tabIndex == searchIndex)
+    {
+        QAction *searchAction = contextMenu.addAction(tr("Clear Results"));
+        a = contextMenu.exec(QCursor::pos());
+        if (a == searchAction)
+        {
+            SqlUtilities::clearSearch();
+            QSettings settings("Entomologist");
+            settings.setValue("last-search-query", "");
+            pSearchTab->refreshResults();
+        }
         return;
+    }
 
-    QMenu contextMenu(tr("Context menu"), this);
     QString trackerName = ui->trackerTab->tabText(tabIndex);
     Backend *b = NULL;
     for (int i = 0; i < mBackendList.size(); ++i)
@@ -1249,7 +1320,7 @@ MainWindow::showMenu(int tabIndex)
     QAction *editAction = contextMenu.addAction(tr("Edit"));
     QAction *deleteAction = contextMenu.addAction(tr("Delete"));
     QAction *resyncAction = contextMenu.addAction(tr("Resync"));
-    QAction *a = contextMenu.exec(QCursor::pos());
+    a = contextMenu.exec(QCursor::pos());
     if (a == editAction)
     {
         NewTracker t(this, true);
@@ -1321,12 +1392,16 @@ MainWindow::searchFocusTriggered()
 int
 MainWindow::compareTabName(QString compareItem)
 {
-    for(int i = 0; i < trackerTabsList.length();i++)
+    int ret = -1;
+    for(int i = 0; i < ui->trackerTab->count(); i++)
     {
         if(QString::compare(compareItem,ui->trackerTab->tabText(i)) == 0)
-            workingTab = i;
+        {
+            ret = i;
+            break;
+        }
     }
-    return(workingTab);
+    return(ret);
 }
 
 void
