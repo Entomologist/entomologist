@@ -16,7 +16,7 @@ class RememberTheMilk : public ServicesBackend
     Q_OBJECT
 
 public:
-    RememberTheMilk(QString toDoList,bool loginState);
+    RememberTheMilk(const QString &toDoList);
 
     void login();
     void newUser();
@@ -29,7 +29,7 @@ public:
     void deleteList();
     void getLists();
     void setList(ToDoList* list);
-
+    void updateItemID(ToDoItem *item, const QString &serviceName);
 private slots:
     void frobResponse();
     void tokenResponse();
@@ -54,7 +54,6 @@ private:
     QString timeline;
     QList<ToDoItem*> syncTasks;
     QNetworkAccessManager *manager;
-    bool loginState;
     void generateToken();
     void createTimeline();
     void regUser();
@@ -62,16 +61,18 @@ private:
     void insertKey();
     void createToDoList();
     void checkToken();
-    void insertListID(QString listName,QString listID);
+    void insertListID(const QString &listName,const QString &listID);
     void getTasks();
     QString generateSig(QStringList parameters);
-    QStringList getTaskID(QString taskName);
+    QStringList getTaskID(const QString &taskName);
     ToDoList* todoList;
     QList<ToDoList*> remoteLists;
-    bool reservedList(QString name);
-    bool compareTaskDates(QString task1,QString task2);
-    bool listExists(QString name);
-    void insertTaskID(ToDoItem* item,QString itemID);
+    bool reservedList(const QString &name);
+    bool compareTaskDates(const QString &task1,const QString &task2);
+    bool listExists(const QString &name);
+    void insertTaskID(ToDoItem* item,const QString &itemID);
+    ToDoItem* currentItem;
+
 };
 
 

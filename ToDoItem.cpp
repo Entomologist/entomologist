@@ -41,132 +41,14 @@ ToDoItem::ToDoItem(QString list,
                    QString lastModified,
                    bool completed) :
     QObject(),
-    listName_(list),
-    internalID_(internalID),
-    bugID_(bugID),
-    summary_(summary),
-    date_(date),
-    lastModified_(lastModified),
-    completed_(completed)
+    mListName(list),
+    mInternalID(internalID),
+    mBugID(bugID),
+    mSummary(summary),
+    mDate(date),
+    mLastModified(lastModified),
+    mCompleted(completed)
 {
-    status_ = UNCHANGED;
-}
-
-void
-ToDoItem::setInternalID(QString internalID)
-{
-    internalID_ = internalID;
-
-}
-
-QString
-ToDoItem::internalID()
-{
-
-    return internalID_;
-}
-
-void
-ToDoItem::setListName(QString listName)
-{
-    listName_ = listName;
-
-}
-
-QString
-ToDoItem::listName()
-{
-
-    return listName_;
-}
-
-QString
-ToDoItem::bugID()
-{
-
-    return bugID_;
-}
-
-QString
-ToDoItem::name()
-{
-
-    return bugID_ + " : " + summary_;
-
-}
-
-QString
-ToDoItem::date()
-{
-    return date_;
-
-}
-
-QString
-ToDoItem::lastModified()
-{
-
-    return lastModified_;
-}
-
-bool
-ToDoItem::isCompleted()
-{
-
-    return completed_;
-}
-
-void
-ToDoItem::setDate(QString newDate)
-{
-
-        date_ = newDate;
-}
-void
-ToDoItem::setCompleted(bool isCompleted)
-{
-    completed_ = isCompleted;
-
-}
-
-void
-ToDoItem::setTaskID(QString task)
-{
-
-    taskID_ = task;
-}
-
-QString
-ToDoItem::taskID()
-{
-
-    return taskID_;
-}
-
-void
-ToDoItem::setTaskSeries(QString series)
-{
-
-    taskseries_ = series;
-}
-
-QString
-ToDoItem::taskSeries()
-{
-    return taskseries_;
-
-}
-
-void
-ToDoItem::setStatus(taskStatus status)
-{
-    status_ = status;
-}
-
-int
-ToDoItem::status()
-{
-
-    return status_;
+    mStatus = UNCHANGED;
 }
 

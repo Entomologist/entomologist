@@ -41,10 +41,10 @@
 #include <qjson/json_parser.hh>
 #include "ToDoItem.h"
 
-RememberTheMilk::RememberTheMilk(QString service, bool state)
-    : serviceName(service),
-      loginState(state)
+RememberTheMilk::RememberTheMilk(const QString &service)
+    : serviceName(service)
 {
+    mServiceType = "Remember The Milk";
     apiKey = "7714673fe0ea7961dd885fb6c895aa79";
     secret = "0aecb45bfbd2cab5";
     manager = new QNetworkAccessManager();
@@ -60,31 +60,20 @@ RememberTheMilk::setList(ToDoList *list)
 void
 RememberTheMilk::login()
 {
-    if(!loginState)
+
+    QSqlQuery query("SELECT auth_key FROM services WHERE name=:name");
+    query.bindValue(":name",serviceName);
+
+    query.exec();
+
+    while(query.next())
     {
-        QSqlQuery query("SELECT auth_key FROM services WHERE name=:name");
-        query.bindValue(":name",serviceName);
-
-        query.exec();
-
-        while(query.next())
-        {
-            authToken = query.value(0).toString();
-        }
-        if(authToken.compare("") != 0)
-            checkToken();
-        else
-        {
-            loginState=true;
-            login();
-        }
+        authToken = query.value(0).toString();
     }
+    if(!authToken.isEmpty())
+        checkToken();
     else
-    {
-
-        loginState = false;
         generateFrob();
-    }
 }
 
 void
@@ -200,8 +189,8 @@ RememberTheMilk::tokenResponse()
             checkToken();
 
         }
-        else
-            emit serviceError("Unable to get authorisation token");
+
+
     }
     else
     {
@@ -264,19 +253,9 @@ RememberTheMilk::checkResponse()
     QVariant outerMap = frob.toMap().value("rsp");
     QString status = outerMap.toMap().value("stat").toString();
 
-    if(status.compare("fail") == 0)
-    {
+    if(status.compare("fail") == 0) login();
 
-        loginState = true;
-        login();
-
-    }
-    else
-    {
-        loginState = false;
-        emit authCompleted();
-
-    }
+    else emit authCompleted();
 
 }
 
@@ -423,7 +402,7 @@ RememberTheMilk::getListsResponse()
             if(!reservedList(name))
             {
                 ToDoList* list = new ToDoList(name);
-                list->setListID(id);
+                list->setmRTMListID(id);
                 remoteLists.append(list);
 
             }
@@ -432,7 +411,7 @@ RememberTheMilk::getListsResponse()
     }
 
     reply->close();
-    if(!listExists(todoList->listName()) || todoList->status()== ToDoList::NEW)
+    if(!listExists(todoList->rtmListID()) || todoList->status()== ToDoList::NEW)
         createToDoList();
 
     else if(todoList->status() == ToDoList::UPDATED)
@@ -446,7 +425,7 @@ RememberTheMilk::getListsResponse()
 }
 
 bool
-RememberTheMilk::reservedList(QString name)
+RememberTheMilk::reservedList(const QString &name)
 {
     QStringList reserved;
     reserved << "Inbox"  << "Sent" << "All Tasks" << "Work";
@@ -455,12 +434,12 @@ RememberTheMilk::reservedList(QString name)
 }
 
 bool
-RememberTheMilk::listExists(QString name)
+RememberTheMilk::listExists(const QString &listID)
 {
     bool exists = false;
 
     foreach(ToDoList* list, remoteLists)
-        if(list->listName().compare(name) == 0)
+        if(list->rtmListID().compare(listID) == 0)
             exists = true;
 
 
@@ -508,8 +487,8 @@ RememberTheMilk::todoListResponse()
     QVariant list = initial.toMap().value("rsp");
     QVariant list2 = list.toMap().value("list");
     QVariant list3 = list2.toMap().value("id");
-    todoList->setListID(list3.toString());
-    insertListID(todoList->listName(),todoList->listID());
+    todoList->setmRTMListID(list3.toString());
+    insertListID(todoList->listName(),todoList->rtmListID());
 
     emit readyToAddItems();
 }
@@ -522,7 +501,7 @@ RememberTheMilk::updateList()
     parameters.append(QString("auth_token=%1").arg(authToken));
     parameters.append("format=json");
     parameters.append("method=rtm.lists.setName");
-    parameters.append(QString("list_id=%1").arg(todoList->listID()));
+    parameters.append(QString("list_id=%1").arg(todoList->rtmListID()));
     parameters.append(QString("name=%1").arg(todoList->listName()));
     parameters.append(QString("timeline=%1").arg(timeline));
 
@@ -569,7 +548,7 @@ void RememberTheMilk::deleteList()
     parameters.append(QString("auth_token=%1").arg(authToken));
     parameters.append("format=json");
     parameters.append("method=rtm.lists.delete");
-    parameters.append(QString("list_id=%1").arg(todoList->listID()));;
+    parameters.append(QString("list_id=%1").arg(todoList->rtmListID()));;
     parameters.append(QString("timeline=%1").arg(timeline));
 
     QString api_sig = generateSig(parameters);
@@ -585,7 +564,7 @@ void RememberTheMilk::deleteList()
 
     QNetworkRequest req = QNetworkRequest(QUrl(mURL));
     QNetworkReply* res = manager->post(req,query.toAscii());
-    connect(res,SIGNAL(finished()),this,SLOT(deleteListResponse()));
+    connect(res,SIGNAL(finished()),this,SLOT(Response()));
 }
 
 
@@ -616,7 +595,7 @@ RememberTheMilk::getTasks()
     parameters.append(QString("auth_token=%1").arg(authToken));
     parameters.append("format=json");
     parameters.append("method=rtm.tasks.getList");
-    parameters.append(QString("list_id=%1").arg(todoList->listID()));
+    parameters.append(QString("list_id=%1").arg(todoList->rtmListID()));
     QString api_sig = generateSig(parameters);
 
     QString query = QString("%1&%2&%3&%4&%5&api_sig=%6")
@@ -668,13 +647,13 @@ RememberTheMilk::getTasksResponse()
         foreach(QVariant t, tasks)
         {
             QStringList name = t.toMap().value("name").toString().split(" : ",QString::SkipEmptyParts);
-            ToDoItem* item = new ToDoItem(todoList->listID(),"",name.at(0),name.at(1),t.toMap().value("due").toString()
+            ToDoItem* item = new ToDoItem(todoList->rtmListID(),"",name.at(0),name.at(1),t.toMap().value("due").toString()
                                           ,t.toMap().value("modified").toString(),
                                           t.toMap().value("completed").toBool());
             QVariant taskid = t.toMap().value("task");
 
-            item->setTaskID(taskid.toMap().value("id").toString());
-            item->setTaskSeries(t.toMap().value("id").toString());
+            item->setRTMTaskID(taskid.toMap().value("id").toString());
+            item->setRTMTaskSeriesID(t.toMap().value("id").toString());
             syncTasks.append(item);
         }
 
@@ -688,14 +667,15 @@ RememberTheMilk::getTasksResponse()
 void
 RememberTheMilk::addTask(ToDoItem* item)
 {
-
+    insertItem(item->bugID(),serviceName);
+    currentItem = item;
     QStringList parameters;
     parameters.append(QString("api_key=%1").arg(apiKey));
     parameters.append(QString("auth_token=%1").arg(authToken));
     parameters.append("format=json");
     parameters.append("method=rtm.tasks.add");
     parameters.append(QString("name=%1").arg(item->name() + " " + item->date().replace("/"," ")));
-    parameters.append(QString("list_id=%1").arg(todoList->listID()));
+    parameters.append(QString("list_id=%1").arg(todoList->rtmListID()));
     parameters.append(QString("timeline=%1").arg(timeline));
     parameters.append("parse=1");
     QString api_sig = generateSig(parameters);
@@ -744,6 +724,8 @@ RememberTheMilk::addTaskResponse()
         QVariantMap taskseries = list["taskseries"].toMap();
         QVariantMap task = taskseries["task"].toMap();
         QVariant id = task["id"];
+        currentItem->setRTMTaskID(id.toString());
+        updateItemID(currentItem,serviceName);
 
     }
 
@@ -753,9 +735,10 @@ RememberTheMilk::addTaskResponse()
 
 // TODO: Connect this to serviceTasks table so we can keep a track of service task ids.
 void
-RememberTheMilk::insertTaskID(ToDoItem *item,QString itemID)
+RememberTheMilk::insertTaskID(ToDoItem *item,const QString &itemID)
 {
-
+    Q_UNUSED(item);
+    Q_UNUSED(itemID);
 
 }
 
@@ -777,7 +760,7 @@ RememberTheMilk::deleteTask(ToDoItem* item)
             parameters.append(QString("timeline=%1").arg(timeline));
             parameters.append("format=json");
             parameters.append("method=rtm.tasks.delete");
-            parameters.append(QString("list_id=%1").arg(todoList->listID()));
+            parameters.append(QString("list_id=%1").arg(todoList->rtmListID()));
             parameters.append(QString("task_id=%1").arg(taskID.at(0)));
             parameters.append(QString("taskseries_id=%1").arg(taskID.at(1)));
             QString api_sig = generateSig(parameters);
@@ -854,7 +837,7 @@ RememberTheMilk::updateCompleted(ToDoItem* item)
 
             parameters.append(QString("task_id=%1").arg(taskID.at(0)));
             parameters.append(QString("taskseries_id=%1").arg(taskID.at(1)));
-            parameters.append(QString("list_id=%1").arg(todoList->listID()));
+            parameters.append(QString("list_id=%1").arg(todoList->rtmListID()));
             parameters.append(QString("timeline=%1").arg(timeline));
 
             QString api_sig = generateSig(parameters);
@@ -923,7 +906,7 @@ RememberTheMilk::updateDate(ToDoItem* item)
             parameters.append(QString("due=%1").arg(date.toString("yyyy-MM-dd")));
             parameters.append(QString("task_id=%1").arg(taskID.at(0)));
             parameters.append(QString("taskseries_id=%1").arg(taskID.at(1)));
-            parameters.append(QString("list_id=%1").arg(todoList->listID()));
+            parameters.append(QString("list_id=%1").arg(todoList->rtmListID()));
             parameters.append(QString("timeline=%1").arg(timeline));
 
             QString api_sig = generateSig(parameters);
@@ -976,7 +959,7 @@ RememberTheMilk::updateDateResponse()
 
 // Utility functions
 QStringList
-RememberTheMilk::getTaskID(QString taskName)
+RememberTheMilk::getTaskID(const QString &taskName)
 {
     QStringList taskid;
     foreach(ToDoItem* t, syncTasks)
@@ -985,30 +968,49 @@ RememberTheMilk::getTaskID(QString taskName)
         if(taskName.compare(t->name()) == 0)
         {
 
-            taskid.append(t->taskID());
-            taskid.append(t->taskSeries());
+            taskid.append(t->RTMTaskID());
+            taskid.append(t->RTMTaskSeriesID());
         }
     }
 
     return taskid;
 }
-
-
-bool
-RememberTheMilk::compareTaskDates(QString task1, QString task2)
+void
+RememberTheMilk::updateItemID(ToDoItem *item, const QString &serviceName)
 {
 
+    QSqlQuery query("UPDATE service_tasks SET item_id = :id WHERE service_name = :name AND task_id = :taskid");
+
+    query.bindValue(":id",item->RTMTaskID());
+    query.bindValue(":name",serviceName);
+    query.bindValue(":taskid",item->bugID());
+
+    if(!query.exec())
+    {
+        qDebug() << "Error on Query";
+        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
+        qDebug() << query.lastQuery();
+
+    }
 
 
 }
 
 
+bool
+RememberTheMilk::compareTaskDates(const QString &task1, const QString &task2)
+{
+    Q_UNUSED(task1);
+    Q_UNUSED(task2);
+
+    return false;
+}
 
 void
-RememberTheMilk::insertListID(QString listName, QString listID)
+RememberTheMilk::insertListID(const QString &listName, const QString &listID)
 {
 
-    QSqlQuery query("UPDATE todolist SET list_id = :listID WHERE name = :listName");
+    QSqlQuery query("UPDATE todolist SET rtm_listid = :listID WHERE name = :listName");
     query.bindValue(":listid",listID);
     query.bindValue(":listName",listName);
 
@@ -1019,8 +1021,8 @@ RememberTheMilk::insertListID(QString listName, QString listID)
         qDebug() << query.lastQuery();
 
     }
-
-    todoList->setListID(listID);
+    qDebug() << "List ID for RTM" << listID;
+    todoList->setmRTMListID(listID);
 
 }
 /*

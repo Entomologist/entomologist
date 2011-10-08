@@ -83,10 +83,10 @@ SOURCES += main.cpp \
     BugTreeItemDelegate.cpp \
     todolistservices/ServicesBackend.cpp \
     todolistservices/RememberTheMilk.cpp \
-    todolistservices/GoogleCalendar.cpp \
     todolistservices/GenericWebDav.cpp \
     TrackerTableView.cpp \
-    SqlSearchDelegate.cpp
+    SqlSearchDelegate.cpp \
+    todolistservices/GoogleTasks.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -157,10 +157,10 @@ HEADERS += MainWindow.h \
     BugTreeItemDelegate.h \
     todolistservices/ServicesBackend.h \
     todolistservices/RememberTheMilk.h \
-    todolistservices/GoogleCalendar.h \
     todolistservices/GenericWebDav.h \
     TrackerTableView.h \
-    SqlSearchDelegate.h
+    SqlSearchDelegate.h \
+    todolistservices/GoogleTasks.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
@@ -243,3 +243,7 @@ INSTALLS += entomologist \
     icon64 \
     icon128 \
     desktop
+
+
+
+

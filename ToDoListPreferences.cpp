@@ -33,7 +33,7 @@
 #include "ui_ToDoListPreferences.h"
 #include "todolistservices/GenericWebDav.h"
 #include "todolistservices/RememberTheMilk.h"
-#include "todolistservices/GoogleCalendar.h"
+#include "todolistservices/GoogleTasks.h"
 #include "todolistservices/ServicesBackend.h"
 
 /* This class displays configuration options for ToDo Lists. The user can add new export
@@ -49,7 +49,7 @@ ToDoListPreferences::ToDoListPreferences(QWidget *parent) :
     ui->setupUi(this);
     ui->addServiceButton->setIcon(style()->standardIcon(QStyle::SP_DialogApplyButton));
     ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
-
+    ui->cancelButton->setText("Close"); // Cancel doesn't make much sense here as it's not a modal dialog so there isn't always a task to cancel.
     connect(ui->serviceList, SIGNAL(customContextMenuRequested(QPoint)),
             this, SLOT(customContextMenuRequested(QPoint)));
     connect(ui->addServiceButton, SIGNAL(clicked()),
@@ -90,7 +90,7 @@ ToDoListPreferences::addService()
     ToDoListServiceAdd* a;
     a = new ToDoListServiceAdd(this);
     QStringList services;
-    services<< "Generic Web Dav" << "Google Calendar" << "Remember The Milk";
+    services << "Google Tasks" << "Remember The Milk";
     a->setServiceCombo(services);
     if(a->exec() == QDialog::Accepted)
         insertData(a);
@@ -130,7 +130,6 @@ ToDoListPreferences::insertData(ToDoListServiceAdd* a)
     query.exec();
     ui->serviceList->clear();
     populateServices();
-    //emit registerUser(data.at(0), data.at(1));
 }
 
 
@@ -158,7 +157,7 @@ ToDoListPreferences::editService()
     ToDoListServiceAdd* a;
     a = new ToDoListServiceAdd(this);
     QStringList services;
-    services<< "Generic Web Dav" << "Google Calendar" << "Remember The Milk";
+    services<< "Generic Web Dav" << "Google Tasks" << "Remember The Milk";
     a->setServiceCombo(services);
     a->setData(servicetype,name,username,password,url);
     a->disableUser();

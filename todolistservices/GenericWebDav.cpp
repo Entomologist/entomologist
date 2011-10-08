@@ -25,6 +25,9 @@
 #include "ServicesBackend.h"
 GenericWebDav::GenericWebDav()
 {
+    mServiceType = "WebDAV";
+
+
 }
 void
 GenericWebDav::login()
