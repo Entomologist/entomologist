@@ -65,7 +65,7 @@ public:
 public slots:
     void searchCallFinished();
     void individualBugFinished();
-    void searchInsertionFinished();
+    void multiInsertSuccess(int code);
     void idDetailsFinished();
     void itemPostFinished();
     void ccFinished();

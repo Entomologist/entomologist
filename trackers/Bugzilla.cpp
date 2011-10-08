@@ -68,8 +68,8 @@ Bugzilla::Bugzilla(const QString &url)
             this, SLOT(commentInsertionFinished()));
     connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
             this, SLOT(bugsInsertionFinished(QStringList)));
-    connect(pSqlWriter, SIGNAL(success()),
-            this, SLOT(searchInsertionFinished()));
+    connect(pSqlWriter, SIGNAL(success(int)),
+            this, SLOT(multiInsertSuccess(int)));
     mLoggedIn = false;
 }
 
@@ -112,7 +112,6 @@ Bugzilla::sync()
     mUploading = false;
     SqlUtilities::clearRecentBugs("bugzilla");
     mTimezoneOffset = SqlUtilities::getTimezoneOffset(mId);
-    qDebug() << "Offset: " << mTimezoneOffset;
     qDebug() << "Bugzilla::sync for " << name() << " at " << mLastSync;
     qDebug() << "Logging into " << mUrl + "/xmlrpc.cgi";
     QVariantList args;
@@ -267,7 +266,6 @@ Bugzilla::getUserBugs()
             params["resolution"] = ""; // Only show open bugs
         params["last_change_time"] = mLastSync.addSecs(mTimezoneOffset);
         args << params;
-        qDebug() << params;
         pClient->call("Bug.search", args, this, SLOT(bugRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
 }
@@ -987,8 +985,8 @@ Bugzilla::componentsResponse(QVariant &arg)
         fieldList << fieldMap;
     }
 
-    pSqlWriter->multiInsert("fields", fieldList);
-    emit fieldsFound();
+    SqlUtilities::removeFieldValues(mId, "component");
+    pSqlWriter->multiInsert("fields", fieldList, SqlUtilities::MULTI_INSERT_COMPONENTS);
 }
 
 void
@@ -1080,14 +1078,16 @@ Bugzilla::searchCallFinished()
         insertList << newBug;
     }
 
-    pSqlWriter->multiInsert("search_results", insertList);
+    pSqlWriter->multiInsert("search_results", insertList, SqlUtilities::MULTI_INSERT_SEARCH);
 }
 
 void
-Bugzilla::searchInsertionFinished()
+Bugzilla::multiInsertSuccess(int operation)
 {
-    qDebug() << "searchInsertionFinished";
-   emit searchFinished();
+    if (operation == SqlUtilities::MULTI_INSERT_SEARCH)
+        emit searchFinished();
+    else if (operation == SqlUtilities::MULTI_INSERT_COMPONENTS)
+        emit fieldsFound();
 }
 
 void

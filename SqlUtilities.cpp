@@ -553,7 +553,7 @@ SqlUtilities::createTables(int dbVersion)
                                                      "item_ids TEXT,"
                                                      "last_modified TEXT)";
 
-    QString createServiceTasksSql = "CREATE TABLE service_tasks (id INTERGER PRIMARY KEY,"
+    QString createServiceTasksSql = "CREATE TABLE service_tasks (id INTEGER PRIMARY KEY,"
                                                        "service_name TEXT,"
                                                        "item_id TEXT,"
                                                        "task_id TEXT)";

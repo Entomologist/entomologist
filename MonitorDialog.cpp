@@ -45,6 +45,7 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
     ui->setupUi(this);
     ui->okButton->setIcon(style()->standardIcon(QStyle::SP_DialogOkButton));
     ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
+    ui->noteLabel->hide();
     pSpinnerMovie = new QMovie(this);
     pSpinnerMovie->setFileName(":/spinner");
     pSpinnerMovie->setScaledSize(QSize(48,48));
@@ -53,7 +54,7 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
 
     QList <QMap<QString, QString> > trackerList;
     QSqlQuery query;
-    query.exec("SELECT type, name, url, username, password, version, id, monitored_components FROM trackers");
+    query.exec("SELECT type, name, url, username, password, version, id, monitored_components, version FROM trackers");
     while (query.next())
     {
         QMap<QString, QString> tracker;
@@ -65,9 +66,26 @@ MonitorDialog::MonitorDialog(QWidget *parent) :
         tracker["version"] = query.value(5).toString();
         tracker["id"] = query.value(6).toString();
         QString monitorList = query.value(7).toString();
-        QStringList componentList = monitorList.split(",");
-        mComponentMap[tracker["name"]] = componentList;
-        trackerList << tracker;
+        QString version = query.value(8).toString();
+        if ((tracker["type"].toLower() == "bugzilla") && (version == "3.2" || version == "3.4"))
+        {
+            ui->noteLabel->setText("Note: Monitored components are not supported for Bugzilla 3.2 and 3.4.  Sorry about that.");
+            ui->noteLabel->show();
+        }
+        else
+        {
+            QStringList componentList = monitorList.split(",");
+            mComponentMap[tracker["name"]] = componentList;
+            trackerList << tracker;
+        }
+    }
+
+    if (trackerList.size() == 0)
+    {
+        pSpinnerMovie->stop();
+        ui->spinnerLabel->hide();
+        ui->loadingLabel->hide();
+        ui->treeWidget->setEnabled(true);
     }
 
     for (int i = 0; i < trackerList.size(); ++i)

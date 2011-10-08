@@ -231,7 +231,6 @@ QString MaiaObject::prepareCall(QString method, QList<QVariant> args) {
 		param.appendChild(toXml(args.at(i)));
 		params.appendChild(param);
 	}
-
 	return doc.toString();
 }
 

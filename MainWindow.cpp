@@ -772,6 +772,7 @@ MainWindow::versionChecked(const QString &version,
     info["type"] = pNewTracker->type();
     info["username"] = pNewTracker->username();
     info["password"] = pNewTracker->password();
+    info["last_sync"] = "1970-01-01T12:13:14";
     info["version"] = version;
     addTracker(info);
 }
