@@ -21,7 +21,8 @@ public:
         MONITOR_NODE_PARENT = Qt::UserRole,
         MONITOR_NODE_IS_CACHED = Qt::UserRole + 1,
         MONITOR_NODE_TRACKER = Qt::UserRole + 2,
-        MONITOR_NODE_IS_PRODUCT = Qt::UserRole + 3
+        MONITOR_NODE_IS_PRODUCT = Qt::UserRole + 3,
+        MONITOR_NODE_ID = Qt::UserRole + 4
     };
 
     MonitorDialog(QWidget *parent = 0);

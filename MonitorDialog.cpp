@@ -123,6 +123,8 @@ void
 MonitorDialog::okClicked()
 {
     mComponentMap.clear();
+    QSqlQuery q;
+    q.exec("UPDATE trackers SET monitored_components = \"\"");
     findCheckedChildren(ui->treeWidget->invisibleRootItem());
     QString text;
     if (mComponentCount > 0)
@@ -184,9 +186,19 @@ MonitorDialog::findCheckedChildren(QTreeWidgetItem *item)
 
         mComponentCount++;
         if (!item->data(0, MONITOR_NODE_PARENT).isNull())
-            q << QString("%1:%2")
-                         .arg(item->data(0, MONITOR_NODE_PARENT).toString())
-                         .arg(item->text(0));
+        {
+            QString id = item->data(0, MONITOR_NODE_ID).toString();
+            if (id.isEmpty())
+                q << QString("%1:%2")
+                             .arg(item->data(0, MONITOR_NODE_PARENT).toString())
+                             .arg(item->text(0));
+            else
+                q << QString("%1:%2:%3")
+                     .arg(id)
+                     .arg(item->data(0, MONITOR_NODE_PARENT).toString())
+                     .arg(item->text(0));
+
+        }
         else
             q << item->text(0);
         mComponentMap.insert(b->name(), q);
@@ -247,13 +259,24 @@ MonitorDialog::componentsFound()
     if ((type == "bugzilla") || (type == "mantis"))
     {
         // Bugzilla and mantis components come back as Product:Component
-        // (for Bugzilla) or Project:Category (for Mantis)
+        // (for Bugzilla) or Id:Project:Category (for Mantis)
         QString version = backend->version();
 
         for (i = 0; i < components.size(); ++i)
         {
-            QString product = components.at(i).section(':', 0, 0);
-            QString component = components.at(i).section(':', 1,-1);
+            QString product, component, id;
+            if (type == "bugzilla")
+            {
+                product = components.at(i).section(':', 0, 0);
+                component = components.at(i).section(':', 1,-1);
+            }
+            else
+            {
+                id = components.at(i).section(':', 0, 0);
+                product = components.at(i).section(':', 1, 1);
+                component = components.at(i).section(':', 2);
+            }
+
             productItem = mProductMap.value(QString("%1:%2").arg(backend->name()).arg(product), NULL);
             if (productItem == NULL)
             {
@@ -281,6 +304,7 @@ MonitorDialog::componentsFound()
             componentItem->setData(0, MONITOR_NODE_PARENT, product);
             componentItem->setData(0, MONITOR_NODE_TRACKER, backendVariant);
             componentItem->setData(0, MONITOR_NODE_IS_PRODUCT, 0);
+            componentItem->setData(0, MONITOR_NODE_ID, id);
             if (mComponentMap.value(backend->name()).contains(components.at(i)))
                 componentItem->setCheckState(0, Qt::Checked);
 

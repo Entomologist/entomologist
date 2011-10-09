@@ -105,6 +105,7 @@ Trac::setPassword(const QString &password)
 void
 Trac::sync()
 {
+    mBugMap.clear();
     qDebug() << "Syncing monitored components...";
     if (mMonitorComponents.isEmpty())
     {
@@ -141,15 +142,24 @@ Trac::sync()
 void
 Trac::getSearchedBug(const QString &bugId)
 {
-    qDebug() << "getSearchedBug";
-    QVariantList args;
-    args.append(bugId.toInt());
-    pClient->call("ticket.get",
-                  args,
-                  this,
-                  SLOT(searchedTicketResponse(QVariant&)),
-                  this,
-                  SLOT(rpcError(int,QString)));
+    int possibleBug = SqlUtilities::hasShadowBug("trac", bugId, mId);
+    if (possibleBug)
+    {
+        qDebug() << "Bug already exists...";
+        QMap<QString, QString> bug = SqlUtilities::tracBugDetail(QString::number(possibleBug));
+        emit searchResultFinished(bug);
+    }
+    else
+    {
+        QVariantList args;
+        args.append(bugId.toInt());
+        pClient->call("ticket.get",
+                      args,
+                      this,
+                      SLOT(searchedTicketResponse(QVariant&)),
+                      this,
+                      SLOT(rpcError(int,QString)));
+    }
 }
 
 void
@@ -421,6 +431,7 @@ Trac::monitoredComponentsRpcResponse(QVariant &arg)
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
     {
+        qDebug() << "Inserting a monitored bug";
         mBugMap.insert(bugs.at(i), "Monitored");
     }
 

@@ -57,6 +57,9 @@ BugzillaUI::BugzillaUI(const QString &id,
             this, SLOT(copyBugUrl(QString)));
     connect(ui->tableView, SIGNAL(openBugInBrowser(QString)),
             this, SLOT(openBugInBrowser(QString)));
+    connect(ui->tableView, SIGNAL(removeSearchedBug(int)),
+            this, SLOT(removeSearchedBug(int)));
+
     connect(v, SIGNAL(customContextMenuRequested(QPoint)),
             this, SLOT(headerContextMenu(QPoint)));
     connect(v, SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
@@ -140,6 +143,9 @@ BugzillaUI::searchResultFinished(QMap<QString, QString> resultMap)
     NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
+    connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
+            this, SLOT(commentsDialogCanceled(QString,QString)));
+
     dialog->setBugInfo(resultMap);
     BugzillaDetails *details = new BugzillaDetails();
     details->setSeverities(resultMap["severity"], mSeverities);
@@ -281,7 +287,7 @@ BugzillaUI::reloadFromDatabase()
     else
         showMonitored = "XXXMonitored";
 
-    QString tempQuery = QString("WHERE (bugzilla.bug_type=\'%1\' OR bugzilla.bug_type=\'%2\' OR bugzilla.bug_type=\'%3\' OR bugzilla.bug_type=\'%4')")
+    QString tempQuery = QString("WHERE (bugzilla.bug_type=\'Searched\' OR bugzilla.bug_type=\'%1\' OR bugzilla.bug_type=\'%2\' OR bugzilla.bug_type=\'%3\' OR bugzilla.bug_type=\'%4')")
                           .arg(showMy)
                           .arg(showRep)
                           .arg(showCC)

@@ -45,6 +45,7 @@ signals:
     void copyBugURL(const QString &bugId);
     void openBugInBrowser(const QString &bugId);
     void addBugToToDoList(const QString &bugId);
+    void removeSearchedBug(int rowId);
 
 protected:
     void mousePressEvent(QMouseEvent *event);

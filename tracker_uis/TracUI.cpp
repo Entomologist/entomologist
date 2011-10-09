@@ -74,6 +74,8 @@ TracUI::TracUI(const QString &id,
             this, SLOT(openBugInBrowser(QString)));
     connect(ui->tableView, SIGNAL(addBugToToDoList(QString)),
             this, SLOT(addBugToToDoList(QString)));
+    connect(ui->tableView, SIGNAL(removeSearchedBug(int)),
+            this, SLOT(removeSearchedBug(int)));
     connect(v, SIGNAL(customContextMenuRequested(QPoint)),
             this, SLOT(headerContextMenu(QPoint)));
     connect(v, SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
@@ -165,9 +167,10 @@ TracUI::searchResultFinished(QMap<QString, QString> resultMap)
     NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
+    connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
+            this, SLOT(commentsDialogCanceled(QString,QString)));
     dialog->setBugInfo(resultMap);
     TracDetails *details = new TracDetails(resultMap["bug_id"]);
-
     details->setSeverities(resultMap["severity"], mSeverities);
     details->setPriorities(resultMap["priority"], mPriorities);
     details->setStatuses(resultMap["status"], mStatuses);
@@ -304,13 +307,12 @@ TracUI::reloadFromDatabase()
     else
         showMonitored = "XXXMonitored";
 
-    QString tempQuery = QString("WHERE (trac.bug_type=\'%1\' OR trac.bug_type=\'%2\' OR trac.bug_type=\'%3\' OR trac.bug_type=\'%4')")
+    QString tempQuery = QString("WHERE (trac.bug_type=\'Searched\' OR trac.bug_type=\'%1\' OR trac.bug_type=\'%2\' OR trac.bug_type=\'%3\' OR trac.bug_type=\'%4')")
                           .arg(showMy)
                           .arg(showRep)
                           .arg(showCC)
                           .arg(showMonitored);
 
     mActiveQuery = mBaseQuery + " " + tempQuery +" AND" + mWhereQuery + mSortQuery;
-
     pBugModel->setQuery(mActiveQuery);
 }

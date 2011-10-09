@@ -93,7 +93,7 @@ public slots:
     void productNamesResponse(QVariant &arg);
     void resolutionResponse(QVariant &arg);
     void addCommentResponse(QVariant &arg);
-
+    void monitoredBugResponse(QVariant &arg);
     void statusResponse(QVariant &arg);
     void handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
 
@@ -104,6 +104,7 @@ protected:
     void postComments();
     void postComment();
     void doUploading();
+    void getMonitoredBugs();
     void parseBuglistCSV(const QString &csv, const QString &bugType);
     QVariantMap mProductMap;
     QString mCurrentProduct;

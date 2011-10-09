@@ -33,13 +33,14 @@ public slots:
     void commentsCached();
     void textClicked(const QString &text);
     void save();
+    void cancel();
 
 signals:
     void commentsDialogClosing(QMap<QString, QString> details, QString newComment);
-
+    void commentsDialogCanceled(const QString &trackerId, const QString & bugId);
 protected:
     void closeEvent(QCloseEvent *event);
-
+    void keyPressEvent(QKeyEvent *event);
 private:
     void styleSplitter(QSplitterHandle *handle);
     void frameToggle(QWidget *frame, QLabel *arrow);

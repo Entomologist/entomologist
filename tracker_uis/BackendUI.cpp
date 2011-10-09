@@ -56,6 +56,24 @@ BackendUI::~BackendUI()
 }
 
 void
+BackendUI::commentsDialogCanceled(const QString &trackerId,
+                                  const QString &bugId)
+{
+    if (!hasShadowBug(QString("shadow_%1").arg(pBackend->type()),
+                      bugId,
+                      trackerId))
+        SqlUtilities::removeSearchedBug(pBackend->type(), trackerId, bugId);
+}
+
+void
+BackendUI::removeSearchedBug(int rowId)
+{
+    SqlUtilities::simpleDelete(QString::number(rowId), pBackend->type());
+    // TODO need to find orphaned shadow bugs
+    reloadFromDatabase();
+}
+
+void
 BackendUI::startSearchProgress()
 {
     if (pSearchProgress == NULL)

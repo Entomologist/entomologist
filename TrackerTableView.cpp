@@ -32,7 +32,7 @@
 #include "TrackerTableView.h"
 #include "QDebug"
 #include "SqlBugModel.h"
-
+#include "SqlUtilities.h"
 /*
  * This class is an override of QTableView as we need drag and drop support.
  * All of the mouse events are reimplemented for dragging bugs between the main
@@ -57,10 +57,17 @@ TrackerTableView::contextMenu(const QPoint &point)
 {
     QModelIndex i = indexAt(point);
     QString bugId = i.sibling(i.row(), 2).data().toString();
-
+    int highlightType = i.sibling(i.row(), 1).data().toInt();
+    int rowId = i.sibling(i.row(), 0).data().toInt();
     QMenu contextMenu(tr("Bug Menu"), this);
     QAction *copyAction = contextMenu.addAction(tr("Copy URL"));
     QAction *openAction = contextMenu.addAction(tr("Open in a browser"));
+    QAction *removeAction = NULL;
+    if (highlightType == SqlUtilities::HIGHLIGHT_SEARCH)
+    {
+        contextMenu.addSeparator();
+        removeAction = contextMenu.addAction(tr("Remove bug from list"));
+    }
     // Maybe later...
 //    contextMenu.addSeparator();
 //    QAction *todoAction = contextMenu.addAction(tr("Add to ToDo List"));
@@ -70,6 +77,11 @@ TrackerTableView::contextMenu(const QPoint &point)
         emit copyBugURL(bugId);
     else if (a == openAction)
         emit openBugInBrowser(bugId);
+    else
+        if (highlightType == SqlUtilities::HIGHLIGHT_SEARCH)
+            if (a == removeAction)
+                emit removeSearchedBug(rowId);
+
 //    else if (a == todoAction)
 //        emit addBugToToDoList(bugId);
 }

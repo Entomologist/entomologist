@@ -47,10 +47,11 @@ public slots:
     void viewResponse();
     void assignedResponse();
     void reportedResponse();
+    void ccResponse();
     void monitoredResponse();
     void searchResponse();
     void searchedBugResponse();
-    void searchInsertionFinished();
+    void multiInsertSuccess(int operation);
     void handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
     void bugsInsertionFinished(QStringList idList);
     void commentInsertionFinished();
@@ -59,6 +60,7 @@ private:
     enum viewType {
         ASSIGNED = 0,
         REPORTED,
+        CC,
         MONITORED,
         SEARCHED
     };
@@ -66,6 +68,7 @@ private:
     void getAssigned();
     void validFieldCall(const QString &request);
     void getReported();
+    void getCC();
     void getMonitored();
     void getSearched();
     void getCategories();
@@ -80,6 +83,7 @@ private:
     void setView(const QString &search = "");
     viewType mViewType;
     QVariantMap mBugs;
+    QMap<QString, QString> mSearchedBugResult;
     QStringList mCategoriesList;
     QStringList mProjectList;
     QtSoapHttpTransport *pMantis;

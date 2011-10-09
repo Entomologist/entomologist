@@ -52,8 +52,8 @@ Mantis::Mantis(const QString &url, QObject *parent) :
             this, SLOT(bugsInsertionFinished(QStringList)));
     connect(pSqlWriter, SIGNAL(commentFinished()),
             this, SLOT(commentInsertionFinished()));
-    connect(pSqlWriter, SIGNAL(success()),
-            this, SLOT(searchInsertionFinished()));
+    connect(pSqlWriter, SIGNAL(success(int)),
+            this, SLOT(multiInsertSuccess(int)));
 
     bool secure = true;
     if (QUrl(mUrl).scheme() == "http")
@@ -82,6 +82,7 @@ Mantis::deleteData()
 void
 Mantis::sync()
 {
+    mBugs.clear();
     QString url = mUrl + "/login.php";
     QString query = QString("username=%1&password=%2&").arg(mUsername).arg(mPassword);
     QNetworkRequest req = QNetworkRequest(QUrl(url));
@@ -113,21 +114,41 @@ Mantis::setView(const QString &search)
 {
     // First we have to set up the 'view' to get the CSV
     QString queryType;
-    if (mViewType == MONITORED)
+    if (mViewType == CC) // In mantis, this is a "monitor", but called CC here to not clash with our "monitors"
     {
-        queryType = "user_monitor[]=-1&reporter_id[]=0&handler_id[]=0";
+        queryType = "user_monitor[]=-1&reporter_id[]=0&handler_id[]=0&project_id[]=0";
+    }
+    else if (mViewType == MONITORED)
+    {
+        if (mMonitorComponents.isEmpty())
+        {
+            mViewType = CC;
+            setView();
+            return;
+        }
+        QString componentQuery;
+        for (int i = 0; i < mMonitorComponents.size(); ++i)
+        {
+            QString item = mMonitorComponents.at(i);
+            // The components will be in the form of ID:Project Name:Component
+            QString id = item.section(':', 0, 0);
+            QString component = item.section(':', 2);
+            componentQuery += QString("&project_id[]=%1&show_category[]=%2").arg(id,component);
+        }
+
+        queryType = QString("user_monitor[]=0&reporter_id[]=0&handler_id[]=0%1").arg(componentQuery);
     }
     else if (mViewType == REPORTED)
     {
-        queryType = "user_monitor[]=0&reporter_id[]=-1&handler_id[]=0";
+        queryType = "user_monitor[]=0&reporter_id[]=-1&handler_id[]=0&project_id[]=0";
     }
     else if (mViewType == SEARCHED)
     {
-        queryType = QString("user_monitor[]=0&reporter_id[]=0&handler_id[]=0&search=%1").arg(search);
+        queryType = QString("user_monitor[]=0&reporter_id[]=0&handler_id[]=0&project_id[]=0&search=%1").arg(search);
     }
     else
     {
-        queryType = "user_monitor[]=0&reporter_id[]=0&handler_id[]=-1";
+        queryType = "user_monitor[]=0&reporter_id[]=0&handler_id[]=-1&project_id[]=0";
     }
     QString url = mUrl + "/view_all_set.php?f=3";
 
@@ -162,6 +183,16 @@ Mantis::getReported()
 }
 
 void
+Mantis::getCC()
+{
+    QString url = mUrl + "/csv_export.php";
+    QNetworkRequest req = QNetworkRequest(QUrl(url));
+    QNetworkReply *rep = pManager->get(req);
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(ccResponse()));
+}
+
+void
 Mantis::getMonitored()
 {
     QString url = mUrl + "/csv_export.php";
@@ -170,7 +201,6 @@ Mantis::getMonitored()
     connect(rep, SIGNAL(finished()),
             this, SLOT(monitoredResponse()));
 }
-
 void
 Mantis::getSearched()
 {
@@ -186,6 +216,15 @@ void
 Mantis::getSearchedBug(const QString &bugId)
 {
     qDebug() << "getSearchedBug: " << bugId;
+    int possibleBug = SqlUtilities::hasShadowBug("mantis", bugId, mId);
+    if (possibleBug)
+    {
+        qDebug() << "Bug already exists...";
+        QMap<QString, QString> bug = SqlUtilities::mantisBugDetail(QString::number(possibleBug));
+        emit searchResultFinished(bug);
+        return;
+    }
+
     QtSoapHttpTransport *searchTransport = new QtSoapHttpTransport(this);
     bool secure = true;
     if (QUrl(mUrl).scheme() == "http")
@@ -599,8 +638,19 @@ Mantis::response()
                 s->insert(newStatus);
             }
             else
-                s->insert(new QtSoapStruct((QtSoapStruct&)issue["handler"]));
+            {
+                if (issue["handler"].isValid())
+                {
+                    s->insert(new QtSoapStruct((QtSoapStruct&)issue["handler"]));
+                }
+                else
+                {
+                    QtSoapStruct *newStatus = new QtSoapStruct(QtSoapQName("handler"));
+                    newStatus->insert(new QtSoapSimpleType(QtSoapQName("name"), ""));
+                    s->insert(newStatus);
+                }
 
+            }
             if (!changed.value("Reproducibility").isNull())
             {
                 QtSoapStruct *newStatus = new QtSoapStruct(QtSoapQName("reproducibility"));
@@ -717,6 +767,7 @@ Mantis::response()
     {
         QtSoapArray &array = (QtSoapArray &) resp.returnValue();
         QString currentProject = mProjectList.takeAt(0);
+        QString id = currentProject.section(':', 0,0);
         QString name = currentProject.section(':', 1);
         QString item = "";
         qDebug() << "Current project:" << currentProject;
@@ -727,7 +778,8 @@ Mantis::response()
             {
                 item = array.at(i).toString();
                 if (!item.isEmpty())
-                    mCategoriesList  << QString("%1:%2")
+                    mCategoriesList  << QString("%1:%2:%3")
+                                        .arg(id)
                                         .arg(name)
                                         .arg(item);
             }
@@ -760,7 +812,7 @@ Mantis::searchedBugResponse()
     const QtSoapType &message = resp.method();
     const QtSoapType &response = resp.returnValue();
     QString messageName = message.name().name();
-    qDebug() << resp.toXmlString();
+
     if (messageName == "mc_issue_getResponse")
     {
         QList<QMap<QString, QString> > list;
@@ -782,7 +834,6 @@ Mantis::searchedBugResponse()
         params["bug_type"] = "Searched";
         params["last_modified"] = response["last_updated"].toString();
         list << params;
-        qDebug() << list;
         pSqlWriter->multiInsert("mantis", list);
         emit searchResultFinished(params);
     }
@@ -868,11 +919,21 @@ Mantis::checkValidReproducibilities()
 void
 Mantis::getCategories()
 {
-    qDebug() << "In getCategories";
     if (mProjectList.isEmpty())
     {
         qDebug() << "Finished with the project list: " << mCategoriesList;
-        emit componentsFound(mCategoriesList);
+        QList<QMap<QString, QString> > fieldList;
+        for (int i = 0; i < mCategoriesList.count(); ++i)
+        {
+            QMap<QString, QString> fieldMap;
+            fieldMap["tracker_id"] = mId;
+            fieldMap["field_name"] = "component";
+            fieldMap["value"] = mCategoriesList.at(i);
+            fieldList << fieldMap;
+        }
+
+        SqlUtilities::removeFieldValues(mId, "component");
+        pSqlWriter->multiInsert("fields", fieldList, SqlUtilities::MULTI_INSERT_COMPONENTS);
         return;
     }
 
@@ -1053,6 +1114,7 @@ void Mantis::loginResponse()
     }
     reply->deleteLater();
 }
+
 void Mantis::loginSyncResponse()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
@@ -1087,6 +1149,8 @@ void Mantis::viewResponse()
         getAssigned();
     else if (mViewType == REPORTED)
         getReported();
+    else if (mViewType == CC)
+        getCC();
     else if (mViewType == MONITORED)
         getMonitored();
     else if (mViewType == SEARCHED)
@@ -1167,6 +1231,23 @@ void Mantis::monitoredResponse()
         qDebug() << "monitoredResponse: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
+        return;
+    }
+
+    QString rep = QString::fromUtf8(reply->readAll());
+    reply->deleteLater();
+    handleCSV(rep, "Monitored");
+    mViewType = CC;
+    setView();
+}
+void Mantis::ccResponse()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        qDebug() << "ccResponse: " << reply->errorString();
+        emit backendError(reply->errorString());
+        reply->close();
 
         return;
     }
@@ -1207,14 +1288,16 @@ Mantis::searchResponse()
         insertList << newBug;
     }
 
-    pSqlWriter->multiInsert("search_results", insertList);
+    pSqlWriter->multiInsert("search_results", insertList, SqlUtilities::MULTI_INSERT_SEARCH);
 }
 
 void
-Mantis::searchInsertionFinished()
+Mantis::multiInsertSuccess(int operation)
 {
-    qDebug() << "searchInsertionFinished";
-    emit searchFinished();
+    if (operation == SqlUtilities::MULTI_INSERT_SEARCH)
+        emit searchFinished();
+    else if (operation == SqlUtilities::MULTI_INSERT_COMPONENTS)
+        emit fieldsFound();
 }
 
 void

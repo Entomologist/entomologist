@@ -1044,7 +1044,10 @@ MainWindow::showEditMonitoredComponents()
                 Backend *b = i.value();
                 // Remove all of the bugs for this tracker, and resync
                 SqlUtilities::clearBugs(b->type(), i.key());
-                b->setMonitorComponents(components.split(","));
+                if (components.isEmpty())
+                    b->setMonitorComponents(QStringList());
+                else
+                    b->setMonitorComponents(components.split(","));
                 b->setLastSync("1970-01-01T12:13:14");
                 mSyncPosition = mBackendList.size();
                 syncTracker(b);
@@ -1413,7 +1416,10 @@ MainWindow::openSearchedBug(const QString &trackerName,
     {
         Backend *b = mBackendList.at(i);
         if (b->name() == trackerName)
+        {
+            mSyncRequests++;
             b->displayWidget()->loadSearchResult(bugId);
+        }
     }
 }
 

@@ -55,12 +55,18 @@ MantisUI::MantisUI(const QString &id,
             this, SLOT(copyBugUrl(QString)));
     connect(ui->tableView, SIGNAL(openBugInBrowser(QString)),
             this, SLOT(openBugInBrowser(QString)));
+    connect(ui->tableView, SIGNAL(removeSearchedBug(int)),
+            this, SLOT(removeSearchedBug(int)));
+
     connect(v, SIGNAL(customContextMenuRequested(QPoint)),
             this, SLOT(headerContextMenu(QPoint)));
     connect(v, SIGNAL(sortIndicatorChanged(int,Qt::SortOrder)),
             this, SLOT(sortIndicatorChanged(int,Qt::SortOrder)));
     connect(ui->tableView, SIGNAL(doubleClicked(QModelIndex)),
             this, SLOT(itemDoubleClicked(QModelIndex)));
+    connect(v, SIGNAL(sectionResized(int,int,int)),
+            this, SLOT(saveHeaderSetting(int,int,int)));
+
     mTableHeaders << ""
                     << tr("Bug ID")
                     << tr("Last Modified")
@@ -107,8 +113,6 @@ MantisUI::MantisUI(const QString &id,
         v->hideSection(i.key().toInt());
     }
 
-    connect(v, SIGNAL(sectionResized(int,int,int)),
-            this, SLOT(saveHeaderSetting(int,int,int)));
     restoreHeaderSetting();
 }
 
@@ -149,6 +153,9 @@ MantisUI::searchResultFinished(QMap<QString, QString> resultMap)
     NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
+    connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
+            this, SLOT(commentsDialogCanceled(QString,QString)));
+
     dialog->setBugInfo(resultMap);
 
     MantisDetails *details = new MantisDetails(resultMap["bug_id"]);
@@ -227,6 +234,7 @@ MantisUI::setupTable()
     ui->tableView->setGridStyle(Qt::PenStyle(Qt::DotLine));
     ui->tableView->hideColumn(0); // Hide the internal row id
     ui->tableView->verticalHeader()->hide(); // Hide the Row numbers
+    ui->tableView->horizontalHeader()->setResizeMode(1, QHeaderView::Fixed);
     ui->tableView->resizeColumnsToContents();
     ui->tableView->resizeRowsToContents();
     ui->tableView->setAlternatingRowColors(true);
@@ -318,7 +326,7 @@ MantisUI::reloadFromDatabase()
     else
         showMonitored = "XXXMonitored";
 
-    QString tempQuery = QString("WHERE (mantis.bug_type=\'%1\' OR mantis.bug_type=\'%2\' OR mantis.bug_type=\'%3\' OR mantis.bug_type=\'%4')")
+    QString tempQuery = QString("WHERE (mantis.bug_type=\'Searched\' OR mantis.bug_type=\'%1\' OR mantis.bug_type=\'%2\' OR mantis.bug_type=\'%3\' OR mantis.bug_type=\'%4')")
                           .arg(showMy)
                           .arg(showRep)
                           .arg(showCC)

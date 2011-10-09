@@ -125,6 +125,15 @@ Bugzilla::sync()
 void
 Bugzilla::getSearchedBug(const QString &bugId)
 {
+    int possibleBug = SqlUtilities::hasShadowBug("bugzilla", bugId, mId);
+    if (possibleBug)
+    {
+        qDebug() << "Bug already exists...";
+        QMap<QString, QString> bug = SqlUtilities::bugzillaBugDetail(QString::number(possibleBug));
+        emit searchResultFinished(bug);
+        return;
+    }
+
     QString url = mUrl + QString("/show_bug.cgi?id=%1&ctype=xml")
                                 .arg(bugId);
     qDebug() << "Fetching " << bugId;
@@ -310,6 +319,38 @@ Bugzilla::getReportedBugs()
         qDebug() << params;
         pClient->call("Bug.search", args, this, SLOT(reportedRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
+}
+
+void
+Bugzilla::getMonitoredBugs()
+{
+    mBugs.clear();
+    if (mMonitorComponents.isEmpty())
+    {
+        qDebug() << "There are no components to monitor.";
+        QVariant empty = QVariant();
+        monitoredBugResponse(empty);
+    }
+
+    QVariantList args, productArgs, componentArgs;
+    QVariantMap params;
+
+    for (int i = 0; i < mMonitorComponents.size(); ++i)
+    {
+        QString product = mMonitorComponents.at(i).section(':', 0, 0);
+        productArgs << product;
+        QString component = mMonitorComponents.at(i).section(':', 1,-1);
+        componentArgs << component;
+    }
+
+    params["product"] = productArgs;
+    params["component"] = componentArgs;
+    if (mLastSync.date().year() == 1970)
+        params["resolution"] = ""; // Only show open bugs
+    params["last_change_time"] = mLastSync.addSecs(mTimezoneOffset);
+    args << params;
+    qDebug() << params;
+    pClient->call("Bug.search", args, this, SLOT(monitoredBugResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
 }
 
 void
@@ -699,7 +740,10 @@ void Bugzilla::emailRpcResponse(QVariant &arg)
     {
         qDebug() << "usermap is empty!";
         mEmail = mUsername;
-        getCCs();
+        if (mVersion == "3.4")
+            getCCs();
+        else
+            getMonitoredBugs();
         return;
     }
 
@@ -707,19 +751,24 @@ void Bugzilla::emailRpcResponse(QVariant &arg)
     if (userList.isEmpty())
     {
         mEmail = mUsername;
-        getCCs();
+        if (mVersion == "3.4")
+            getCCs();
+        else
+            getMonitoredBugs();
         return;
     }
 
     mEmail = userList.at(0).toMap().value("email").toString();
-    getCCs();
+    if (mVersion == "3.4")
+        getCCs();
+    else
+        getMonitoredBugs();
 }
 
 void Bugzilla::reportedRpcResponse(QVariant &arg)
 {
     qDebug() << "REPORTED_BUGS";
     QVariantList bugList = arg.toMap().value("bugs").toList();
-    qDebug() << bugList;
     for (int i = 0; i < bugList.size(); ++i)
     {
         QVariantMap responseMap = bugList.at(i).toMap();
@@ -727,6 +776,30 @@ void Bugzilla::reportedRpcResponse(QVariant &arg)
         mBugs[responseMap.value("id").toString()] = responseMap;
     }
     getUserBugs();
+}
+
+void
+Bugzilla::monitoredBugResponse(QVariant &arg)
+{
+    if (arg.isNull())
+    {
+        qDebug() << "Empty monitoredBugResponse argument";
+        getCCs();
+        return;
+    }
+
+    qDebug() << "Monitored Bugs:";
+    QVariantList bugList = arg.toMap().value("bugs").toList();
+    for (int i = 0; i < bugList.size(); ++i)
+    {
+        QVariantMap responseMap = bugList.at(i).toMap();
+        responseMap["bug_type"] = "Monitored";
+        mBugs[responseMap.value("id").toString()] = responseMap;
+        qDebug() << "Setting " << responseMap.value("id").toString() << " to:";
+        qDebug() << responseMap;
+    }
+
+    getCCs();
 }
 
 void Bugzilla::bugRpcResponse(QVariant &arg)
@@ -1181,7 +1254,6 @@ Bugzilla::ccFinished()
         return;
     }
 
-    mBugs.clear();
     QString csv = reply->readAll();
     parseBuglistCSV(csv, "CC");
     reply->close();

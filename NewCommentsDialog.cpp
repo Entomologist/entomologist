@@ -12,6 +12,7 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     QDialog(parent),
     ui(new Ui::NewCommentsDialog)
 {
+    setAttribute(Qt::WA_DeleteOnClose);
     pBackend = backend;
     connect(pBackend, SIGNAL(commentsCached()),
             this, SLOT(commentsCached()));
@@ -50,7 +51,7 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     styleSplitter(ui->splitter->handle(2));
 //    setStyleSheet("QDialog { background-color: white; }");
     ui->detailsFrame->setStyleSheet("QFrame#detailsFrame {border: 1px solid black; border-radius: 4px; }");
-    connect(ui->cancelButton,SIGNAL(clicked()),SLOT(close()));
+    connect(ui->cancelButton,SIGNAL(clicked()),SLOT(cancel()));
     connect(ui->saveButton,SIGNAL(clicked()),SLOT(save()));
     connect(ui->detailsLabel, SIGNAL(clicked(QString)),
             this, SLOT(textClicked(QString)));
@@ -253,6 +254,20 @@ NewCommentsDialog::save()
     QString newComment = ui->commentEdit->document()->toPlainText();
     emit commentsDialogClosing(details, newComment);
     close();
+}
+
+void
+NewCommentsDialog::cancel()
+{
+    emit commentsDialogCanceled(mTrackerId, mCurrentBugId);
+    close();
+}
+
+void
+NewCommentsDialog::keyPressEvent(QKeyEvent *event)
+{
+    if(event->key() == Qt::Key_Escape)
+        this->close();
 }
 
 void

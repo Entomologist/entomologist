@@ -67,6 +67,7 @@ public:
     static int hasShadowBug(const QString &table_name,
                              const QString &bugId,
                              const QString &trackerId);
+
     static void removeShadowBug(const QString &shadowTable,
                              const QString &bugId,
                              const QString &trackerId);
@@ -120,7 +121,9 @@ public:
                               const QString &trackerName);
     static void clearBugs(const QString &tableName, const QString &trackerId);
     static QString getMonitoredComponents(const QString &trackerId);
-
+    static void removeSearchedBug(const QString &tableName,
+                                  const QString &trackerId,
+                                  const QString &bugId);
     // Tracker-specific SELECT calls
     static QMap<QString, QString> tracBugDetail(const QString &rowId);
     static QMap<QString, QString> mantisBugDetail(const QString &rowId);

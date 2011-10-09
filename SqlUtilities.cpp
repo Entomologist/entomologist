@@ -313,7 +313,7 @@ SqlUtilities::simpleUpdate(const QString &tableName, QMap<QString, QString> upda
         whereList << u;
     }
 
-    QString query = QString("UPDATE %1 SET %2 WHERE %3")
+    QString query = QString("UPDATE %1 SET %2 %3")
                      .arg(tableName)
                      .arg(updateList.join(","))
                      .arg(whereList.join(" AND "));
@@ -567,7 +567,7 @@ SqlUtilities::createTables(int dbVersion)
                                                             "summary TEXT)";
 
     QString createBugzillaSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
-                                              "highlight_type INTEGER,"
+                                              "highlight_type INTEGER DEFAULT 0,"
                                               "tracker_id INTEGER,"
                                               "bug_id INTEGER,"
                                               "severity TEXT,"
@@ -584,7 +584,7 @@ SqlUtilities::createTables(int dbVersion)
                                               "last_modified TEXT)";
 
     QString createTracSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
-                                              "highlight_type INTEGER,"
+                                              "highlight_type INTEGER DEFAULT 0,"
                                               "tracker_id INTEGER,"
                                               "bug_id INTEGER,"
                                               "severity TEXT,"
@@ -602,7 +602,7 @@ SqlUtilities::createTables(int dbVersion)
                                               "last_modified TEXT)";
 
     QString createMantisSql = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
-                                              "highlight_type INTEGER,"
+                                              "highlight_type INTEGER DEFAULT 0,"
                                               "tracker_id INTEGER,"
                                               "bug_id INTEGER,"
                                               "category TEXT,"
@@ -1541,6 +1541,7 @@ SqlUtilities::removeTracker(const QString &trackerId, const QString &trackerName
 {
     QSqlQuery q;
     q.exec(QString("DELETE FROM trackers WHERE id=%1").arg(trackerId));
+    q.exec(QString("DELETE FROM fields WHERE tracker_id=%1").arg(trackerId));
     q.exec(QString("DELETE FROM comments WHERE tracker_id=%1").arg(trackerId));
     q.exec(QString("DELETE FROM shadow_comments WHERE tracker_id=%1").arg(trackerId));
     q.exec(QString("DELETE FROM trac WHERE tracker_id=%1").arg(trackerId));
@@ -1641,7 +1642,8 @@ void
 SqlUtilities::clearBugs(const QString &tableName,
                         const QString &trackerId)
 {
-    QString query = QString("DELETE FROM %1 WHERE tracker_id = %2").arg(tableName).arg(trackerId);
+    QString query = QString("DELETE FROM %1 WHERE tracker_id = %2 AND bug_type != \'Searched\'").arg(tableName).arg(trackerId);
+    qDebug() << "Clear bugs: " << query;
     QSqlQuery q;
     if (!q.exec(query))
         qDebug() << "SqlUtilities::clearBugs: " << q.lastError().text();
@@ -1664,6 +1666,20 @@ SqlUtilities::getChangedBugzillaIds(const QString &trackerId)
         ret << q.value(0).toString();
     }
     return ret;
+}
+
+void
+SqlUtilities::removeSearchedBug(const QString &tableName,
+                                const QString &trackerId,
+                                const QString &bugId)
+{
+    QString query = QString("DELETE FROM %1 WHERE tracker_id = %2 AND bug_id=\'%3\' AND bug_type=\'Searched\'")
+                    .arg(tableName, trackerId, bugId);
+    QSqlQuery q;
+    if (!q.exec(query))
+    {
+        qDebug() << "SqlUtilities::removeSearchedBug failed: " << q.lastError().text();
+    }
 }
 
 int
