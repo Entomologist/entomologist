@@ -41,7 +41,7 @@ public:
     // For Mantis, we need to remove *all* bugs in the tables before inserting the new bugs,
     // as there's no way to filter results based on the last modifed time values.  If trackerId
     // is not -1, then the bugs will be removed before inserting the new list.
-    void insertBugs(const QString &table, QList<QMap<QString, QString> > list, const QString &trackerId = "-1");
+    void insertBugs(const QString &table, QList<QMap<QString, QString> > list, const QString &trackerId = "-1", int operation = 0);
     void insertComments(QList<QMap<QString, QString> > commentList);
     void insertBugComments(QList<QMap<QString, QString> > commentList);
     void multiInsert(const QString &table, QList<QMap<QString, QString> > bugList, int operation = 0);
@@ -52,9 +52,9 @@ signals:
     void success(int operation);
     void failure(QString message);
     void commentFinished();
-    void bugsFinished(QStringList idList);
+    void bugsFinished(QStringList idList, int operation);
     void deleteBugs(const QString &trackerId);
-    void bugsInsert(const QString &table, QList<QMap<QString, QString> > bugList, const QString &trackerId);
+    void bugsInsert(const QString &table, QList<QMap<QString, QString> > bugList, const QString &trackerId, int operation);
     void multiRowInsert(const QString &table, QList<QMap<QString, QString> > bugList, int operation);
     void newComments(QList<QMap<QString, QString> > commentList);
     void newBugComments(QList<QMap<QString, QString> > commentList);

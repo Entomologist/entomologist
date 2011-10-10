@@ -53,7 +53,7 @@ public slots:
     void searchedBugResponse();
     void multiInsertSuccess(int operation);
     void handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
-    void bugsInsertionFinished(QStringList idList);
+    void bugsInsertionFinished(QStringList idList, int operation);
     void commentInsertionFinished();
 
 private:

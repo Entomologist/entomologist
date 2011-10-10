@@ -171,9 +171,6 @@ BugzillaUI::itemDoubleClicked(const QModelIndex &index)
     details->setComponent(detailMap["component"]);
     details->setProduct(detailMap["product"]);
     dialog->setDetailsWidget(details);
-    connect(details, SIGNAL(fieldChanged(QString,QString)),
-            this, SLOT(fieldChanged(QString,QString)));
-
     dialog->loadComments();
     dialog->show();
 }

@@ -56,7 +56,7 @@ public:
 
 public slots:
     void commentInsertionFinished();
-    void bugsInsertionFinished(QStringList idList);
+    void bugsInsertionFinished(QStringList idList, int operation);
     void searchedTicketResponse(QVariant &arg);
     void uploadFinished(QVariant &arg);
     void versionRpcResponse(QVariant &arg);

@@ -193,9 +193,6 @@ MantisUI::itemDoubleClicked(const QModelIndex &index)
     details->setStatuses(detailMap["status"], mStatuses);
     details->setResolutions(detailMap["resolution"], mResolutions);
     details->setReproducibility(detailMap["reproducibility"], mRepro);
-    connect(details, SIGNAL(fieldChanged(QString,QString)),
-            this, SLOT(fieldChanged(QString,QString)));
-
     dialog->setDetailsWidget(details);
     dialog->loadComments();
     dialog->show();

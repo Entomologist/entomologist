@@ -70,7 +70,7 @@ public slots:
     void itemPostFinished();
     void ccFinished();
     void commentInsertionFinished();
-    void bugsInsertionFinished(QStringList idList);
+    void bugsInsertionFinished(QStringList idList, int operation);
     void commentXMLFinished();
     void reportedBugListFinished();
     void userBugListFinished();
@@ -83,6 +83,7 @@ public slots:
     void reportedRpcResponse(QVariant &arg);
     void commentRpcResponse(QVariant &arg);
     void rpcError(int error, const QString &message);
+    void loginRpcError(int error, const QString &message);
     void versionError(int error, const QString &message);
     void priorityResponse(QVariant &arg);
     void severityResponse(QVariant &arg);

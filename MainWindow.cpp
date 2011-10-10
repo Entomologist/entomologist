@@ -761,6 +761,7 @@ MainWindow::versionChecked(const QString &version,
     {
         ErrorHandler::handleError("This tracker is not valid.", message);
         stopAnimation();
+        return;
     }
 
     // TODO: Refactor the addTracker(...) call to take a Backend object
@@ -1417,7 +1418,7 @@ MainWindow::openSearchedBug(const QString &trackerName,
         Backend *b = mBackendList.at(i);
         if (b->name() == trackerName)
         {
-            mSyncRequests++;
+            qDebug() << "openSearchedBug: mSyncRequests is now " << mSyncRequests;
             b->displayWidget()->loadSearchResult(bugId);
         }
     }

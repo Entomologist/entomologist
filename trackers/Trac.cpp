@@ -53,8 +53,8 @@ Trac::Trac(const QString &url,
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
     connect(pSqlWriter, SIGNAL(commentFinished()),
             this, SLOT(commentInsertionFinished()));
-    connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
-            this, SLOT(bugsInsertionFinished(QStringList)));
+    connect(pSqlWriter, SIGNAL(bugsFinished(QStringList, int)),
+            this, SLOT(bugsInsertionFinished(QStringList, int)));
     connect(pSqlWriter, SIGNAL(success(int)),
             this, SLOT(multiInsertSuccess(int)));
 }
@@ -223,7 +223,6 @@ Trac::headFinished()
         {
             emit versionChecked("-1", "Not a trac instance!");
         }
-        reply->close();
         reply->deleteLater();
         return;
     }
@@ -440,7 +439,7 @@ Trac::searchedTicketResponse(QVariant &arg)
         newBug["bug_state"] = "open";
     insertList << newBug;
     qDebug() << "searchedTicketResponse: insertBugs";
-    pSqlWriter->insertBugs("trac", insertList);
+    pSqlWriter->insertBugs("trac", insertList, mId, SqlUtilities::BUGS_INSERT_SEARCH);
     emit searchResultFinished(newBug);
 }
 
@@ -869,11 +868,14 @@ Trac::commentInsertionFinished()
 }
 
 void
-Trac::bugsInsertionFinished(QStringList idList)
+Trac::bugsInsertionFinished(QStringList idList, int operation)
 {
     Q_UNUSED(idList);
-    updateSync();
-    emit bugsUpdated();
+    if (operation != SqlUtilities::BUGS_INSERT_SEARCH)
+    {
+        updateSync();
+        emit bugsUpdated();
+    }
 }
 
 void

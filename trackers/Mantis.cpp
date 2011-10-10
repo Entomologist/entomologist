@@ -39,6 +39,7 @@ Mantis::Mantis(const QString &url, QObject *parent) :
 {
     Q_UNUSED(parent);
     mUploadingBugs = false;
+    mVersion = "-1";
     pManager->setCookieJar(pCookieJar);
     connect(pManager, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
@@ -48,8 +49,8 @@ Mantis::Mantis(const QString &url, QObject *parent) :
             this, SLOT(response()));
     connect(pMantis->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)),
             this, SLOT(handleSslErrors(QNetworkReply*,QList<QSslError>)));
-    connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
-            this, SLOT(bugsInsertionFinished(QStringList)));
+    connect(pSqlWriter, SIGNAL(bugsFinished(QStringList, int)),
+            this, SLOT(bugsInsertionFinished(QStringList, int)));
     connect(pSqlWriter, SIGNAL(commentFinished()),
             this, SLOT(commentInsertionFinished()));
     connect(pSqlWriter, SIGNAL(success(int)),
@@ -483,15 +484,21 @@ Mantis::response()
     {
         qDebug() << "SOAP fault: " << resp.faultString().toString();
         qDebug() << resp.faultDetail().toString();
-        emit bugsUpdated();
-        emit backendError(QString("%1: %2").arg(resp.faultString().toString()).arg(resp.faultDetail().toString()));
+        if (mVersion == "-1")
+        {
+            emit versionChecked("-1", resp.faultString().toString());
+        }
+        else
+        {
+            emit bugsUpdated();
+            emit backendError(QString("%1: %2").arg(resp.faultString().toString()).arg(resp.faultDetail().toString()));
+        }
         return;
     }
 
     const QtSoapType &message = resp.method();
     const QtSoapType &response = resp.returnValue();
     QString messageName = message.name().name();
-    qDebug() << "SOAP message: " << messageName;
 
     if (messageName == "mc_versionResponse")
     {
@@ -510,6 +517,12 @@ Mantis::response()
         }
 
         emit versionChecked(QString("%1").arg(version), "");
+    }
+    else if (messageName == "mc_enum_access_levelsResponse")
+    {
+        QtSoapMessage request;
+        request.setMethod(QtSoapQName("mc_version", "http://futureware.biz/mantisconnect"));
+        pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
     }
     else if (messageName == "mc_enum_prioritiesResponse")
     {
@@ -858,15 +871,37 @@ Mantis::headFinished()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "headFinished: Not a Mantis instance";
+        qDebug() << "Mantis::headFinished: " << reply->errorString();
+        qDebug() << "Mantis: Error value: " << reply->error();
+        if (reply->error() == QNetworkReply::AuthenticationRequiredError)
+        {
+            emit versionChecked("-1", "Invalid username or password.");
+        }
+        else if (reply->error() == QNetworkReply::HostNotFoundError)
+        {
+            emit versionChecked("-1", "Host not found");
+        }
+        else if (reply->error() == QNetworkReply::ConnectionRefusedError)
+        {
+            emit versionChecked("-1", "Connection refused");
+        }
+        else
+        {
+            emit versionChecked("-1", "Not a Mantis instance!");
+        }
+
         reply->deleteLater();
-        emit versionChecked("-1", "Not a Mantis instance!");
         return;
     }
 
+    // Mantis doesn't have a "login" call, really (the php doesn't return an HTTP error on failure)
+    // so this is a stupid hack to test if the username and password are correct during version detection
     QtSoapMessage request;
-    request.setMethod(QtSoapQName("mc_version", "http://futureware.biz/mantisconnect"));
+    request.setMethod(QtSoapQName("mc_enum_access_levels", "http://futureware.biz/mantisconnect"));
+    request.addMethodArgument("username", "", mUsername);
+    request.addMethodArgument("password", "", mPassword);
     pMantis->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+
 }
 
 void
@@ -1115,6 +1150,7 @@ void Mantis::loginResponse()
     reply->deleteLater();
 }
 
+
 void Mantis::loginSyncResponse()
 {
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
@@ -1301,12 +1337,15 @@ Mantis::multiInsertSuccess(int operation)
 }
 
 void
-Mantis::bugsInsertionFinished(QStringList idList)
+Mantis::bugsInsertionFinished(QStringList idList, int operation)
 {
     Q_UNUSED(idList);
     qDebug() << "Mantis: bugs updated";
-    updateSync();
-    emit bugsUpdated();
+    if (operation != SqlUtilities::BUGS_INSERT_SEARCH)
+    {
+        updateSync();
+        emit bugsUpdated();
+    }
 }
 
 void

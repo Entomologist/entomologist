@@ -46,6 +46,7 @@
 Bugzilla::Bugzilla(const QString &url)
     : Backend(url)
 {
+    mVersion = "-1";
     pClient = new MaiaXmlRpcClient(QUrl(mUrl + "/xmlrpc.cgi"), "Entomologist/0.1");
     // To keep the CSV output easy to parse, we specify the specific columns we're interested in
     QNetworkCookie columnCookie("COLUMNLIST", "changeddate%20bug_severity%20priority%20assigned_to%20bug_status%20product%20component%20short_short_desc");
@@ -66,8 +67,8 @@ Bugzilla::Bugzilla(const QString &url)
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
     connect(pSqlWriter, SIGNAL(commentFinished()),
             this, SLOT(commentInsertionFinished()));
-    connect(pSqlWriter, SIGNAL(bugsFinished(QStringList)),
-            this, SLOT(bugsInsertionFinished(QStringList)));
+    connect(pSqlWriter, SIGNAL(bugsFinished(QStringList, int)),
+            this, SLOT(bugsInsertionFinished(QStringList, int)));
     connect(pSqlWriter, SIGNAL(success(int)),
             this, SLOT(multiInsertSuccess(int)));
     mLoggedIn = false;
@@ -102,7 +103,7 @@ Bugzilla::login()
     params["login"] = QVariant(mUsername);
     params["password"] = QVariant(mPassword);
     args << params;
-    pClient->call("User.login", args, this, SLOT(loginRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
+    pClient->call("User.login", args, this, SLOT(loginRpcResponse(QVariant&)), this, SLOT(loginRpcError(int, const QString &)));
 }
 
 void
@@ -146,9 +147,7 @@ Bugzilla::getSearchedBug(const QString &bugId)
 void
 Bugzilla::checkVersion()
 {
-    qDebug() << "Checking Bugzilla version...";
-    QVariantList args;
-    pClient->call("Bugzilla.version", args, this, SLOT(versionRpcResponse(QVariant&)), this, SLOT(versionError(int, const QString &)));
+    login();
 }
 
 void
@@ -679,6 +678,17 @@ Bugzilla::rpcError(int error, const QString &message)
 }
 
 void
+Bugzilla::loginRpcError(int error, const QString &message)
+{
+    qDebug() << "Bugzilla::loginRpcError: " << message;
+    QString e = QString("Error %1: %2").arg(error).arg(message);
+    if (mVersion == "-1")
+        emit versionChecked("-1", e);
+    else
+        emit backendError(e);
+}
+
+void
 Bugzilla::versionError(int error, const QString &message)
 {
     Q_UNUSED(error);
@@ -712,6 +722,15 @@ void Bugzilla::loginRpcResponse(QVariant &arg)
     {
         mBugzillaId = map.value("id").toString();
     }
+
+    if (mVersion == "-1")
+    {
+        qDebug() << "Logged in.  Now checking Bugzilla version...";
+        QVariantList args;
+        pClient->call("Bugzilla.version", args, this, SLOT(versionRpcResponse(QVariant&)), this, SLOT(versionError(int, const QString &)));
+        return;
+    }
+
     if (mUploading)
         doUploading();
 
@@ -1219,12 +1238,16 @@ Bugzilla::userBugListFinished()
 }
 
 void
-Bugzilla::bugsInsertionFinished(QStringList idList)
+Bugzilla::bugsInsertionFinished(QStringList idList, int operation)
 {
     Q_UNUSED(idList);
     qDebug() << "bugInsertionFinished";
-    updateSync();
-    emit bugsUpdated();
+    if (operation != SqlUtilities::BUGS_INSERT_SEARCH)
+    {
+        qDebug() << "Updating sync...";
+        updateSync();
+        emit bugsUpdated();
+    }
 
 }
 
@@ -1619,7 +1642,7 @@ Bugzilla::individualBugFinished()
         return;
     }
     bugInsertList << newBug;
-    pSqlWriter->insertBugs("bugzilla", bugInsertList);
+    pSqlWriter->insertBugs("bugzilla", bugInsertList, mId, SqlUtilities::BUGS_INSERT_SEARCH);
     if (commentList.size() > 0)
     {
         mPendingCommentInsertions++;

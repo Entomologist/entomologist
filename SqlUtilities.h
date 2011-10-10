@@ -43,7 +43,8 @@ public:
 
     enum {
         MULTI_INSERT_COMPONENTS = 1,
-        MULTI_INSERT_SEARCH
+        MULTI_INSERT_SEARCH,
+        BUGS_INSERT_SEARCH
     };
 
     SqlUtilities();
@@ -136,11 +137,11 @@ signals:
     void success(int operation);
     void failure(QString message);
     void commentFinished();
-    void bugsFinished(QStringList idList);
+    void bugsFinished(QStringList idList, int operation);
 
 public slots:
     void deleteBugs(const QString &trackerId);
-    void insertBugs(const QString &tableName, QList< QMap<QString, QString> > list, const QString &trackerId);
+    void insertBugs(const QString &tableName, QList< QMap<QString, QString> > list, const QString &trackerId, int operation);
     void multiInsert(const QString &tableName, QList< QMap<QString, QString> > list, int operation);
 
     // insertComments inserts comments for a number of different bugs.

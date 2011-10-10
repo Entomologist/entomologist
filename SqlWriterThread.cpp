@@ -49,8 +49,8 @@ SqlWriterThread::run()
     qRegisterMetaType< QList<QMap<QString,QString> > >("QList<QMap<QString,QString> >");
     connect(this, SIGNAL(multiRowInsert(QString, QList<QMap<QString,QString> >, int)),
             pWriter, SLOT(multiInsert(QString, QList<QMap<QString,QString> >, int)));
-    connect(this, SIGNAL(bugsInsert(QString,QList<QMap<QString,QString> >, QString)),
-            pWriter, SLOT(insertBugs(QString,QList<QMap<QString,QString> >, QString)));
+    connect(this, SIGNAL(bugsInsert(QString,QList<QMap<QString,QString> >, QString, int)),
+            pWriter, SLOT(insertBugs(QString,QList<QMap<QString,QString> >, QString, int)));
     connect(this, SIGNAL(newComments(QList<QMap<QString,QString> >)),
             pWriter, SLOT(insertComments(QList<QMap<QString,QString> >)));
     connect(this, SIGNAL(newBugComments(QList<QMap<QString,QString> >)),
@@ -67,8 +67,8 @@ SqlWriterThread::run()
             this, SIGNAL(success(int)));
     connect(pWriter, SIGNAL(commentFinished()),
             this, SIGNAL(commentFinished()));
-    connect(pWriter, SIGNAL(bugsFinished(QStringList)),
-            this, SIGNAL(bugsFinished(QStringList)));
+    connect(pWriter, SIGNAL(bugsFinished(QStringList, int)),
+            this, SIGNAL(bugsFinished(QStringList, int)));
     exec();
 }
 
@@ -81,9 +81,9 @@ SqlWriterThread::multiInsert(const QString &table, QList<QMap<QString, QString> 
     emit multiRowInsert(table, list, operation);
 }
 void
-SqlWriterThread::insertBugs(const QString &table, QList<QMap<QString, QString> > list, const QString &trackerId)
+SqlWriterThread::insertBugs(const QString &table, QList<QMap<QString, QString> > list, const QString &trackerId, int operation)
 {
-    emit bugsInsert(table, list, trackerId);
+    emit bugsInsert(table, list, trackerId, operation);
 }
 
 void

@@ -135,12 +135,13 @@ SqlUtilities::multiInsert(const QString &tableName,
 void
 SqlUtilities::insertBugs(const QString &tableName,
                          QList< QMap<QString, QString> > list,
-                         const QString &trackerId)
+                         const QString &trackerId,
+                         int operation)
 {
     QStringList idList;
     if ((list.size() == 0) && trackerId == "-1")
     {
-        emit bugsFinished(idList);
+        emit bugsFinished(idList, operation);
         return;
     }
     QSqlQuery q(mDatabase), bugQuery(mDatabase), commentQuery(mDatabase);
@@ -250,7 +251,7 @@ SqlUtilities::insertBugs(const QString &tableName,
     if (!error)
     {
         mDatabase.commit();
-        emit bugsFinished(idList);
+        emit bugsFinished(idList, operation);
     }
     else
     {

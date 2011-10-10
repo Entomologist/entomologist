@@ -128,7 +128,7 @@ signals:
 
 public slots:
     virtual void commentInsertionFinished() {}
-    virtual void bugsInsertionFinished(QStringList idList) { Q_UNUSED(idList);}
+    virtual void bugsInsertionFinished(QStringList idList, int operation) { Q_UNUSED(idList); Q_UNUSED(operation); }
     void sqlError(QString message);
 
 protected:
