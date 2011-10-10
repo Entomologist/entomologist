@@ -831,7 +831,7 @@ Mantis::searchedBugResponse()
         params["status"] = response["status"]["name"].toString();
         params["summary"] = response["summary"].toString();
         params["product_version"] = response["product_version"].toString();
-        params["bug_type"] = "Searched";
+        params["bug_type"] = "SearchedTemp";
         params["last_modified"] = response["last_updated"].toString();
         list << params;
         pSqlWriter->multiInsert("mantis", list);

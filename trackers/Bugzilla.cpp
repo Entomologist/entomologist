@@ -1535,7 +1535,7 @@ Bugzilla::individualBugFinished()
             {
                 newBug["highlight_type"] = QString::number(SqlUtilities::HIGHLIGHT_SEARCH);
                 newBug["tracker_id"] = mId;
-                newBug["bug_type"] = "Searched";
+                newBug["bug_type"] = "SearchedTemp";
             }
         }
         else if (xmlReader.isEndElement())

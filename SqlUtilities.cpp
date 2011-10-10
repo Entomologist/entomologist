@@ -1673,12 +1673,26 @@ SqlUtilities::removeSearchedBug(const QString &tableName,
                                 const QString &trackerId,
                                 const QString &bugId)
 {
-    QString query = QString("DELETE FROM %1 WHERE tracker_id = %2 AND bug_id=\'%3\' AND bug_type=\'Searched\'")
+    QString query = QString("DELETE FROM %1 WHERE tracker_id = %2 AND bug_id=\'%3\' AND bug_type=\'Searched\' OR bug_type=\'SearchedTemp\'")
                     .arg(tableName, trackerId, bugId);
     QSqlQuery q;
     if (!q.exec(query))
     {
         qDebug() << "SqlUtilities::removeSearchedBug failed: " << q.lastError().text();
+    }
+}
+
+void
+SqlUtilities::updateSearchedBug(const QString &tableName,
+                                const QString &trackerId,
+                                const QString &bugId)
+{
+    QString query = QString("UPDATE %1 SET bug_type=\'Searched\' WHERE bug_id=%2 AND tracker_id=%3")
+                            .arg(tableName, bugId, trackerId);
+    QSqlQuery q;
+    if (!q.exec(query))
+    {
+        qDebug() << "SqlUtilities::updateSearchBug failed: " << q.lastError().text();
     }
 }
 

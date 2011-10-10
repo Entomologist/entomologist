@@ -62,6 +62,9 @@ public slots:
     void openBugInBrowser(const QString &bugId);
     void saveHeaderSetting(int logicalIndex, int oldSize, int newSize);
     void commentsDialogCanceled(const QString &trackerId, const QString &bugId);
+    void commentsDialogClosing(QMap<QString, QString> details, const QString &newComment);
+    void searchCommentsDialogClosing(QMap<QString, QString> details, const QString &newComment);
+
     void removeSearchedBug(int rowId);
 
     virtual void addBugToToDoList(const QString &bugId) { Q_UNUSED(bugId); }

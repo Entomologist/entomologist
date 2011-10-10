@@ -50,7 +50,6 @@ public slots:
     void reloadFromDatabase();
     void itemDoubleClicked(const QModelIndex &index);
     void headerContextMenu(const QPoint &pos);
-    void commentsDialogClosing(QMap<QString, QString> details, QString newComment);
     void sortIndicatorChanged(int logicalIndex, Qt::SortOrder order);
     void loadSearchResult(const QString &id);
     void searchResultFinished(QMap<QString, QString> resultMap);

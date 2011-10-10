@@ -56,12 +56,35 @@ BackendUI::~BackendUI()
 }
 
 void
+BackendUI::searchCommentsDialogClosing(QMap<QString, QString> details,
+                                       const QString &newComment)
+{
+    SqlUtilities::updateSearchedBug(pBackend->type(), mId, details["bug_id"]);
+    saveNewShadowItems(QString("shadow_%1").arg(pBackend->type()),
+                       details,
+                       newComment);
+    reloadFromDatabase();
+    emit bugChanged();
+}
+
+void
+BackendUI::commentsDialogClosing(QMap<QString, QString> details,
+                                 const QString &newComment)
+{
+    saveNewShadowItems(QString("shadow_%1").arg(pBackend->type()),
+                       details,
+                       newComment);
+    reloadFromDatabase();
+    emit bugChanged();
+}
+
+void
 BackendUI::commentsDialogCanceled(const QString &trackerId,
                                   const QString &bugId)
 {
-    if (!hasShadowBug(QString("shadow_%1").arg(pBackend->type()),
-                      bugId,
-                      trackerId))
+    if (!SqlUtilities::hasShadowBug(QString("shadow_%1").arg(pBackend->type()),
+                                    bugId,
+                                    trackerId))
         SqlUtilities::removeSearchedBug(pBackend->type(), trackerId, bugId);
 }
 

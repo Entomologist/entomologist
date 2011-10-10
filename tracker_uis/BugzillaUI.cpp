@@ -119,14 +119,6 @@ BugzillaUI::loadFields()
 }
 
 void
-BugzillaUI::commentsDialogClosing(QMap<QString, QString> details, QString newComment)
-{
-    saveNewShadowItems("shadow_bugzilla", details, newComment);
-    reloadFromDatabase();
-    emit bugChanged();
-}
-
-void
 BugzillaUI::headerContextMenu(const QPoint &pos)
 {
     int index = v->logicalIndexAt(pos);
@@ -142,7 +134,7 @@ BugzillaUI::searchResultFinished(QMap<QString, QString> resultMap)
 {
     NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
-             this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
+             this, SLOT(searchCommentsDialogClosing(QMap<QString,QString>,QString)));
     connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
             this, SLOT(commentsDialogCanceled(QString,QString)));
 
@@ -160,7 +152,6 @@ BugzillaUI::searchResultFinished(QMap<QString, QString> resultMap)
     dialog->show();
     stopSearchProgress();
 }
-
 
 void
 BugzillaUI::itemDoubleClicked(const QModelIndex &index)

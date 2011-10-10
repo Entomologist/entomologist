@@ -148,6 +148,7 @@ Trac::getSearchedBug(const QString &bugId)
         qDebug() << "Bug already exists...";
         QMap<QString, QString> bug = SqlUtilities::tracBugDetail(QString::number(possibleBug));
         emit searchResultFinished(bug);
+        emit bugsUpdated();
     }
     else
     {
@@ -205,10 +206,28 @@ Trac::headFinished()
     if (reply->error())
     {
         qDebug() << "headFinished: Not a trac instance: " << reply->errorString();
+        qDebug() << "headFinished: Error value: " << reply->error();
+        if (reply->error() == QNetworkReply::AuthenticationRequiredError)
+        {
+            emit versionChecked("-1", "Invalid username or password.");
+        }
+        else if (reply->error() == QNetworkReply::HostNotFoundError)
+        {
+            emit versionChecked("-1", "Host not found");
+        }
+        else if (reply->error() == QNetworkReply::ConnectionRefusedError)
+        {
+            emit versionChecked("-1", "Connection refused");
+        }
+        else
+        {
+            emit versionChecked("-1", "Not a trac instance!");
+        }
+        reply->close();
         reply->deleteLater();
-        emit versionChecked("-1", "Not a trac instance!");
         return;
     }
+
     // Mantis seems to report 301 FOUND for any and all URLs.
     // That should be caught when the actual version RPC call is done
     qDebug() << "Found a trac instance?";
@@ -410,7 +429,7 @@ Trac::searchedTicketResponse(QVariant &arg)
     newBug["description"] = bug.value("description").toString();
     newBug["resolution"] = bug.value("resolution").toString();
     newBug["component"] = bug.value("component").toString();
-    newBug["bug_type"] = "Searched";
+    newBug["bug_type"] = "SearchedTemp";
     newBug["highlight_type"] = QString::number(SqlUtilities::HIGHLIGHT_SEARCH);
     newBug["last_modified"] = bug.value("changetime")
                                  .toDateTime()

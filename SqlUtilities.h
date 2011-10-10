@@ -124,6 +124,9 @@ public:
     static void removeSearchedBug(const QString &tableName,
                                   const QString &trackerId,
                                   const QString &bugId);
+    static void updateSearchedBug(const QString &tableName,
+                                  const QString &trackerId,
+                                  const QString &bugId);
     // Tracker-specific SELECT calls
     static QMap<QString, QString> tracBugDetail(const QString &rowId);
     static QMap<QString, QString> mantisBugDetail(const QString &rowId);

@@ -147,14 +147,6 @@ TracUI::loadFields()
 }
 
 void
-TracUI::commentsDialogClosing(QMap<QString, QString> details, QString newComment)
-{
-    saveNewShadowItems("shadow_trac", details, newComment);
-    reloadFromDatabase();
-    emit bugChanged();
-}
-
-void
 TracUI::loadSearchResult(const QString &id)
 {
     startSearchProgress();
@@ -166,7 +158,7 @@ TracUI::searchResultFinished(QMap<QString, QString> resultMap)
 {
     NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
-             this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
+             this, SLOT(searchCommentsDialogClosing(QMap<QString,QString>,QString)));
     connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
             this, SLOT(commentsDialogCanceled(QString,QString)));
     dialog->setBugInfo(resultMap);

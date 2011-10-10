@@ -152,7 +152,7 @@ MantisUI::searchResultFinished(QMap<QString, QString> resultMap)
 {
     NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
-             this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
+             this, SLOT(searchCommentsDialogClosing(QMap<QString,QString>,QString)));
     connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
             this, SLOT(commentsDialogCanceled(QString,QString)));
 
@@ -172,14 +172,6 @@ MantisUI::searchResultFinished(QMap<QString, QString> resultMap)
     stopSearchProgress();
     dialog->show();
     stopSearchProgress();
-}
-
-void
-MantisUI::commentsDialogClosing(QMap<QString, QString> details, QString newComment)
-{
-    saveNewShadowItems("shadow_mantis", details, newComment);
-    reloadFromDatabase();
-    emit bugChanged();
 }
 
 void
