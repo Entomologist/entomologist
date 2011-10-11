@@ -95,6 +95,7 @@ Mantis::sync()
 void
 Mantis::search(const QString &query)
 {
+    mBugs.clear();
     mViewType = SEARCHED;
     setView(query);
 }
@@ -845,6 +846,7 @@ Mantis::searchedBugResponse()
         params["summary"] = response["summary"].toString();
         params["product_version"] = response["product_version"].toString();
         params["bug_type"] = "SearchedTemp";
+        params["highlight_type"] = QString::number(SqlUtilities::HIGHLIGHT_SEARCH);
         params["last_modified"] = response["last_updated"].toString();
         list << params;
         pSqlWriter->multiInsert("mantis", list);
@@ -1232,6 +1234,7 @@ void Mantis::assignedResponse()
         newBug["product_version"] = responseMap.value("product_version").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
         newBug["last_modified"] = responseMap.value("last_modified").toString();
+        qDebug() << "Last modified is now: " << newBug["last_modified"];
 
         insertList << newBug;
     }

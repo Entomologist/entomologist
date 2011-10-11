@@ -185,7 +185,7 @@ SqlUtilities::insertBugs(const QString &tableName,
         qDebug() << "insertBugs: Going to delete a bunch of things in " << tableName << " for " << trackerId;
         QSqlQuery rmShadow;
 
-        if (!rmShadow.exec(QString("DELETE FROM %1 WHERE tracker_id = %2").arg(tableName).arg(trackerId)))
+        if (!rmShadow.exec(QString("DELETE FROM %1 WHERE tracker_id = %2 AND bug_type != \'Searched\' AND bug_type != \'SearchedTemp\'").arg(tableName).arg(trackerId)))
         {
             qDebug() << "insertBugs: Couldn't delete mantis bugs: " << rmShadow.lastError().text();
         }
@@ -314,13 +314,14 @@ SqlUtilities::simpleUpdate(const QString &tableName, QMap<QString, QString> upda
         whereList << u;
     }
 
-    QString query = QString("UPDATE %1 SET %2 %3")
+    QString query = QString("UPDATE %1 SET %2 WHERE %3")
                      .arg(tableName)
                      .arg(updateList.join(","))
                      .arg(whereList.join(" AND "));
     if(!q.prepare(query))
     {
         qDebug() << "Could not prepare simpleUpdate: " << q.lastError().text();
+        qDebug() << q.lastQuery();
         return false;
     }
 

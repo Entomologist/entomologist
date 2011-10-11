@@ -118,6 +118,7 @@ NewCommentsDialog::commentsCached()
     ui->descriptionFrame->setEnabled(true);
     ui->commentsFrame->setEnabled(true);
     ui->newCommentFrame->setEnabled(true);
+    qDebug() << "commentsCached";
     setComments();
 }
 
@@ -188,7 +189,7 @@ NewCommentsDialog::setComments()
     int total = 0;
     if (ui->descriptionTextBox->toPlainText().isEmpty())
         ui->descriptionTextBox->setText(SqlUtilities::getBugDescription(pBackend->type(), mCurrentBugId));
-    qDebug() << mTrackerId << mCurrentBugId;
+    qDebug() << "setComments for: tracker id " << mTrackerId << " bug id " << mCurrentBugId;
     QList < QMap<QString, QString> > mainComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, false);
     QList < QMap<QString, QString> > shadowComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, true);
     total = mainComments.size() + shadowComments.size();

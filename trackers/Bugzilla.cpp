@@ -47,6 +47,7 @@ Bugzilla::Bugzilla(const QString &url)
     : Backend(url)
 {
     mVersion = "-1";
+    mUploading = false;
     pClient = new MaiaXmlRpcClient(QUrl(mUrl + "/xmlrpc.cgi"), "Entomologist/0.1");
     // To keep the CSV output easy to parse, we specify the specific columns we're interested in
     QNetworkCookie columnCookie("COLUMNLIST", "changeddate%20bug_severity%20priority%20assigned_to%20bug_status%20product%20component%20short_short_desc");
@@ -111,6 +112,7 @@ Bugzilla::sync()
 {
     mUpdateCount = 0;
     mUploading = false;
+    mBugs.clear();
     SqlUtilities::clearRecentBugs("bugzilla");
     mTimezoneOffset = SqlUtilities::getTimezoneOffset(mId);
     qDebug() << "Bugzilla::sync for " << name() << " at " << mLastSync;
@@ -153,6 +155,7 @@ Bugzilla::checkVersion()
 void
 Bugzilla::search(const QString &query)
 {
+    mBugs.clear();
     QString url = mUrl + QString("/buglist.cgi?query_format=advanced"
                                  "&bug_status=NEW&bug_status=ASSIGNED"
                                  "&bug_status=REOPENED&bug_status=NEEDINFO&bug_status=UNCONFIRMED"
@@ -163,7 +166,7 @@ Bugzilla::search(const QString &query)
                                  "&query_format=advanced"
                                  "&value0-0-0=%1&value0-0-1=%1"
                                  "&ctype=csv")
-                                .arg(query);
+                                 .arg(query);
     qDebug() << "Searching " << url;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply *rep = pManager->get(req);
@@ -535,7 +538,7 @@ Bugzilla::getComments(const QString &bugId)
     {
         qDebug() << "Get comments for 3.2, " << bugId;
 
-        QString url = mUrl + "/show_bug.cgi?id=" + bugId+ "ctype=xml";
+        QString url = mUrl + "/show_bug.cgi?id=" + bugId+ "&ctype=xml";
 
         QNetworkRequest req = QNetworkRequest(QUrl(url));
         QNetworkReply *rep = pManager->get(req);
@@ -1134,7 +1137,7 @@ Bugzilla::reportedBugListFinished()
         return;
     }
     qDebug() << "reportedBugListFinished";
-    QString csv = reply->readAll();
+    QString csv = QString::fromUtf8(reply->readAll());
     parseBuglistCSV(csv, "Reported");
     reply->close();
     getUserBugs();
@@ -1143,8 +1146,9 @@ Bugzilla::reportedBugListFinished()
 void
 Bugzilla::searchCallFinished()
 {
-    qDebug() << "searchFinished";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    int wasRedirected = reply->request().attribute(QNetworkRequest::User).toInt();
+    QVariant redirect = reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
     if (reply->error())
     {
         emit backendError(reply->errorString());
@@ -1152,8 +1156,20 @@ Bugzilla::searchCallFinished()
         return;
     }
 
-    QString csv = reply->readAll();
-    parseBuglistCSV(csv, "Search");
+    if (!redirect.toUrl().isEmpty() && !wasRedirected)
+    {
+        qDebug() << "Was redirected to " << redirect.toUrl();
+        reply->deleteLater();
+        QNetworkRequest req = QNetworkRequest(redirect.toUrl());
+        req.setAttribute(QNetworkRequest::User, QVariant(1));
+        QNetworkReply *rep = pManager->get(req);
+        connect(rep, SIGNAL(finished()),
+                this, SLOT(searchCallFinished()));
+        return;
+    }
+
+    QString csv = QString::fromUtf8(reply->readAll());
+    parseBuglistCSV(csv, "Searched");
     reply->close();
 
     QList< QMap<QString,QString> > insertList;
@@ -1194,7 +1210,7 @@ Bugzilla::userBugListFinished()
 
         return;
     }
-    QString csv = reply->readAll();
+    QString csv = QString::fromUtf8(reply->readAll());
     parseBuglistCSV(csv, "Assigned");
     reply->close();
 
@@ -1277,7 +1293,7 @@ Bugzilla::ccFinished()
         return;
     }
 
-    QString csv = reply->readAll();
+    QString csv = QString::fromUtf8(reply->readAll());
     parseBuglistCSV(csv, "CC");
     reply->close();
     getReportedBugs();
@@ -1410,6 +1426,7 @@ Bugzilla::itemPostFinished()
 void
 Bugzilla::commentXMLFinished()
 {
+    qDebug() << "commentXMLFinished";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
@@ -1508,8 +1525,8 @@ Bugzilla::commentXMLFinished()
     // If we reach here, that means we didn't have anything to do
     if (!insertedComment)
     {
-        updateSync();
-        emit bugsUpdated();
+        qDebug() << "!insertedComment";
+        emit commentsCached();
     }
 }
 
@@ -1642,19 +1659,21 @@ Bugzilla::individualBugFinished()
         return;
     }
     bugInsertList << newBug;
-    pSqlWriter->insertBugs("bugzilla", bugInsertList, mId, SqlUtilities::BUGS_INSERT_SEARCH);
+    pSqlWriter->insertBugs("bugzilla", bugInsertList, "-1", SqlUtilities::BUGS_INSERT_SEARCH);
+    #if 0
     if (commentList.size() > 0)
     {
         mPendingCommentInsertions++;
         pSqlWriter->insertBugComments(commentList);
     }
-
+#endif
     emit searchResultFinished(newBug);
 }
 
 void
 Bugzilla::commentInsertionFinished()
 {
+    qDebug() << "commentInsertionFinished";
     emit commentsCached();
 }
 

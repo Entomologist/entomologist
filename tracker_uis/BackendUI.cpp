@@ -106,7 +106,8 @@ BackendUI::startSearchProgress()
         pSearchProgress->setMinimumDuration(0);
     }
 
-    pSearchProgress->setValue(1);
+    pSearchProgress->show();
+    pSearchProgress->setValue(0);
 }
 
 void

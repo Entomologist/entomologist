@@ -439,7 +439,8 @@ Trac::searchedTicketResponse(QVariant &arg)
         newBug["bug_state"] = "open";
     insertList << newBug;
     qDebug() << "searchedTicketResponse: insertBugs";
-    pSqlWriter->insertBugs("trac", insertList, mId, SqlUtilities::BUGS_INSERT_SEARCH);
+    //pSqlWriter->insertBugs("trac", insertList, mId, SqlUtilities::BUGS_INSERT_SEARCH);
+    pSqlWriter->multiInsert("trac", insertList);
     emit searchResultFinished(newBug);
 }
 
