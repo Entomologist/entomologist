@@ -61,6 +61,7 @@
 #include "SqlUtilities.h"
 #include "ui_MainWindow.h"
 #include "ToDoListView.h"
+#include "UpdatesAvailableDialog.h"
 
 #define DB_VERSION 5
 
@@ -97,6 +98,10 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
 
     ui->setupUi(this);
+    ui->refreshButton->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
+    ui->uploadButton->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
+    ui->changelogButton->setIcon(style()->standardIcon(QStyle::SP_FileDialogInfoView));
+
     setupTrayIcon();
     // Setup the "Show" menu and "Work Offline"
     ui->actionMy_Bugs->setChecked(settings.value("show-my-bugs", true).toBool());
@@ -182,8 +187,10 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(upload()));
     restoreGeometry(settings.value("window-geometry").toByteArray());
 
-    // Set the network status bar
-    isOnline();
+    // Set the network status bar and check for updates if possible
+    if (isOnline())
+        if (settings.value("update-check", true).toBool() == true)
+            checkForUpdates();
 
     setupDB();
     toggleButtons();
@@ -349,7 +356,6 @@ MainWindow::setupTracker(Backend *newBug, QMap<QString, QString> info)
     }
     else
     {
-        newBug->login();
         addTrackerToList(newBug, false);
     }
 }
@@ -1420,6 +1426,42 @@ MainWindow::openSearchedBug(const QString &trackerName,
         {
             qDebug() << "openSearchedBug: mSyncRequests is now " << mSyncRequests;
             b->displayWidget()->loadSearchResult(bugId);
+        }
+    }
+}
+
+void
+MainWindow::checkForUpdates()
+{
+    QNetworkRequest req = QNetworkRequest(QUrl("http://www.entomologist-project.org/latest_version"));
+    QString userAgent = QString("Entomologist/%1").arg(APP_VERSION);
+    req.setRawHeader("User-Agent", userAgent.toLocal8Bit());
+    QNetworkReply *rep = pManager->get(req);
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(updateCheckResponse()));
+}
+
+void
+MainWindow::updateCheckResponse()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+        return;
+
+    // The format of the "you can upgrade" file is simple:
+    // MAJOR_VERSION (e.g, 1.0) \n
+    // MINOR_VERSION (e.g, 2) \n
+    // CHANGELOG
+    QString versionInfo = QString::fromUtf8(reply->readAll());
+    QString majorVersion = versionInfo.section("\n", 0,0);
+    QString minorVersion = versionInfo.section("\n", 1, 1);
+    QString notes = versionInfo.section("\n", 2);
+    if (majorVersion.toDouble() >= QString(APP_MAJOR_VERSION).toDouble())
+    {
+        if (minorVersion.toInt() > QString(APP_MINOR_VERSION).toInt())
+        {
+            UpdatesAvailableDialog dlg(QString("%1.%2").arg(majorVersion, minorVersion), notes, this);
+            dlg.exec();
         }
     }
 }

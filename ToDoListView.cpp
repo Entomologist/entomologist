@@ -75,7 +75,10 @@ ToDoListView::ToDoListView(QWidget *parent) :
     ui->setupUi(this);
     QSettings settings("Entomologist");
     restoreGeometry(settings.value("todo-window-geometry", "").toByteArray());
-
+    ui->syncAllButton->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
+    ui->preferencesButton->setIcon(style()->standardIcon(QStyle::SP_FileDialogDetailedView));
+    connect(ui->preferencesButton, SIGNAL(clicked()),
+            this, SLOT(toDoListPreferences()));
     // Add ToDoLists, if there aren't any, add a DEFAULT todolist
     QSqlQuery query("SELECT name, rtm_listid, google_listid, id FROM todolist");
     query.exec();
@@ -286,10 +289,8 @@ ToDoListView::addItem(int bugID,
     }
     else
     {
-        qDebug() << "Parent: " << parent;
         topLevel = findTopLevelItemIndex(parent);
         topLevel->addChild(item);
-
     }
 
     item->setCheckState(item->columnCount(),Qt::CheckState(completed));
@@ -299,7 +300,6 @@ ToDoListView::addItem(int bugID,
     for(int i = 0; i < ui->bugTreeWidget->columnCount();i++)
         ui->bugTreeWidget->resizeColumnToContents(i);
 
-    qDebug() << "Adding bugID: " << bugID;
     ToDoItem* newItem = new ToDoItem(topLevel->text(0),
                                      QString::number(bugID),
                                      bugData.at(0),
@@ -467,7 +467,7 @@ ToDoListView::customContextMenuRequested(const QPoint &pos)
         {
             QAction* editToDoListName = menu.addAction("Edit Name");
             connect(editToDoListName,SIGNAL(triggered()),this,SLOT(editTopLevelItem()));
-            QAction* exportToCalendar = menu.addAction("Export List to Calendar");
+            QAction* exportToCalendar = menu.addAction("Export List");
             connect(exportToCalendar,SIGNAL(triggered()),this,SLOT(startSync()));
         }
     }
@@ -477,9 +477,6 @@ ToDoListView::customContextMenuRequested(const QPoint &pos)
         connect(newTLI,SIGNAL(triggered()),this,SLOT(newTopLevelItem()));
     }
 
-    menu.addSeparator();
-    QAction* toDoListConfig = menu.addAction("ToDo List Preferences");
-    connect(toDoListConfig,SIGNAL(triggered()),this,SLOT(toDoListPreferences()));
     menu.exec(ui->bugTreeWidget->mapToGlobal(pos));
 }
 

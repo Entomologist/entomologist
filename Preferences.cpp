@@ -36,6 +36,7 @@ Preferences::Preferences(QWidget *parent) :
     ui->autoUpdateCheckBox->setChecked(settings.value("update-automatically", false).toBool());
     ui->confirmationCheckBox->setChecked(settings.value("no-upload-confirmation", "false").toBool());
     ui->startupSyncCheckbox->setChecked(settings.value("startup-sync", false).toBool());
+    ui->updatesCheckBox->setChecked(settings.value("update-check", true).toBool());
     if (!ui->autoUpdateCheckBox->isChecked())
         ui->autoUpdateSpinBox->setEnabled(false);
 
@@ -70,7 +71,7 @@ Preferences::accepted()
     settings.setValue("update-automatically", ui->autoUpdateCheckBox->isChecked());
     settings.setValue("no-upload-confirmation", ui->confirmationCheckBox->isChecked());
     settings.setValue("startup-sync", ui->startupSyncCheckbox->isChecked());
-
+    settings.setValue("update-check", ui->updatesCheckBox->isChecked());
     close();
 }
 

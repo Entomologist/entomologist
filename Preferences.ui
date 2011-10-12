@@ -76,7 +76,14 @@
    <item>
     <widget class="QCheckBox" name="startupSyncCheckbox">
      <property name="text">
-      <string>Sync trackers on startup</string>
+      <string>Sync trackers when Entomologist starts</string>
+     </property>
+    </widget>
+   </item>
+   <item>
+    <widget class="QCheckBox" name="updatesCheckBox">
+     <property name="text">
+      <string>Automatically check for Entomologist updates</string>
      </property>
     </widget>
    </item>

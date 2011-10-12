@@ -68,6 +68,7 @@ signals:
                         bool showMonitored);
 public slots:
     void quitEvent();
+    void updateCheckResponse();
     void fieldsChecked();
     void versionChecked(const QString &version, const QString &message);
     void handleSslErrors(QNetworkReply *reply,
@@ -99,6 +100,7 @@ protected:
     void changeEvent(QEvent *e);
 
 private:
+    void checkForUpdates();
     QString cleanupUrl(QString &url);
     void populateStats();
     int compareTabName(QString compareItem);

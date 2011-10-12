@@ -48,7 +48,7 @@ void
 NovellBugzilla::sync()
 {
     checkingVersion = false;
-    qDebug() << "NovellBugzilla::login";
+    qDebug() << "NovellBugzilla::sync";
     QString ichainLogin = "https://bugzilla.novell.com/ICSLogin/auth-up";
     QByteArray username(QString("username=%1&password=%2").arg(mUsername).arg(mPassword).toLocal8Bit());
 
@@ -88,14 +88,21 @@ NovellBugzilla::finished()
     reply->deleteLater();
 
     if (checkingVersion)
+    {
+        qDebug() << "NovellBugzilla::finished calling Bugzilla::;checkVersion";
         Bugzilla::checkVersion();
+    }
     else
+    {
+        qDebug() << "NovellBugzilla::finished calling Bugzilla::login";
         Bugzilla::login();
+    }
 }
 
 void
 NovellBugzilla::syncFinished()
 {
+    qDebug() << "NovellBugzilla::syncFinished";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
@@ -106,7 +113,13 @@ NovellBugzilla::syncFinished()
     reply->deleteLater();
 
     if (checkingVersion)
+    {
+        qDebug() << "NovellBugzilla::finished calling Bugzilla::checkVersion";
         Bugzilla::checkVersion();
+    }
     else
+    {
+        qDebug() << "NovellBugzilla::finished calling Bugzilla::sync";
         Bugzilla::sync();
+    }
 }

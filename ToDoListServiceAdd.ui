@@ -10,7 +10,7 @@
     <x>0</x>
     <y>0</y>
     <width>471</width>
-    <height>168</height>
+    <height>177</height>
    </rect>
   </property>
   <property name="windowTitle">
@@ -121,16 +121,16 @@
       </spacer>
      </item>
      <item>
-      <widget class="QPushButton" name="cancelButton">
+      <widget class="QPushButton" name="saveButton">
        <property name="text">
-        <string>Cancel</string>
+        <string>Save</string>
        </property>
       </widget>
      </item>
      <item>
-      <widget class="QPushButton" name="saveButton">
+      <widget class="QPushButton" name="cancelButton">
        <property name="text">
-        <string>Save</string>
+        <string>Cancel</string>
        </property>
       </widget>
      </item>

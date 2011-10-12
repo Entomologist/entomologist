@@ -13,7 +13,11 @@ TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
 VERSION = 1.0
+MAJOR_VERSION = 1.0
+MINOR_VERSION = 0
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
+DEFINES += APP_MAJOR_VERSION=\\\"$$MAJOR_VERSION\\\"
+DEFINES += APP_MINOR_VERSION=\\\"$$MINOR_VERSION\\\"
 isEmpty(LOCALE_PREFIX):LOCALE_PREFIX = $$PREFIX
 DEFINES += LOCALE_PREFIX=\\\"$$LOCALE_PREFIX\\\"
 SOURCES += main.cpp \
@@ -86,7 +90,8 @@ SOURCES += main.cpp \
     todolistservices/GenericWebDav.cpp \
     TrackerTableView.cpp \
     SqlSearchDelegate.cpp \
-    todolistservices/GoogleTasks.cpp
+    todolistservices/GoogleTasks.cpp \
+    UpdatesAvailableDialog.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -160,7 +165,8 @@ HEADERS += MainWindow.h \
     todolistservices/GenericWebDav.h \
     TrackerTableView.h \
     SqlSearchDelegate.h \
-    todolistservices/GoogleTasks.h
+    todolistservices/GoogleTasks.h \
+    UpdatesAvailableDialog.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
@@ -181,7 +187,8 @@ FORMS += MainWindow.ui \
     ToDoListServiceAdd.ui \
     ToDoListPreferences.ui \
     ToDoListView.ui \
-    ToDoListExport.ui
+    ToDoListExport.ui \
+    UpdatesAvailableDialog.ui
 RESOURCES += resources.qrc
 QMAKE_EXTRA_TARGETS += distfile
 DISTFILE_MAKEDIR = .tmp/entomologist-$$VERSION
@@ -243,7 +250,3 @@ INSTALLS += entomologist \
     icon64 \
     icon128 \
     desktop
-
-
-
-

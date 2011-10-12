@@ -74,6 +74,13 @@
    <item row="1" column="0">
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
+      <widget class="QPushButton" name="preferencesButton">
+       <property name="text">
+        <string>Preferences</string>
+       </property>
+      </widget>
+     </item>
+     <item>
       <spacer name="horizontalSpacer">
        <property name="orientation">
         <enum>Qt::Horizontal</enum>
@@ -91,10 +98,6 @@
        <property name="text">
         <string>Export  All</string>
        </property>
-       <property name="icon">
-        <iconset resource="resources.qrc">
-         <normaloff>:/upload</normaloff>:/upload</iconset>
-       </property>
       </widget>
      </item>
     </layout>
@@ -108,8 +111,6 @@
    <header>BugTreeWidget.h</header>
   </customwidget>
  </customwidgets>
- <resources>
-  <include location="resources.qrc"/>
- </resources>
+ <resources/>
  <connections/>
 </ui>

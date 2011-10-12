@@ -149,7 +149,7 @@ Bugzilla::getSearchedBug(const QString &bugId)
 void
 Bugzilla::checkVersion()
 {
-    login();
+    Bugzilla::login();
 }
 
 void
@@ -332,6 +332,7 @@ Bugzilla::getMonitoredBugs()
         qDebug() << "There are no components to monitor.";
         QVariant empty = QVariant();
         monitoredBugResponse(empty);
+        return;
     }
 
     QVariantList args, productArgs, componentArgs;
@@ -358,6 +359,7 @@ Bugzilla::getMonitoredBugs()
 void
 Bugzilla::getCCs()
 {
+    qDebug() << "getCCs";
     QString closed = "";
     if (mLastSync.date().year() != 1970)
         closed = "&bug_status=CLOSED&bug_status=RESOLVED";
@@ -372,6 +374,7 @@ Bugzilla::getCCs()
                          .arg(mEmail);
     qDebug() << url;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
+    req.setAttribute(QNetworkRequest::User, QVariant(0));
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
             this, SLOT(ccFinished()));
@@ -826,6 +829,7 @@ Bugzilla::monitoredBugResponse(QVariant &arg)
 
 void Bugzilla::bugRpcResponse(QVariant &arg)
 {
+    qDebug() << "bugRpcResponse";
     QVariantList bugList = arg.toMap().value("bugs").toList();
     QVariantMap responseMap;
     for (int i = 0; i < bugList.size(); ++i)
@@ -1009,7 +1013,11 @@ Bugzilla::timezoneResponse(QVariant &arg)
     bool ok[4];
     bool negOffset = false;
     QString offsetStr = arg.toMap().value("tz_offset").toString();
+    #if QT_VERSION < 0x040700
+    QDateTime now = QDateTime::currentDateTime().toUTC();
+    #else
     QDateTime now = QDateTime::currentDateTimeUtc();
+    #endif
     QDateTime serverTime = arg.toMap().value("db_time").toDateTime();
 
     // Taken from KDE's KDateTime code
@@ -1158,7 +1166,6 @@ Bugzilla::searchCallFinished()
 
     if (!redirect.toUrl().isEmpty() && !wasRedirected)
     {
-        qDebug() << "Was redirected to " << redirect.toUrl();
         reply->deleteLater();
         QNetworkRequest req = QNetworkRequest(redirect.toUrl());
         req.setAttribute(QNetworkRequest::User, QVariant(1));
@@ -1283,7 +1290,6 @@ Bugzilla::ccFinished()
 
     if (!redirect.toUrl().isEmpty() && !wasRedirected)
     {
-        qDebug() << "Was redirected to " << redirect.toUrl();
         reply->deleteLater();
         QNetworkRequest req = QNetworkRequest(redirect.toUrl());
         req.setAttribute(QNetworkRequest::User, QVariant(1));
