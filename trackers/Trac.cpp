@@ -106,6 +106,7 @@ void
 Trac::sync()
 {
     mBugMap.clear();
+    mUpdateCount = 0;
     qDebug() << "Syncing monitored components...";
     if (mMonitorComponents.isEmpty())
     {
@@ -119,7 +120,6 @@ Trac::sync()
     SqlUtilities::clearRecentBugs("trac");
     QVariantList args;
     QString closed = "";
-    mUpdateCount = 0;
     if (mLastSync.date().year() == 1970)
         closed = "status!=closed&";
     else

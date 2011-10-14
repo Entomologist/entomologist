@@ -460,7 +460,6 @@ MainWindow::notifyUser()
                 painter.setFont(QFont("Helvetica", 30));
             else
                 painter.setFont(QFont("Helvetica", 24));
-//            painter.drawText(QPoint(75,95), QString::number(total));
 
             if (total < 1000)
                 painter.drawText(circle, Qt::AlignCenter, QString::number(total));
@@ -470,7 +469,7 @@ MainWindow::notifyUser()
             painter.end();
             QApplication::setWindowIcon(QIcon(newIcon));
         }
-#else Q_OS_MAC
+#else
         pTrayIcon->showMessage("Bugs Updated",
                                tr("%n bug(s) updated", "", total),
                                QSystemTrayIcon::Information,
@@ -759,14 +758,6 @@ MainWindow::addTrackerTriggered()
         pNewTracker->setUsername(info["username"]);
         pNewTracker->setPassword(info["password"]);
         checkVersion(pNewTracker);
-#if 0
-        Autodetector *detector = new Autodetector();
-        connect(detector, SIGNAL(finishedDetecting(QMap<QString,QString>)),
-                this, SLOT(finishedDetecting(QMap<QString,QString>)));
-        connect(detector, SIGNAL(backendError(QString)),
-                this, SLOT(backendError(QString)));
-        detector->detect(info);
-#endif
     }
 }
 

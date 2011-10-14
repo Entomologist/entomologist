@@ -132,6 +132,9 @@ SqlUtilities::multiInsert(const QString &tableName,
 }
 
 
+// Because Mantis can't search on modified time, we have to fetch all bugs.
+// If trackerId is passed in to insertBugs, all bugs in the tables are removed
+// in order to accomodate that.
 void
 SqlUtilities::insertBugs(const QString &tableName,
                          QList< QMap<QString, QString> > list,
@@ -147,6 +150,7 @@ SqlUtilities::insertBugs(const QString &tableName,
     QSqlQuery q(mDatabase), bugQuery(mDatabase), commentQuery(mDatabase);
     QStringList keys = list.at(0).keys();
     QStringList placeholder;
+    QStringList rmIdList;
     bool error = false;
     // TODO find a more clever way to do this
     for (int i = 0; i < keys.size(); ++i)
@@ -182,14 +186,22 @@ SqlUtilities::insertBugs(const QString &tableName,
     mDatabase.transaction();
     if (trackerId != "-1")
     {
-        qDebug() << "insertBugs: Going to delete a bunch of things in " << tableName << " for " << trackerId;
+        for (int rm = 0; rm < list.size(); ++rm)
+        {
+            QMap<QString, QString> rmData = list.at(rm);
+            rmIdList << rmData["bug_id"];
+        }
+
         QSqlQuery rmShadow;
 
         if (!rmShadow.exec(QString("DELETE FROM %1 WHERE tracker_id = %2 AND bug_type != \'Searched\' AND bug_type != \'SearchedTemp\'").arg(tableName).arg(trackerId)))
         {
             qDebug() << "insertBugs: Couldn't delete mantis bugs: " << rmShadow.lastError().text();
         }
-        if (!rmShadow.exec(QString("DELETE FROM shadow_%1 WHERE tracker_id = %2").arg(tableName).arg(trackerId)))
+        if (!rmShadow.exec(QString("DELETE FROM shadow_%1 WHERE tracker_id = %2 AND bug_id NOT IN (%3)")
+                            .arg(tableName)
+                            .arg(trackerId)
+                           .arg(rmIdList.join(","))))
         {
             qDebug() << "insertBugs: Couldn't delete shadow_mantis bugs: " << rmShadow.lastError().text();
         }
@@ -232,6 +244,7 @@ SqlUtilities::insertBugs(const QString &tableName,
                 break;
             }
         }
+
         for (int i = 0; i < keys.size(); ++i)
         {
             q.bindValue(i, data.value(keys.at(i)));
