@@ -45,6 +45,8 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
             this, SLOT(textClicked(QString)));
     connect(ui->descriptionLabel, SIGNAL(clicked(QString)),
             this, SLOT(textClicked(QString)));
+    connect(ui->commentsLabel, SIGNAL(clicked(QString)),
+            this, SLOT(textClicked(QString)));
 
 }
 
@@ -94,6 +96,10 @@ NewCommentsDialog::textClicked(const QString &text)
     else if (text == tr("Description:"))
     {
         frameToggle(ui->descriptionFrame, ui->descriptionGraphic);
+    }
+    else if (text == tr("Comments:"))
+    {
+        frameToggle(ui->commentsFrame, ui->commentsGraphic);
     }
 }
 
