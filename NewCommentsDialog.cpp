@@ -20,20 +20,11 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
     ui->saveButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
     QSettings settings("Entomologist");
-    QByteArray restoredSplitterState = settings.value("comment-window-splitter").toByteArray();
     restoreGeometry(settings.value("comment-window-geometry").toByteArray());
 
     pSpinnerMovie = new QMovie(this);
     pSpinnerMovie->setFileName(":/spinner");
     pSpinnerMovie->setScaledSize(QSize(48,48));
-    ui->splitter->setChildrenCollapsible(false);
-
-    if (!ui->splitter->restoreState(restoredSplitterState))
-    {
-        QList<int> splitterSizes;
-        splitterSizes << 60 << 40 << 0;
-        ui->splitter->setSizes(splitterSizes);
-    }
 
     ui->spinnerLabel->setMovie(pSpinnerMovie);
     ui->loadingFrame->hide();
@@ -42,14 +33,6 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     ui->commentsFrame->setEnabled(false);
     ui->newCommentFrame->setEnabled(false);
     ui->detailsFrame->setEnabled(false);
-
-    ui->splitter->setCollapsible(0, false);
-
-    // The splitter by default is difficult to see (on Linux, anyway),
-    // so let's make it a little more obvious
-    styleSplitter(ui->splitter->handle(1));
-    styleSplitter(ui->splitter->handle(2));
-//    setStyleSheet("QDialog { background-color: white; }");
     ui->detailsFrame->setStyleSheet("QFrame#detailsFrame {border: 1px solid black; border-radius: 4px; }");
     connect(ui->cancelButton,SIGNAL(clicked()),SLOT(cancel()));
     connect(ui->saveButton,SIGNAL(clicked()),SLOT(save()));
@@ -68,13 +51,13 @@ NewCommentsDialog::~NewCommentsDialog()
 void
 NewCommentsDialog::styleSplitter(QSplitterHandle *handle)
 {
-    QVBoxLayout *layout = new QVBoxLayout(handle);
-    layout->setSpacing(0);
-    layout->setMargin(0);
-    QFrame *line = new QFrame(handle);
-    line->setFrameShape(QFrame::HLine);
-    line->setFrameShadow(QFrame::Sunken);
-    layout->addWidget(line);
+    //QVBoxLayout *layout = new QVBoxLayout(handle);
+    //layout->setSpacing(0);
+    //layout->setMargin(0);
+    //QFrame *line = new QFrame(handle);
+    //line->setFrameShape(QFrame::HLine);
+    //line->setFrameShadow(QFrame::Sunken);
+    //layout->addWidget(line);
 }
 
 void
@@ -95,9 +78,6 @@ NewCommentsDialog::frameToggle(QWidget *frame, QLabel *arrow)
 void
 NewCommentsDialog::textClicked(const QString &text)
 {
-    QList<int> sizes = ui->splitter->sizes();
-    QList<int> newSizes;
-    qDebug() << "Text clicked: " << text;
     if (text == tr("Details:"))
     {
         frameToggle(ui->detailsFrame, ui->detailsGraphic);
@@ -200,7 +180,7 @@ NewCommentsDialog::setComments()
     for(i = 0; i < mainComments.size(); ++i)
     {
         QMap<QString, QString> comment = mainComments.at(i);
-        CommentFrame *frame = new CommentFrame(ui->scrollArea);
+        CommentFrame *frame = new CommentFrame(ui->commentsFrame);
          ui->commentsLayout->addWidget(frame);
          frame->setName(comment["author"]);
          frame->setComment(comment["comment"]);
@@ -213,7 +193,7 @@ NewCommentsDialog::setComments()
     for(i = 0; i < shadowComments.size(); ++i)
     {
         QMap<QString, QString> comment = shadowComments.at(i);
-        CommentFrame *frame = new CommentFrame(ui->scrollArea);
+        CommentFrame *frame = new CommentFrame(ui->commentsFrame);
         ui->commentsLayout->addWidget(frame);
         frame->setName(comment["author"]);
         frame->setComment(comment["comment"]);
@@ -226,6 +206,7 @@ NewCommentsDialog::setComments()
     }
 
     ui->commentsLayout->addSpacerItem(commentSpacer);
+    ui->commentsFrame->layout();
 }
 
 QStringList
@@ -276,7 +257,7 @@ NewCommentsDialog::closeEvent(QCloseEvent *event)
 {
     qDebug() << "Closing";
     QSettings settings("Entomologist");
-    settings.setValue("comment-window-splitter", ui->splitter->saveState());
+//    settings.setValue("comment-window-splitter", ui->splitter->saveState());
     settings.setValue("comment-window-geometry", saveGeometry());
     QDialog::closeEvent(event);
 }
