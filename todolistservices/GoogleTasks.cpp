@@ -205,14 +205,11 @@ GoogleTasks::getLists()
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply* rep = pManager->get(req);
     connect(rep,SIGNAL(finished()),this,SLOT(getListRepsonse()));
-
-
 }
 
 void
 GoogleTasks::getListRepsonse()
 {
-
     QNetworkReply* rep = static_cast<QNetworkReply*>(sender());
     QString response = rep->readAll();
     rep->deleteLater();

@@ -5,9 +5,9 @@
 
 UpdatesAvailableDialog::UpdatesAvailableDialog(const QString &version,
                                                const QString &notes,
-                                               QWidget *parent) :
-    QDialog(parent),
-    ui(new Ui::UpdatesAvailableDialog)
+                                               QWidget *parent)
+: QDialog(parent),
+  ui(new Ui::UpdatesAvailableDialog)
 {
     ui->setupUi(this);
     ui->versionLabel->setText(version);

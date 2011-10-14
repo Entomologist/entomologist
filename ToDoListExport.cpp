@@ -57,6 +57,7 @@ ToDoListExport::populateServices()
         item->setText(0,query.value(0).toString());
         item->setText(1,query.value(1).toString());
         ui->exportList->addTopLevelItem(item);
+        item->setSelected(true);
     }
 }
 

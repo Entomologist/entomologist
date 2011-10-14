@@ -58,7 +58,7 @@ public:
 
     explicit ToDoListView(QWidget *parent = 0);
     ~ToDoListView();
-    void toDoListAdded(const QString &name,
+    int toDoListAdded(const QString &name,
                        const QString &rtmID,
                        const QString &googleID,
                        const QString &dbId,

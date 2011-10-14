@@ -148,7 +148,7 @@ ToDoListView::findItems()
     }
 }
 
-void
+int
 ToDoListView::toDoListAdded(const QString &name,
                             const QString &rtmID,
                             const QString &googleID,
@@ -178,6 +178,7 @@ ToDoListView::toDoListAdded(const QString &name,
     }
 
     lists.insert(name, list);
+    return ui->bugTreeWidget->indexOfTopLevelItem(item);
 }
 
 QString
@@ -210,7 +211,20 @@ ToDoListView::bugAdded(const QString &data,
 
     QStringList items = data.split(":");
     QString trackerTable = items.at(0);
-    int listId =  ui->bugTreeWidget->topLevelItem((parent))->data(0, Qt::UserRole).toInt();
+    int listId;
+    if (parent == -1)
+    {
+        // Apparently we have no lists
+        QString newId = toDoListInsert("Default List");
+        parent = toDoListAdded("Default List", "","", newId, false);
+        listId = newId.toInt();
+        ui->bugTreeWidget->topLevelItem(parent)->setExpanded(true);
+    }
+    else
+    {
+        listId =  ui->bugTreeWidget->topLevelItem((parent))->data(0, Qt::UserRole).toInt();
+    }
+
     int trackerID = items.at(1).toInt();
     int bugID = items.at(2).toInt();
 
@@ -229,7 +243,7 @@ ToDoListView::bugAdded(const QString &data,
     query.bindValue(":tracker_id", trackerID);
     query.bindValue(":tracker_table", trackerTable);
     query.bindValue(":bug_id", bugID);
-    query.bindValue(":parent",ui->bugTreeWidget->topLevelItem(parent)->data(0,Qt::UserRole));
+    query.bindValue(":parent", ui->bugTreeWidget->topLevelItem(parent)->data(0,Qt::UserRole));
     query.bindValue(":date",date);
     query.bindValue(":completed",completed);
     query.bindValue(":modified",QDateTime::currentDateTime().toString());
@@ -588,7 +602,7 @@ ToDoListView::newTopLevelItem()
             QMessageBox box;
             box.setStandardButtons(QMessageBox::Ok);
 
-            box.setText("This Todo List name exists");
+            box.setText("This ToDo List name exists");
             box.setInformativeText(QString("A ToDo List with the name \"%1\" "
                                            "already exists, please "
                                            "select a new name").arg(itemName));
@@ -663,10 +677,9 @@ ToDoListView::startSync()
 {
     mSyncServices = getExports();
 
-    if(sender()->inherits("QWidget")) {
-
+    if(sender()->inherits("QWidget"))
+    {
         syncAll(false);
-
     }
     else syncList(false);
 }
@@ -689,8 +702,6 @@ ToDoListView::syncAll(bool callback)
 
 
 }
-
-
 
 void
 ToDoListView::syncList(bool callback)

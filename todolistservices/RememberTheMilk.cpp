@@ -386,7 +386,7 @@ RememberTheMilk::getListsResponse()
     QVariantMap rsp = initial["rsp"].toMap();
     QVariant stat = initial["stat"];
     if(stat.toString().compare("fail") == 0)
-        emit serviceError("An unkown error has occured " + response);
+        emit serviceError("An unknown error has occured " + response);
 
     QVariantMap list = rsp["lists"].toMap();
     QVariantList lists = list["list"].toList();
@@ -441,7 +441,6 @@ RememberTheMilk::listExists(const QString &listID)
     foreach(ToDoList* list, remoteLists)
         if(list->rtmListID().compare(listID) == 0)
             exists = true;
-
 
     return exists;
 }
@@ -615,6 +614,7 @@ RememberTheMilk::getTasks()
 void
 RememberTheMilk::getTasksResponse()
 {
+    qDebug() << "getTasksResponse";
     QNetworkReply* reply = qobject_cast<QNetworkReply*>(sender());
     if(reply->error())
     {
@@ -631,12 +631,12 @@ RememberTheMilk::getTasksResponse()
     QVariantMap rsp = initial["rsp"].toMap();
     QVariant stat = initial["stat"];
     if(stat.toString().compare("fail") == 0)
-        emit serviceError("An unkown error has occured " + response);
+        emit serviceError("An unknown error has occured " + response);
     QVariantMap task = rsp["tasks"].toMap();
     QVariantMap list = task["list"].toMap();
     QVariant series = list["taskseries"];
-
     QVariantList tasks = series.toList();
+
     if(tasks.length() < 0)
         tasks.append(series);
 
@@ -654,6 +654,7 @@ RememberTheMilk::getTasksResponse()
 
             item->setRTMTaskID(taskid.toMap().value("id").toString());
             item->setRTMTaskSeriesID(t.toMap().value("id").toString());
+            qDebug() << "getTasksResponse: appending " << name;
             syncTasks.append(item);
         }
 
@@ -661,7 +662,6 @@ RememberTheMilk::getTasksResponse()
     reply->close();
 
     emit readyToAddItems();
-
 }
 
 void
@@ -818,7 +818,7 @@ RememberTheMilk::updateCompleted(ToDoItem* item)
 {
 
     QStringList taskID = getTaskID(item->name());
-
+    qDebug() << "RTM:updateCompleted taskID: " << taskID;
     if(taskID.length() > 0)
     {
 
@@ -859,7 +859,10 @@ RememberTheMilk::updateCompleted(ToDoItem* item)
         }
     }
     else
+    {
+        qDebug() << "RTM:updateCompleted addTask";
         addTask(item);
+    }
 
 }
 void
@@ -896,6 +899,7 @@ RememberTheMilk::updateDate(ToDoItem* item)
 
     if(taskID.length() > 0)
     {
+        qDebug() << "RTM:updateDate for " << taskID;
         if(taskID.at(0).compare("") != 0 && taskID.at(1).compare("") != 0)
         {
             QStringList parameters;
@@ -922,16 +926,21 @@ RememberTheMilk::updateDate(ToDoItem* item)
                     .arg(parameters.at(7))
                     .arg(parameters.at(8))
                     .arg(api_sig);
+            qDebug() << "updateDate: " << parameters;
             QNetworkRequest req = QNetworkRequest(QUrl(mURL));
             QNetworkReply* res = manager->post(req,query.toAscii());
             connect(res,SIGNAL(finished()),this,SLOT(updateDateResponse()));
         }
     }
     else
+    {
+        qDebug() << "RTM:updateDate addTask";
         addTask(item);
+    }
 
 
 }
+
 void
 RememberTheMilk::updateDateResponse()
 {
@@ -951,9 +960,6 @@ RememberTheMilk::updateDateResponse()
     QVariant err = rsp.toMap().value("err");
     if(stat.toString().compare("fail") == 0)
         emit serviceError("Failed to update date because: " + err.toString());
-
-
-
 }
 
 
@@ -962,12 +968,13 @@ QStringList
 RememberTheMilk::getTaskID(const QString &taskName)
 {
     QStringList taskid;
+    qDebug() << "getTaskID looking for " << taskName;
+    qDebug() << "Synctasks: " << syncTasks.count();
     foreach(ToDoItem* t, syncTasks)
     {
         qDebug() << "Tasks" << t->name();
         if(taskName.compare(t->name()) == 0)
         {
-
             taskid.append(t->RTMTaskID());
             taskid.append(t->RTMTaskSeriesID());
         }

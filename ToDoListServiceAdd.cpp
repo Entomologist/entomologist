@@ -33,6 +33,11 @@ ToDoListServiceAdd::ToDoListServiceAdd(QWidget *parent) :
     ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
     ui->saveButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
 
+    // Temporarily hide the widgets that we only need for WebDAV
+    ui->urlLabel->hide();
+    ui->urlLine->hide();
+    ui->passwordLabel->hide();
+    ui->passwordLine->hide();
     connect(ui->cancelButton, SIGNAL(clicked()),
             this, SLOT(reject()));
     connect(ui->saveButton, SIGNAL(clicked()),
@@ -53,6 +58,10 @@ void
 ToDoListServiceAdd::indexChanged(const QString &text)
 {
     ui->nameLine->setText(text);
+    if (text == "Google Tasks")
+        ui->uNameLine->setPlaceholderText("Example: johndoe@googlemail.com");
+    else
+        ui->uNameLine->setPlaceholderText("");
     needsURL(text);
     needsPassword(text);
 }
@@ -85,12 +94,12 @@ ToDoListServiceAdd::needsURL(const QString &text)
 {
     if(text.compare("Generic Web Dav") == 0)
     {
-        ui->urlLab->setEnabled(true);
+        ui->urlLabel->setEnabled(true);
         ui->urlLine->setEnabled(true);
     }
     else
     {
-        ui->urlLab->setEnabled(false);
+        ui->urlLabel->setEnabled(false);
         ui->urlLine->setEnabled(false);
     }
 }

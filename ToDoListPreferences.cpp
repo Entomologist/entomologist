@@ -90,7 +90,9 @@ ToDoListPreferences::addService()
     ToDoListServiceAdd* a;
     a = new ToDoListServiceAdd(this);
     QStringList services;
-    services << "Google Tasks" << "Remember The Milk";
+    // Disabling for 1.0 until some bugs in RTM can be worked out
+//    services << "Google Tasks" << "Remember The Milk";
+    services << "Google Tasks";
     a->setServiceCombo(services);
     if(a->exec() == QDialog::Accepted)
         insertData(a);
