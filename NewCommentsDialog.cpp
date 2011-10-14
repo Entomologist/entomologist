@@ -19,6 +19,7 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     ui->setupUi(this);
     ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
     ui->saveButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
+
     QSettings settings("Entomologist");
     restoreGeometry(settings.value("comment-window-geometry").toByteArray());
 
@@ -34,11 +35,15 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     ui->newCommentFrame->setEnabled(false);
     ui->detailsFrame->setEnabled(false);
     ui->detailsFrame->setStyleSheet("QFrame#detailsFrame {border: 1px solid black; border-radius: 4px; }");
+    ui->descriptionFrame->setStyleSheet("QFrame#descriptionFrame {border: 1px solid black; background: #ffffff; border-radius: 4px; }");
+
     connect(ui->cancelButton,SIGNAL(clicked()),SLOT(cancel()));
     connect(ui->saveButton,SIGNAL(clicked()),SLOT(save()));
     connect(ui->detailsLabel, SIGNAL(clicked(QString)),
             this, SLOT(textClicked(QString)));
     connect(ui->summaryLabel, SIGNAL(clicked(QString)),
+            this, SLOT(textClicked(QString)));
+    connect(ui->descriptionLabel, SIGNAL(clicked(QString)),
             this, SLOT(textClicked(QString)));
 
 }
@@ -85,6 +90,10 @@ NewCommentsDialog::textClicked(const QString &text)
     else if (text == tr("Summary:"))
     {
         frameToggle(ui->summaryFrame, ui->summaryGraphic);
+    }
+    else if (text == tr("Description:"))
+    {
+        frameToggle(ui->descriptionFrame, ui->descriptionGraphic);
     }
 }
 
@@ -135,7 +144,7 @@ NewCommentsDialog::setBugInfo(QMap<QString, QString> details)
                           .arg(details["tracker_name"]);
     setWindowTitle(windowTitle);
     ui->summaryTextBox->setText(details["summary"]);
-    ui->descriptionTextBox->setText(details["description"]);
+    ui->descriptionText->setText(details["description"]);
 }
 
 void
@@ -167,8 +176,8 @@ NewCommentsDialog::setComments()
 {
     int i = 0;
     int total = 0;
-    if (ui->descriptionTextBox->toPlainText().isEmpty())
-        ui->descriptionTextBox->setText(SqlUtilities::getBugDescription(pBackend->type(), mCurrentBugId));
+    if (ui->descriptionText->text().isEmpty())
+        ui->descriptionText->setText(SqlUtilities::getBugDescription(pBackend->type(), mCurrentBugId));
     qDebug() << "setComments for: tracker id " << mTrackerId << " bug id " << mCurrentBugId;
     QList < QMap<QString, QString> > mainComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, false);
     QList < QMap<QString, QString> > shadowComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, true);
