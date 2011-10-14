@@ -14,5 +14,6 @@
         <file alias="plus_circle">graphics/plus-circle.png</file>
         <file alias="new_bug">graphics/new_bug.png</file>
         <file alias="search_small">graphics/search_small.png</file>
+        <file alias="logo_128">install_icons/128x128/entomologist.png</file>
     </qresource>
 </RCC>

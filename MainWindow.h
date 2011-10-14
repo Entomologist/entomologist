@@ -98,7 +98,7 @@ public slots:
                          const QString &bugId);
 protected:
     void changeEvent(QEvent *e);
-
+    void showEvent(QShowEvent *e);
 private:
     void checkForUpdates();
     QString cleanupUrl(QString &url);

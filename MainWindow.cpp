@@ -39,6 +39,7 @@
 #include <QSystemTrayIcon>
 #include <QShortcut>
 #include <QKeySequence>
+#include <QPainter>
 
 #include "About.h"
 #include "ChangelogWindow.h"
@@ -425,8 +426,14 @@ MainWindow::bugsUpdated()
 void
 MainWindow::notifyUser()
 {
+
+    // On non-mac platforms, we can assume that if the window is
+    // not visible, then it's in the system tray.  That doesn't
+    // necessarily work out on OSX when we're minimized to the dock.
+#ifndef Q_OS_MAC
     if (isVisible())
-        return; // We don't show the popup when the window is on-screen
+        return;
+#endif
 
     int total = 0;
     QMapIterator<QString, Backend *> i(mBackendMap);
@@ -438,11 +445,52 @@ MainWindow::notifyUser()
 
     if (total > 0)
     {
+#ifdef Q_OS_MAC
+        QApplication::alert(this);
+        if (isMinimized())
+        {
+            QPixmap newIcon(":/logo_128");
+            QPainter painter(&newIcon);
+            painter.setPen(QColor(Qt::darkRed));
+            painter.setBrush(Qt::red);
+            QRectF circle(70, 60, 50, 50);
+            painter.drawEllipse(circle);
+            painter.setPen(Qt::white);
+            if (total < 100)
+                painter.setFont(QFont("Helvetica", 30));
+            else
+                painter.setFont(QFont("Helvetica", 24));
+//            painter.drawText(QPoint(75,95), QString::number(total));
+
+            if (total < 1000)
+                painter.drawText(circle, Qt::AlignCenter, QString::number(total));
+            else
+                painter.drawText(circle, Qt::AlignCenter, ">999");
+
+            painter.end();
+            QApplication::setWindowIcon(QIcon(newIcon));
+        }
+#else Q_OS_MAC
         pTrayIcon->showMessage("Bugs Updated",
                                tr("%n bug(s) updated", "", total),
                                QSystemTrayIcon::Information,
                                5000);
+#endif
     }
+}
+
+void
+MainWindow::showEvent(QShowEvent *e)
+{
+#ifdef Q_OS_MAC
+    qDebug() << "showEvent";
+    if (e->spontaneous())
+    {
+        qDebug() << "spontaneous";
+        QApplication::setWindowIcon(QIcon(":/logo_128"));
+    }
+#endif
+    QWidget::showEvent(e);
 }
 
 void
@@ -979,6 +1027,9 @@ MainWindow::closeEvent(QCloseEvent *event)
     qDebug() << "Close event";
     if (isVisible())
     {
+#ifdef Q_OS_MAC
+        showMinimized();
+#else
         // Save the window geometry and position
         QSettings settings("Entomologist");
         settings.setValue("window-geometry", saveGeometry());
@@ -989,8 +1040,9 @@ MainWindow::closeEvent(QCloseEvent *event)
             box.exec();
             settings.setValue("minimize-warning", true);
         }
-        qDebug() << "Hiding";
+
         hide();
+#endif
         event->ignore();
     }
     else
@@ -1283,6 +1335,8 @@ MainWindow::setTimer()
 void
 MainWindow::setupTrayIcon()
 {
+
+#ifndef Q_OS_MAC
     pTrayIcon = new QSystemTrayIcon(QIcon(":/logo"), this);
     pTrayIcon->setToolTip("Entomologist");
     connect(pTrayIcon, SIGNAL(activated(QSystemTrayIcon::ActivationReason)),
@@ -1291,6 +1345,7 @@ MainWindow::setupTrayIcon()
     pTrayIconMenu->addAction(ui->action_Quit);
     pTrayIcon->setContextMenu(pTrayIconMenu);
     pTrayIcon->show();
+#endif
 }
 
 // Called from the tracker tab to display the context menu
