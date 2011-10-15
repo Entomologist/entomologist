@@ -55,6 +55,7 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
     if (edit)
     {
         ui->urlEdit->setEnabled(false);
+        ui->trackerTypeCombo->setEnabled(false);
         setWindowTitle("Edit Tracker");
     }
 }
@@ -165,6 +166,12 @@ void
 NewTracker::setPassword(const QString &password)
 {
     ui->passEdit->setText(password);
+}
+
+void
+NewTracker::setTrackerType(const QString &type)
+{
+    ui->trackerTypeCombo->setCurrentIndex(ui->trackerTypeCombo->findText(type, Qt::MatchFixedString));
 }
 
 void NewTracker::changeEvent(QEvent *e)

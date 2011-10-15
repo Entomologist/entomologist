@@ -1385,7 +1385,7 @@ MainWindow::showMenu(int tabIndex)
         t.setHost(b->url());
         t.setUsername(b->username());
         t.setPassword(b->password());
-
+        t.setTrackerType(b->type());
         if (t.exec() == QDialog::Accepted)
         {
 

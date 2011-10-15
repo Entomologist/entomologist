@@ -37,6 +37,7 @@ public:
     ~NewTracker();
     void setName(const QString &name);
     void setHost(const QString &host);
+    void setTrackerType(const QString &type);
     void setUsername(const QString &username);
     void setPassword(const QString &password);
 
