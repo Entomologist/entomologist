@@ -30,7 +30,7 @@
 NovellBugzilla::NovellBugzilla(const QString &url)
     : Bugzilla(url)
 {
-    checkingVersion = false;
+    state = 0;
 }
 
 NovellBugzilla::~NovellBugzilla()
@@ -40,15 +40,14 @@ NovellBugzilla::~NovellBugzilla()
 void
 NovellBugzilla::checkVersion()
 {
-    checkingVersion = true;
+    state = NOVELL_CHECK_VERSION;
     login();
 }
 
 void
 NovellBugzilla::sync()
 {
-    checkingVersion = false;
-    qDebug() << "NovellBugzilla::sync";
+    state = 0;
     QString ichainLogin = "https://bugzilla.novell.com/ICSLogin/auth-up";
     QByteArray username(QString("username=%1&password=%2").arg(mUsername).arg(mPassword).toLocal8Bit());
 
@@ -57,6 +56,15 @@ NovellBugzilla::sync()
     connect(reply, SIGNAL(finished()),
             this, SLOT(syncFinished()));
 }
+
+void
+NovellBugzilla::getComments(const QString &bugId)
+{
+    state = NOVELL_GET_COMMENTS;
+    mCommentBugId = bugId;
+    login();
+}
+
 
 // Novell bugzilla uses a proprietary login system called "ichain".  We
 // log into ichain by mimicing a POST form, save the cookie they give us, and
@@ -87,15 +95,23 @@ NovellBugzilla::finished()
     }
     reply->deleteLater();
 
-    if (checkingVersion)
+    switch(state)
     {
-        qDebug() << "NovellBugzilla::finished calling Bugzilla::;checkVersion";
-        Bugzilla::checkVersion();
-    }
-    else
-    {
-        qDebug() << "NovellBugzilla::finished calling Bugzilla::login";
-        Bugzilla::login();
+        case NOVELL_CHECK_VERSION:
+        {
+            Bugzilla::checkVersion();
+            break;
+        }
+        case NOVELL_GET_COMMENTS:
+        {
+            Bugzilla::getComments(mCommentBugId);
+            break;
+        }
+        default:
+        {
+            Bugzilla::login();
+            break;
+        }
     }
 }
 
@@ -112,7 +128,7 @@ NovellBugzilla::syncFinished()
     }
     reply->deleteLater();
 
-    if (checkingVersion)
+    if (state == NOVELL_CHECK_VERSION)
     {
         qDebug() << "NovellBugzilla::finished calling Bugzilla::checkVersion";
         Bugzilla::checkVersion();

@@ -217,7 +217,6 @@ Mantis::getSearched()
 void
 Mantis::getSearchedBug(const QString &bugId)
 {
-    qDebug() << "getSearchedBug: " << bugId;
     int possibleBug = SqlUtilities::hasShadowBug("mantis", bugId, mId);
     if (possibleBug)
     {
@@ -275,7 +274,6 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
     // and map them to what we want
     Translator t;
     t.openDatabase();
-    qDebug() << list.at(0);
     bug = parseCSVLine(list.at(0));
     for (int i = 0; i < bug.size(); ++i)
     {
@@ -398,21 +396,18 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
             entry = "";
         newBug["reproducibility"] = entry.remove(reg);
 
-        qDebug() << "col OS";
         if (colOS)
             entry = bug.at(colOS);
         else
             entry = "";
         newBug["os"] = entry.remove(reg);
 
-        qDebug() << "col os version";
         if (colOSVersion)
             entry = bug.at(colOSVersion);
         else
             entry = "";
         newBug["os_version"] = entry.remove(reg);
 
-        qDebug() <<  "summary";
         if (colSummary)
             entry = bug.at(colSummary);
         else
@@ -784,8 +779,6 @@ Mantis::response()
         QString id = currentProject.section(':', 0,0);
         QString name = currentProject.section(':', 1);
         QString item = "";
-        qDebug() << "Current project:" << currentProject;
-        qDebug() << "Project: " << name;
         for (int i = 0; i < array.count(); ++i)
         {
             if (array.at(i).isValid())
@@ -873,8 +866,7 @@ Mantis::headFinished()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "Mantis::headFinished: " << reply->errorString();
-        qDebug() << "Mantis: Error value: " << reply->error();
+        qDebug() << "Mantis::headFinished error: " << reply->errorString();
         if (reply->error() == QNetworkReply::AuthenticationRequiredError)
         {
             emit versionChecked("-1", "Invalid username or password.");
@@ -915,7 +907,6 @@ Mantis::checkFields()
 void
 Mantis::validFieldCall(const QString &request)
 {
-    qDebug() << "Calling " << request;
     QtSoapMessage msg;
     msg.setMethod(QtSoapQName(request, "http://futureware.biz/mantisconnect"));
     msg.addMethodArgument("username", "", mUsername);
@@ -958,7 +949,6 @@ Mantis::getCategories()
 {
     if (mProjectList.isEmpty())
     {
-        qDebug() << "Finished with the project list: " << mCategoriesList;
         QList<QMap<QString, QString> > fieldList;
         for (int i = 0; i < mCategoriesList.count(); ++i)
         {
@@ -976,7 +966,6 @@ Mantis::getCategories()
 
     QString project = mProjectList.at(0);
     QString id = project.section(':', 0,0);
-    qDebug() << "Getting mantis categories for " << id;
     QtSoapMessage request;
     request.setMethod(QtSoapQName("mc_project_get_categories", "http://futureware.biz/mantisconnect"));
     request.addMethodArgument("username", "", mUsername );
@@ -1144,7 +1133,7 @@ void Mantis::loginResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "loginResponse: " << reply->errorString();
+        qDebug() << "loginResponse error: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
         return;
@@ -1158,7 +1147,7 @@ void Mantis::loginSyncResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "loginResponse: " << reply->errorString();
+        qDebug() << "loginSyncResponse error: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
         return;
@@ -1174,7 +1163,7 @@ void Mantis::viewResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "viewResponse: " << reply->errorString();
+        qDebug() << "viewResponse error: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -1197,11 +1186,10 @@ void Mantis::viewResponse()
 
 void Mantis::assignedResponse()
 {
-    qDebug() << "Assigned response";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "assignedResponse: " << reply->errorString();
+        qDebug() << "assignedResponse error: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -1234,7 +1222,6 @@ void Mantis::assignedResponse()
         newBug["product_version"] = responseMap.value("product_version").toString();
         newBug["bug_type"] = responseMap.value("bug_type").toString();
         newBug["last_modified"] = responseMap.value("last_modified").toString();
-        qDebug() << "Last modified is now: " << newBug["last_modified"];
 
         insertList << newBug;
     }
@@ -1244,11 +1231,10 @@ void Mantis::assignedResponse()
 
 void Mantis::reportedResponse()
 {
-    qDebug() << "reported response";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "reportedResponse: " << reply->errorString();
+        qDebug() << "reportedResponse error: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -1267,7 +1253,7 @@ void Mantis::monitoredResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "monitoredResponse: " << reply->errorString();
+        qDebug() << "monitoredResponse error: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
         return;
@@ -1284,7 +1270,7 @@ void Mantis::ccResponse()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
-        qDebug() << "ccResponse: " << reply->errorString();
+        qDebug() << "ccResponse error: " << reply->errorString();
         emit backendError(reply->errorString());
         reply->close();
 
@@ -1343,7 +1329,6 @@ void
 Mantis::bugsInsertionFinished(QStringList idList, int operation)
 {
     Q_UNUSED(idList);
-    qDebug() << "Mantis: bugs updated";
     if (operation != SqlUtilities::BUGS_INSERT_SEARCH)
     {
         updateSync();

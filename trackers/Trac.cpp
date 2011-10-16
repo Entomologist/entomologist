@@ -185,7 +185,7 @@ Trac::login()
 void
 Trac::checkVersion()
 {
-    qDebug() << "Checking trac version...";
+    qDebug() << "Checking trac version at " << mUrl;
     QUrl url(mUrl + "/login/xmlrpc");
     QString concatenated = mUsername + ":" + mPassword;
     QByteArray data = concatenated.toLocal8Bit().toBase64();
@@ -206,7 +206,6 @@ Trac::headFinished()
     if (reply->error())
     {
         qDebug() << "headFinished: Not a trac instance: " << reply->errorString();
-        qDebug() << "headFinished: Error value: " << reply->error();
         if (reply->error() == QNetworkReply::AuthenticationRequiredError)
         {
             emit versionChecked("-1", "Invalid username or password.");
@@ -357,7 +356,6 @@ Trac::uploadAll()
             else if (column == "Resolution")
                 actionMap["resolution"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
 
-            qDebug() << "pushing " << actionMap;
             QVariantMap newMethod;
             QVariantList newParams;
             newParams.append(newChange.value("bug_id").toInt());
@@ -389,11 +387,9 @@ Trac::uploadFinished(QVariant &arg)
     {
         QVariantList returnList = bugList.at(i).toList();
         QString bugId = returnList.at(0).toList().at(0).toString();
-        qDebug() << "Removing bug for " << bugId;
         QVariantMap statusMap = returnList.at(0).toList().at(3).toMap();
         if (statusMap.value("status").toString() == "closed")
         {
-            qDebug() << "Removing main bug";
             SqlUtilities::removeShadowBug("trac", bugId, mId);
         }
         SqlUtilities::removeShadowBug("shadow_trac", bugId, mId);
@@ -438,7 +434,6 @@ Trac::searchedTicketResponse(QVariant &arg)
     else
         newBug["bug_state"] = "open";
     insertList << newBug;
-    qDebug() << "searchedTicketResponse: insertBugs";
     //pSqlWriter->insertBugs("trac", insertList, mId, SqlUtilities::BUGS_INSERT_SEARCH);
     pSqlWriter->multiInsert("trac", insertList);
     emit searchResultFinished(newBug);
@@ -473,7 +468,6 @@ Trac::monitoredComponentsRpcResponse(QVariant &arg)
 void
 Trac::ccRpcResponse(QVariant &arg)
 {
-    qDebug() << "ccResponse...";
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
     {
@@ -497,7 +491,6 @@ Trac::ccRpcResponse(QVariant &arg)
 void
 Trac::reporterRpcResponse(QVariant &arg)
 {
-    qDebug() << "Reporter response";
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
     {
@@ -521,7 +514,6 @@ Trac::reporterRpcResponse(QVariant &arg)
 void
 Trac::ownerRpcResponse(QVariant &arg)
 {
-    qDebug() << "owner response";
     QStringList bugs = arg.toStringList();
     for (int i = 0; i < bugs.size(); ++i)
     {
@@ -660,7 +652,6 @@ Trac::bugDetailsRpcResponse(QVariant &arg)
         }
     }
 
-    qDebug() << "bugDetailsResponse: inserting bugs";
     pSqlWriter->insertBugs("trac", insertList);
 }
 
@@ -820,7 +811,6 @@ Trac::typeRpcResponse(QVariant &arg)
 void
 Trac::versionRpcResponse(QVariant &arg)
 {
-    qDebug() << "versionRpcResponse";
     QVariantList list = arg.toList();
     QString version;
     // 0 = Trac 0.10.  1 = Trac 0.11+

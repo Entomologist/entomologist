@@ -30,17 +30,24 @@ class NovellBugzilla : public Bugzilla
 {
     Q_OBJECT
 public:
+    enum {
+        NOVELL_CHECK_VERSION = 1,
+        NOVELL_GET_COMMENTS
+    };
+
     NovellBugzilla(const QString &url);
     ~NovellBugzilla();
     void sync();
     void login();
     void checkVersion();
+    void getComments(const QString &bugId);
 public slots:
     void finished();
     void syncFinished();
 
 private:
-    bool checkingVersion;
+    int state;
+    QString mCommentBugId;
 };
 
 #endif // NOVELLBUGZILLA_H

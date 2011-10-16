@@ -131,7 +131,6 @@ Bugzilla::getSearchedBug(const QString &bugId)
     int possibleBug = SqlUtilities::hasShadowBug("bugzilla", bugId, mId);
     if (possibleBug)
     {
-        qDebug() << "Bug already exists...";
         QMap<QString, QString> bug = SqlUtilities::bugzillaBugDetail(QString::number(possibleBug));
         emit searchResultFinished(bug);
         return;
@@ -139,7 +138,6 @@ Bugzilla::getSearchedBug(const QString &bugId)
 
     QString url = mUrl + QString("/show_bug.cgi?id=%1&ctype=xml")
                                 .arg(bugId);
-    qDebug() << "Fetching " << bugId;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
@@ -167,7 +165,6 @@ Bugzilla::search(const QString &query)
                                  "&value0-0-0=%1&value0-0-1=%1"
                                  "&ctype=csv")
                                  .arg(query);
-    qDebug() << "Searching " << url;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
@@ -196,13 +193,10 @@ void Bugzilla::doUploading()
     idList = SqlUtilities::getChangedBugzillaIds(mId);
     for (int i = 0; i < idList.size(); ++i)
         ids += "id=" + idList.at(i) + "&";
-    qDebug() << "Id list: " << idList;
-    qDebug() << "ids: " << ids;
 
     // We're assuming that the login cookie is still valid here
     // TODO: It might not be
     QString url = mUrl + "/show_bug.cgi?" + ids + "ctype=xml";
-    qDebug() << "Fetching " << url;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
@@ -318,7 +312,6 @@ Bugzilla::getReportedBugs()
             params["resolution"] = ""; // Only show open bugs
         params["last_change_time"] = mLastSync.addSecs(mTimezoneOffset);
         args << params;
-        qDebug() << params;
         pClient->call("Bug.search", args, this, SLOT(reportedRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
 }
@@ -352,7 +345,6 @@ Bugzilla::getMonitoredBugs()
         params["resolution"] = ""; // Only show open bugs
     params["last_change_time"] = mLastSync.addSecs(mTimezoneOffset);
     args << params;
-    qDebug() << params;
     pClient->call("Bug.search", args, this, SLOT(monitoredBugResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
 }
 
@@ -372,7 +364,6 @@ Bugzilla::getCCs()
                           .arg(closed)
                          .arg(mLastSync.toString("yyyy-MM-dd"))
                          .arg(mEmail);
-    qDebug() << url;
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     req.setAttribute(QNetworkRequest::User, QVariant(0));
     QNetworkReply *rep = pManager->get(req);
@@ -421,7 +412,6 @@ Bugzilla::postNewItems(QMap<QString, QString> tokenMap)
             mPostQueue << uploadBug;
     }
 
-    qDebug() << "Going to post " << mPostQueue;
     postItem();
 }
 
@@ -457,8 +447,6 @@ Bugzilla::postItem()
 
     QNetworkRequest req = QNetworkRequest(QUrl(url));
     req.setAttribute(QNetworkRequest::User, map["id"]);
-    qDebug() << "Posting " << query;
-    qDebug() << "To " << url;
     QNetworkReply *rep = pManager->post(req, query.toAscii());
     connect(rep, SIGNAL(finished()),
             this, SLOT(itemPostFinished()));
@@ -557,7 +545,6 @@ Bugzilla::getComments(const QString &bugId)
         QVariantMap params;
         QVariant v(ids);
         params["ids"] = v.toList();
-        qDebug() << "Finding comments for " << params;
         args << params;
         pClient->call("Bug.comments", args, this, SLOT(commentRpcResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
     }
@@ -820,8 +807,6 @@ Bugzilla::monitoredBugResponse(QVariant &arg)
         QVariantMap responseMap = bugList.at(i).toMap();
         responseMap["bug_type"] = "Monitored";
         mBugs[responseMap.value("id").toString()] = responseMap;
-        qDebug() << "Setting " << responseMap.value("id").toString() << " to:";
-        qDebug() << responseMap;
     }
 
     getCCs();
@@ -1025,7 +1010,6 @@ Bugzilla::timezoneResponse(QVariant &arg)
     if (!offsetStr.indexOf(rx))
     {
         QStringList parts = rx.capturedTexts();
-        qDebug() << "Parts: " << parts;
         offset = parts[2].toInt(&ok[0]) * 3600;
         int offsetMin = parts[3].toInt(&ok[1]);
         if (!ok[0] || !ok[1] || offsetMin > 59)
@@ -1064,7 +1048,6 @@ Bugzilla::componentsResponse(QVariant &arg)
     QString component;
     QStringList response;
 
-    qDebug() << "componentsResponse: ";
     QVariantList v = arg.toMap().value("fields").toList();
     QVariantList values = v.at(0).toMap().value("values").toList();
     for (int i = 0; i < values.size(); ++i)
@@ -1375,7 +1358,6 @@ Bugzilla::idDetailsFinished()
             {
                 if (id != "" && token != "")
                 {
-                    qDebug() << "Will push for " << id << " token " << token;
                     tokenMap[id] = token;
                 }
 
@@ -1531,7 +1513,6 @@ Bugzilla::commentXMLFinished()
     // If we reach here, that means we didn't have anything to do
     if (!insertedComment)
     {
-        qDebug() << "!insertedComment";
         emit commentsCached();
     }
 }
@@ -1539,7 +1520,6 @@ Bugzilla::commentXMLFinished()
 void
 Bugzilla::individualBugFinished()
 {
-    qDebug() << "individualBugFinished";
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     if (reply->error())
     {
@@ -1679,7 +1659,6 @@ Bugzilla::individualBugFinished()
 void
 Bugzilla::commentInsertionFinished()
 {
-    qDebug() << "commentInsertionFinished";
     emit commentsCached();
 }
 

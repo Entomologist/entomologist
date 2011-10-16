@@ -585,10 +585,9 @@ GoogleTasks::insertListID(const QString &listName, const QString &listID)
 
     if(!query.exec())
     {
-        qDebug() << "Error on Query";
-        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
+        qDebug() << "Error in GoogleTasks::insertListId: " << query.lastError();
+        qDebug() << " Bound Values: " << query.boundValues();
         qDebug() << query.lastQuery();
-
     }
 
     mTodoList->setGoogleTasksListID(listID);
@@ -626,13 +625,10 @@ GoogleTasks::updateItemID(ToDoItem *item, const QString &serviceName)
     if(!query.exec())
     {
 
-        qDebug() << "Error on Query";
-        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
+        qDebug() << "Error in GoogleTasks::updateItemID: Query" << query.lastError();
+        qDebug() << " Bound Values: " << query.boundValues();
         qDebug() << query.lastQuery();
-
     }
-
-
 }
 
 QString
@@ -647,8 +643,8 @@ GoogleTasks::getTaskIDFromDB(const QString &taskID, const QString &serviceName)
     if(!query.exec())
     {
 
-        qDebug() << "Error on Query";
-        qDebug() << query.lastError() << " Bound Values: " << query.boundValues();
+        qDebug() << "Error in getTaskIDFromDB: " << query.lastError();
+        qDebug() << " Bound Values: " << query.boundValues();
         qDebug() << query.lastQuery();
 
     }
