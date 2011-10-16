@@ -317,10 +317,7 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
         || (colLastModified  == -1)
         || (colSummary == -1)
         || (colStatus == -1)
-        || (colReproducibility == -1)
-        || (colOSVersion == -1)
-        || (colOS == -1)
-        || (colProductVersion == -1))
+        || (colReproducibility == -1))
     {
         qDebug() << "Missing a column somewhere...:";
         qDebug() << QString("%1, %2, %3, %4, %5, %6, %7, %8, %9")
@@ -348,73 +345,73 @@ Mantis::handleCSV(const QString &csv, const QString &bugType)
         newBug["id"]  = entry.remove(removeLeadingZeros);
         tmpBugId = entry;
 
-        if (colProject)
+        if (colProject != -1)
             entry = bug.at(colProject);
         else
             entry = "";
         newBug["project"] = entry.remove(reg);
 
-        if (colProductVersion)
+        if (colProductVersion != -1)
             entry = bug.at(colProductVersion);
         else
             entry = "";
         newBug["product_version"] = entry.remove(reg);
 
-        if (colAssignedTo)
+        if (colAssignedTo != -1)
             entry = bug.at(colAssignedTo);
         else
             entry = "";
         newBug["assigned_to"] = entry.remove(reg);
 
-        if (colPriority)
+        if (colPriority != -1)
             entry = bug.at(colPriority);
         else
             entry = "";
         newBug["priority"] = entry.remove(reg);
 
-        if (colSeverity)
+        if (colSeverity != -1)
             entry = bug.at(colSeverity);
         else
             entry = "";
         newBug["severity"] = entry.remove(reg);
 
-        if (colCategory)
+        if (colCategory != -1)
             entry = bug.at(colCategory);
         else
             entry = "";
         newBug["category"] = entry.remove(reg);
 
-        if (colLastModified)
+        if (colLastModified != -1)
             entry = bug.at(colLastModified);
         else
             entry = "1970-01-01";
         newBug["last_modified"] = entry.remove(reg);
 
-        if (colReproducibility)
+        if (colReproducibility != -1)
             entry = bug.at(colReproducibility);
         else
             entry = "";
         newBug["reproducibility"] = entry.remove(reg);
 
-        if (colOS)
+        if (colOS != -1)
             entry = bug.at(colOS);
         else
             entry = "";
         newBug["os"] = entry.remove(reg);
 
-        if (colOSVersion)
+        if (colOSVersion != -1)
             entry = bug.at(colOSVersion);
         else
             entry = "";
         newBug["os_version"] = entry.remove(reg);
 
-        if (colSummary)
+        if (colSummary != -1)
             entry = bug.at(colSummary);
         else
             entry = "";
         newBug["summary"] = entry.remove(reg);
 
-        if (colStatus)
+        if (colStatus != -1)
             entry = bug.at(colStatus);
         else
             entry = "";
