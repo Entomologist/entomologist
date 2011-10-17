@@ -30,6 +30,7 @@
 #include "Utilities.hpp"
 #ifdef Q_OS_ANDROID
 #include <jni.h>
+#include <QtGui/QPlatformNativeInterface>
 #endif
 
 void
@@ -38,8 +39,8 @@ Utilities::openAndroidUrl(QUrl url)
     Q_UNUSED(url);
 #ifdef Q_OS_ANDROID
     JNIEnv *env;
-    JavaVM* m_javaVM = QPlatformNativeInterface::nativeResourceForWidget("JavaVM",0);
-
+//    JavaVM* m_javaVM = QPlatformNativeInterface::nativeResourceForWidget("JavaVM",0);
+    JavaVM* m_javaVM = QApplication::platformNativeInterface()->nativeResourceForWidget("JavaVM", 0);
     if (m_javaVM->AttachCurrentThread(&env, NULL)<0)
     {
         qCritical()<<"AttachCurrentThread failed";
