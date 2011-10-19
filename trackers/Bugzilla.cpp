@@ -47,7 +47,7 @@ Bugzilla::Bugzilla(const QString &url)
     : Backend(url)
 {
     mVersion = "-1";
-    mUploading = false;
+    mState = 0;
     pClient = new MaiaXmlRpcClient(QUrl(mUrl + "/xmlrpc.cgi"), "Entomologist/0.1");
     // To keep the CSV output easy to parse, we specify the specific columns we're interested in
     QNetworkCookie columnCookie("COLUMNLIST", "changeddate%20bug_severity%20priority%20assigned_to%20bug_status%20product%20component%20short_short_desc");
@@ -111,7 +111,7 @@ void
 Bugzilla::sync()
 {
     mUpdateCount = 0;
-    mUploading = false;
+    mState = 0;
     mBugs.clear();
     SqlUtilities::clearRecentBugs("bugzilla");
     mTimezoneOffset = SqlUtilities::getTimezoneOffset(mId);
@@ -181,7 +181,7 @@ Bugzilla::uploadAll()
         return;
     }
     qDebug() << "Bugzilla::uploadAll()";
-    mUploading = true;
+    mState = BUGZILLA_STATE_UPLOADING;
     login();
 }
 
@@ -464,7 +464,7 @@ Bugzilla::postComments()
     model.select();
     if (model.rowCount() == 0)
     {
-        mUploading = false;
+        mState = 0;
         qDebug() << "Calling sync from postComments.";
         sync();
         return;
@@ -487,7 +487,7 @@ void Bugzilla::postComment()
     if (mCommentQueue.size() == 0)
     {
         // We're done posting the changes, so resync with the remote server
-        mUploading = false;
+        mState = 0;
         qDebug() << "Calling sync from postcomment";
         sync();
         return;
@@ -553,7 +553,8 @@ Bugzilla::getComments(const QString &bugId)
 void
 Bugzilla::checkFields()
 {
-    checkValidPriorities();
+    mState = BUGZILLA_STATE_FIELDS;
+    login();
 }
 
 // The next three calls are valid for Bugzilla 3.0, 3.2, 3.4
@@ -724,9 +725,10 @@ void Bugzilla::loginRpcResponse(QVariant &arg)
         return;
     }
 
-    if (mUploading)
+    if (mState == BUGZILLA_STATE_UPLOADING)
         doUploading();
-
+    else if (mState == BUGZILLA_STATE_FIELDS)
+        checkValidPriorities();
 }
 
 void Bugzilla::loginSyncRpcResponse(QVariant &arg)
@@ -738,7 +740,7 @@ void Bugzilla::loginSyncRpcResponse(QVariant &arg)
         mBugzillaId = map.value("id").toString();
     }
 
-    if (mUploading)
+    if (mState == BUGZILLA_STATE_UPLOADING)
         doUploading();
     else
         getUserEmail();

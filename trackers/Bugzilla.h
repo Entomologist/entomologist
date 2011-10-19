@@ -34,7 +34,10 @@ class Bugzilla : public Backend
 {
 Q_OBJECT
 public:
-
+    enum {
+        BUGZILLA_STATE_UPLOADING = 1,
+        BUGZILLA_STATE_FIELDS
+    };
     Bugzilla(const QString &url);
     ~Bugzilla();
     BackendUI *displayWidget();
@@ -114,7 +117,7 @@ protected:
     QList< QMap<QString, QString> > mPostQueue;
     QList< QMap<QString, QString> > mCommentQueue;
     QString mActiveCommentId;
-    bool mUploading;
+    int mState;
     int mTimezoneOffset;
     void getUserEmail();
     void getUserBugs();
