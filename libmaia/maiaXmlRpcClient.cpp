@@ -28,8 +28,12 @@
 #include "maiaXmlRpcClient.h"
 #include "maiaFault.h"
 
+#include "Utilities.hpp"
+
 #include <QDebug>
 #include <QAuthenticator>
+
+extern bool mLogAllXmlRpcOutput; // in MainWindow.cpp
 
 MaiaXmlRpcClient::MaiaXmlRpcClient(QObject* parent) : QObject(parent),
     manager(this), request()
@@ -143,7 +147,10 @@ void MaiaXmlRpcClient::replyFinished(QNetworkReply* reply) {
 		response = QString::fromUtf8(reply->readAll());
 	}
 	
-	// parseResponse deletes the MaiaObject
+    if (mLogAllXmlRpcOutput)
+        qDebug() << "MaiaXmlRpcClient replyFinished: " << response;
+
+    // parseResponse deletes the MaiaObject
 	callmap[reply]->parseResponse(response, reply);
 	reply->deleteLater();
 	callmap.remove(reply);

@@ -94,6 +94,7 @@ public slots:
     void upload();
     void backendError(const QString &message);
     void searchFocusTriggered();
+    void toggleXmlRpcLogging();
     void openSearchedBug(const QString &trackerName,
                          const QString &bugId);
 protected:

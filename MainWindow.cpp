@@ -66,6 +66,8 @@
 
 #define DB_VERSION 5
 
+bool mLogAllXmlRpcOutput;
+
 // TODOs:
 // - URL handing needs to be improved
 // - Pressing cancel during tracker detection should actually cancel
@@ -82,6 +84,7 @@ MainWindow::MainWindow(QWidget *parent) :
     ui(new Ui::MainWindow)
 {
     pDetectorProgress = NULL;
+    mLogAllXmlRpcOutput = false;
     mDbUpdated = false;
     pTodoListView = NULL;
     // mSyncRequests tracks how many sync requests have been made
@@ -135,6 +138,7 @@ MainWindow::MainWindow(QWidget *parent) :
     // Keyboard shortcuts for search bar focus / upload changes.
     QShortcut* searchFocus;
     QShortcut* uploadChange;
+    QShortcut *logXmlRpc;
 
     searchFocus = new QShortcut(QKeySequence(Qt::META + Qt::Key_Space),this);
     searchFocus->setContext(Qt::ApplicationShortcut);
@@ -143,6 +147,10 @@ MainWindow::MainWindow(QWidget *parent) :
     uploadChange = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_S),this);
     uploadChange->setContext(Qt::ApplicationShortcut);
     connect(uploadChange,SIGNAL(activated()),this,SLOT(upload()));
+
+    logXmlRpc = new QShortcut(QKeySequence(Qt::CTRL + Qt::Key_0), this);
+    logXmlRpc->setContext(Qt::ApplicationShortcut);
+    connect(logXmlRpc, SIGNAL(activated()), this, SLOT(toggleXmlRpcLogging()));
 
     // Menu actions
     connect(ui->action_Add_Tracker, SIGNAL(triggered()),
@@ -1510,6 +1518,25 @@ MainWindow::updateCheckResponse()
             dlg.exec();
         }
     }
+}
+
+void
+MainWindow::toggleXmlRpcLogging()
+{
+    QMessageBox box;
+    if (!mLogAllXmlRpcOutput)
+    {
+        mLogAllXmlRpcOutput = true;
+        box.setText("Enabling XML-RPC logging");
+    }
+    else
+    {
+        mLogAllXmlRpcOutput  = false;
+        box.setText("Disabling XML-RPC logging");
+    }
+    box.setIcon(QMessageBox::Information);
+    box.setStandardButtons(QMessageBox::Ok);
+    box.exec();
 }
 
 // TODO implement this?
