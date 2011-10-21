@@ -14,11 +14,29 @@ TracDetails::TracDetails(const QString &bugId, QWidget *parent) :
     ui->severityCombo->installEventFilter(parent);
     ui->statusCombo->installEventFilter(parent);
     ui->versionCombo->installEventFilter(parent);
+
+    connect(ui->statusCombo, SIGNAL(currentIndexChanged(QString)),
+            this, SLOT(statusIndexChanged(QString)));
+    ui->resolutionCombo->setEnabled(false);
 }
 
 TracDetails::~TracDetails()
 {
     delete ui;
+}
+
+void
+TracDetails::statusIndexChanged(const QString &value)
+{
+    if (value.toLower() == "closed")
+    {
+        ui->resolutionCombo->setEnabled(true);
+    }
+    else
+    {
+        ui->resolutionCombo->setEnabled(false);
+        ui->resolutionCombo->setCurrentIndex(ui->resolutionCombo->findText(mResolution));
+    }
 }
 
 QMap<QString, QString>

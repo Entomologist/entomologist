@@ -23,6 +23,9 @@ public:
     void setResolutions(const QString &selected, QStringList resolutions);
     QMap<QString, QString> fieldDetails();
 
+public slots:
+    void statusIndexChanged(const QString &value);
+
 private:
     Ui::TracDetails *ui;
     QString mBugId;
