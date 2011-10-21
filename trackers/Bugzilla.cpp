@@ -696,7 +696,12 @@ Bugzilla::versionRpcResponse(QVariant &arg)
     QString message = "";
     qDebug() << "Bugzilla version response: " << version;
     if (version.count('.') > 1)
-        version = version.remove(version.lastIndexOf('.'), version.length() + 1);
+    {
+        QStringList versionList = version.split('.');
+        if (versionList.size() > 2)
+            version = QString("%1.%2").arg(versionList.at(0)).arg(versionList.at(1));
+    }
+
     if (version.toFloat() < 3.2)
     {
         qDebug() << "Version is too low: " << version.toFloat();

@@ -23,6 +23,9 @@ public:
     void setComponent(const QString &selected);
     QMap<QString, QString> fieldDetails();
 
+public slots:
+    void statusIndexChanged(const QString &value);
+
 private:
     Ui::BugzillaDetails *ui;
     // These are used to see if a combo box is set to a new value

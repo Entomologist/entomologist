@@ -9,12 +9,32 @@ BugzillaDetails::BugzillaDetails(QWidget *parent) :
     ui->priorityCombo->installEventFilter(parent);
     ui->severityCombo->installEventFilter(parent);
     ui->statusCombo->installEventFilter(parent);
+    connect(ui->statusCombo, SIGNAL(currentIndexChanged(QString)),
+            this, SLOT(statusIndexChanged(QString)));
     ui->resolutionCombo->installEventFilter(parent);
+    ui->resolutionCombo->setEnabled(false);
 }
 
 BugzillaDetails::~BugzillaDetails()
 {
     delete ui;
+}
+
+void
+BugzillaDetails::statusIndexChanged(const QString &value)
+{
+    // the user should only be allowed to change the resolution
+    // if Bugzilla will allow it
+    QString val = value.toLower();
+    if ((val == "closed") || (val == "resolved"))
+    {
+        ui->resolutionCombo->setEnabled(true);
+    }
+    else
+    {
+        ui->resolutionCombo->setEnabled(false);
+        ui->resolutionCombo->setCurrentIndex(ui->resolutionCombo->findText(mResolution));
+    }
 }
 
 QMap<QString, QString>
