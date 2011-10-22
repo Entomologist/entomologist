@@ -1,6 +1,9 @@
 #include <QComboBox>
+#include <QCompleter>
+
 #include "TracDetails.h"
 #include "ui_TracDetails.h"
+
 
 TracDetails::TracDetails(const QString &bugId, QWidget *parent) :
     BackendDetails(parent),
@@ -60,6 +63,11 @@ TracDetails::fieldDetails()
 
     if (mResolution != ui->resolutionCombo->currentText())
         newMap["resolution"] = ui->resolutionCombo->currentText();
+
+    if (mAssigned != ui->assignedToEdit->text())
+        if (!ui->assignedToEdit->text().isEmpty())
+            newMap["assigned_to"] = ui->assignedToEdit->text();
+
     return newMap;
 }
 
@@ -78,6 +86,16 @@ TracDetails::setPriorities(const QString &selected, QStringList priorities)
     mPriority = selected;
     ui->priorityCombo->addItems(priorities);
     ui->priorityCombo->setCurrentIndex(ui->priorityCombo->findText(selected));
+}
+
+void
+TracDetails::setAssigneds(const QString &assigned, QStringList assignedVals)
+{
+    mAssigned = assigned;
+    ui->assignedToEdit->setText(assigned);
+    QCompleter *completer = new QCompleter(assignedVals, this);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    ui->assignedToEdit->setCompleter(completer);
 }
 
 void

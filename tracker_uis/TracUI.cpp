@@ -169,6 +169,8 @@ TracUI::searchResultFinished(QMap<QString, QString> resultMap)
     details->setVersions(resultMap["version"], mVersions);
     details->setComponents(resultMap["component"], mComponents);
     details->setResolutions(resultMap["resolution"], mResolutions);
+    QStringList assignedVals = SqlUtilities::assignedToValues("trac", mId);
+    details->setAssigneds(resultMap["assigned_to"], assignedVals);
     dialog->setDetailsWidget(details);
     dialog->loadComments();
     stopSearchProgress();
@@ -193,6 +195,8 @@ TracUI::itemDoubleClicked(const QModelIndex &index)
     details->setVersions(detailMap["version"], mVersions);
     details->setComponents(detailMap["component"], mComponents);
     details->setResolutions(detailMap["resolution"], mResolutions);
+    QStringList assignedVals = SqlUtilities::assignedToValues("trac", mId);
+    details->setAssigneds(detailMap["assigned_to"], assignedVals);
     dialog->setDetailsWidget(details);
     dialog->loadComments();
     dialog->show();

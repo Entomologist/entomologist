@@ -133,6 +133,8 @@ public:
     static QMap<QString, QString> mantisBugDetail(const QString &rowId);
     static QMap<QString, QString> bugzillaBugDetail(const QString &rowId);
 
+    static QStringList assignedToValues(const QString &table,
+                                        const QString &trackerId);
 signals:
     void success(int operation);
     void failure(QString message);

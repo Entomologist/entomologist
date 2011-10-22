@@ -397,7 +397,7 @@ Bugzilla::postNewItems(QMap<QString, QString> tokenMap)
             else if (column == "Priority")
                 uploadBug["priority"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
             else if (column == "Assigned To")
-                uploadBug["assignee"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+                uploadBug["assigned_to"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
             else if (column == "Status")
                 uploadBug["bug_status"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
             else if (column == "Summary")

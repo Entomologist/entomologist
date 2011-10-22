@@ -483,7 +483,6 @@ Mantis::response()
         }
         else
         {
-            emit bugsUpdated();
             emit backendError(QString("%1: %2").arg(resp.faultString().toString()).arg(resp.faultDetail().toString()));
         }
         return;
@@ -808,7 +807,6 @@ Mantis::searchedBugResponse()
         qDebug() << "SOAP fault: " << resp.faultString().toString();
         qDebug() << resp.faultDetail().toString();
         transport->deleteLater();
-        emit bugsUpdated();
         emit backendError(QString("%1: %2").arg(resp.faultString().toString()).arg(resp.faultDetail().toString()));
         return;
     }

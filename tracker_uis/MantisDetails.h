@@ -24,6 +24,8 @@ public:
     void setStatuses(const QString &selected, QStringList statuses);
     void setResolutions(const QString &selected, QStringList resolutions);
     void setReproducibility(const QString &selected, QStringList reproducibilities);
+    void setAssigneds(const QString &assigned, QStringList assignedVals);
+
     QMap<QString, QString> fieldDetails();
 
 private:
@@ -31,7 +33,7 @@ private:
     QString mBugId;
 
     // These are used to see if a combo box is set to a new value
-    QString mSeverity, mPriority, mReproducibility, mStatus, mResolution;
+    QString mSeverity, mPriority, mReproducibility, mStatus, mResolution, mAssigned;
 };
 
 #endif // MANTISDETAILS_H

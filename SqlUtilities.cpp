@@ -1711,6 +1711,30 @@ SqlUtilities::updateSearchedBug(const QString &tableName,
     }
 }
 
+QStringList
+SqlUtilities::assignedToValues(const QString &table,
+                               const QString &trackerId)
+{
+    QString query = QString("SELECT DISTINCT assigned_to FROM %1 WHERE tracker_id = %2 "
+                            "UNION SELECT DISTINCT assigned_to FROM shadow_%1 WHERE tracker_id = %2")
+                    .arg(table, trackerId);
+    QStringList ret;
+    QSqlQuery q;
+    if (!q.exec(query))
+    {
+        qDebug() << "SqlUtilities::assignedToValues failed: " << q.lastError().text();
+        qDebug() << q.lastQuery();
+    }
+
+    QRegExp removeFont("<[^>]*>");
+    while(q.next())
+    {
+        ret << q.value(0).toString().remove(removeFont);
+    }
+
+    return(ret);
+}
+
 int
 SqlUtilities::getTimezoneOffset(const QString &trackerId)
 {

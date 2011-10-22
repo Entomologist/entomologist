@@ -355,6 +355,12 @@ Trac::uploadAll()
             }
             else if (column == "Resolution")
                 actionMap["resolution"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            else if (column == "Assigned To")
+            {
+                actionMap["status"] = "assigned";
+                actionMap.remove("action");
+                actionMap["owner"] = newChange.value("to").toString().remove(QRegExp("<[^>]*>"));
+            }
 
             QVariantMap newMethod;
             QVariantList newParams;

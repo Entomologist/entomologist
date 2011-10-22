@@ -146,6 +146,8 @@ BugzillaUI::searchResultFinished(QMap<QString, QString> resultMap)
     details->setResolutions(resultMap["resolution"], mResolutions);
     details->setComponent(resultMap["component"]);
     details->setProduct(resultMap["product"]);
+    QStringList assignedVals = SqlUtilities::assignedToValues("bugzilla", mId);
+    details->setAssigneds(resultMap["assigned_to"], assignedVals);
     dialog->setDetailsWidget(details);
     dialog->loadComments();
     stopSearchProgress();
@@ -170,6 +172,8 @@ BugzillaUI::itemDoubleClicked(const QModelIndex &index)
     details->setResolutions(detailMap["resolution"], mResolutions);
     details->setComponent(detailMap["component"]);
     details->setProduct(detailMap["product"]);
+    QStringList assignedVals = SqlUtilities::assignedToValues("bugzilla", mId);
+    details->setAssigneds(detailMap["assigned_to"], assignedVals);
     dialog->setDetailsWidget(details);
     dialog->loadComments();
     dialog->show();

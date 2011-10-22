@@ -167,6 +167,8 @@ MantisUI::searchResultFinished(QMap<QString, QString> resultMap)
     details->setStatuses(resultMap["status"], mStatuses);
     details->setResolutions(resultMap["resolution"], mResolutions);
     details->setReproducibility(resultMap["reproducibility"], mRepro);
+    QStringList assignedVals = SqlUtilities::assignedToValues("mantis", mId);
+    details->setAssigneds(resultMap["assigned_to"], assignedVals);
     dialog->setDetailsWidget(details);
     dialog->loadComments();
     stopSearchProgress();
@@ -193,6 +195,8 @@ MantisUI::itemDoubleClicked(const QModelIndex &index)
     details->setStatuses(detailMap["status"], mStatuses);
     details->setResolutions(detailMap["resolution"], mResolutions);
     details->setReproducibility(detailMap["reproducibility"], mRepro);
+    QStringList assignedVals = SqlUtilities::assignedToValues("mantis", mId);
+    details->setAssigneds(detailMap["assigned_to"], assignedVals);
     dialog->setDetailsWidget(details);
     dialog->loadComments();
     dialog->show();

@@ -1,6 +1,7 @@
 #include "MantisDetails.h"
 #include "ui_MantisDetails.h"
 
+#include <QCompleter>
 MantisDetails::MantisDetails(const QString &bugId, QWidget *parent) :
     BackendDetails(parent),
     ui(new Ui::MantisDetails),
@@ -37,6 +38,11 @@ MantisDetails::fieldDetails()
 
     if (mResolution != ui->resolutionCombo->currentText())
         newMap["resolution"] = ui->resolutionCombo->currentText();
+
+    if (mAssigned != ui->assignedToEdit->text())
+        if (!ui->assignedToEdit->text().isEmpty())
+            newMap["assigned_to"] = ui->assignedToEdit->text();
+
     return newMap;
 }
 void
@@ -49,6 +55,16 @@ void
 MantisDetails::setVersion(const QString &version)
 {
     ui->versionText->setText(version);
+}
+
+void
+MantisDetails::setAssigneds(const QString &assigned, QStringList assignedVals)
+{
+    mAssigned = assigned;
+    ui->assignedToEdit->setText(assigned);
+    QCompleter *completer = new QCompleter(assignedVals, this);
+    completer->setCaseSensitivity(Qt::CaseInsensitive);
+    ui->assignedToEdit->setCompleter(completer);
 }
 
 void
