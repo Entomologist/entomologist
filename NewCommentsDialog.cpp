@@ -1,10 +1,15 @@
 #include <QNetworkAccessManager>
+#include <QDesktopServices>
+#include <QFileDialog>
 #include <QMovie>
 #include <QSettings>
+#include <QMessageBox>
+
 #include "trackers/Backend.h"
 #include "tracker_uis/BackendDetails.h"
 #include "Utilities.hpp"
 #include "SqlUtilities.h"
+#include "AttachmentWidget.h"
 #include "NewCommentsDialog.h"
 #include "ui_NewCommentsDialog.h"
 
@@ -16,6 +21,7 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     pBackend = backend;
     connect(pBackend, SIGNAL(commentsCached()),
             this, SLOT(commentsCached()));
+
     ui->setupUi(this);
     ui->cancelButton->setIcon(style()->standardIcon(QStyle::SP_DialogCancelButton));
     ui->saveButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
@@ -33,10 +39,13 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
     ui->descriptionFrame->setEnabled(false);
     ui->commentsFrame->setEnabled(false);
     ui->newCommentFrame->setEnabled(false);
+    ui->attachmentsFrame->setEnabled(false);
     ui->detailsFrame->setEnabled(false);
     ui->detailsFrame->setStyleSheet("QFrame#detailsFrame {border: 1px solid black; border-radius: 4px; }");
     ui->descriptionFrame->setStyleSheet("QFrame#descriptionFrame {border: 1px solid black; background: #ffffff; border-radius: 4px; }");
 
+    connect(pBackend, SIGNAL(attachmentDownloaded(QString)),
+            this, SLOT(attachmentDownloaded(QString)));
     connect(ui->cancelButton,SIGNAL(clicked()),SLOT(cancel()));
     connect(ui->saveButton,SIGNAL(clicked()),SLOT(save()));
     connect(ui->detailsLabel, SIGNAL(clicked(QString)),
@@ -47,7 +56,8 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
             this, SLOT(textClicked(QString)));
     connect(ui->commentsLabel, SIGNAL(clicked(QString)),
             this, SLOT(textClicked(QString)));
-
+    connect(ui->attachmentsLabel, SIGNAL(clicked(QString)),
+            this, SLOT(textClicked(QString)));
 }
 
 NewCommentsDialog::~NewCommentsDialog()
@@ -101,10 +111,34 @@ NewCommentsDialog::textClicked(const QString &text)
     {
         frameToggle(ui->commentsFrame, ui->commentsGraphic);
     }
+    else if (text == tr("Attachments:"))
+    {
+        frameToggle(ui->attachmentsFrame, ui->attachmentsGraphic);
+    }
 }
 
 void
 NewCommentsDialog::commentsCached()
+{
+    stopSpinner();
+    qDebug() << "commentsCached";
+    setComments();
+}
+
+void
+NewCommentsDialog::startSpinner()
+{
+    pSpinnerMovie->start();
+    ui->loadingFrame->show();
+    ui->summaryFrame->setEnabled(false);
+    ui->descriptionFrame->setEnabled(false);
+    ui->commentsFrame->setEnabled(false);
+    ui->newCommentFrame->setEnabled(false);
+    ui->detailsFrame->setEnabled(false);
+}
+
+void
+NewCommentsDialog::stopSpinner()
 {
     pSpinnerMovie->stop();
     ui->loadingFrame->hide();
@@ -113,8 +147,7 @@ NewCommentsDialog::commentsCached()
     ui->descriptionFrame->setEnabled(true);
     ui->commentsFrame->setEnabled(true);
     ui->newCommentFrame->setEnabled(true);
-    qDebug() << "commentsCached";
-    setComments();
+    ui->attachmentsFrame->setEnabled(true);
 }
 
 void
@@ -160,14 +193,7 @@ NewCommentsDialog::loadComments()
     if (Utilities::isOnline(&m))
     {
         // Fetch comments
-        pSpinnerMovie->start();
-        ui->loadingFrame->show();
-        ui->summaryFrame->setEnabled(false);
-        ui->descriptionFrame->setEnabled(false);
-        ui->commentsFrame->setEnabled(false);
-        ui->newCommentFrame->setEnabled(false);
-        ui->detailsFrame->setEnabled(false);
-
+        startSpinner();
         qDebug() << "Loading comments for " << mCurrentBugId;
         pBackend->getComments(mCurrentBugId);
     }
@@ -187,6 +213,31 @@ NewCommentsDialog::setComments()
     qDebug() << "setComments for: tracker id " << mTrackerId << " bug id " << mCurrentBugId;
     QList < QMap<QString, QString> > mainComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, false);
     QList < QMap<QString, QString> > shadowComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, true);
+    QList < QMap<QString, QString> > attachmentList = SqlUtilities::loadAttachments(mTrackerId, mCurrentBugId);
+    if (attachmentList.size() == 0)
+    {
+        ui->topAttachmentsFrame->hide();
+    }
+    else
+    {
+        for (i = 0; i < attachmentList.size(); ++i)
+        {
+            QMap<QString, QString> attachment = attachmentList.at(i);
+            AttachmentWidget *widget = new AttachmentWidget(ui->attachmentsFrame);
+            connect(widget, SIGNAL(clicked(int)),
+                    this, SLOT(attachmentClicked(int)));
+            connect(widget, SIGNAL(saveAsClicked(int)),
+                    this, SLOT(attachmentSaveAsClicked(int)));
+            widget->setRowId(attachment["id"].toInt());
+            widget->setFilename(attachment["filename"]);
+            widget->setSummary(attachment["summary"]);
+            widget->setDetails(attachment["creator"], attachment["last_modified"]);
+            ui->attachmentsLayout->addWidget(widget);
+        }
+
+        ui->attachmentsFrame->layout();
+    }
+
     total = mainComments.size() + shadowComments.size();
     if (total > 0)
         ui->noCommentsLabel->hide();
@@ -220,7 +271,7 @@ NewCommentsDialog::setComments()
         frame->setRedHeader();
     }
 
-    ui->commentsLayout->addSpacerItem(commentSpacer);
+//    ui->commentsLayout->addSpacerItem(commentSpacer);
     ui->commentsFrame->layout();
 }
 
@@ -265,6 +316,59 @@ NewCommentsDialog::keyPressEvent(QKeyEvent *event)
 {
     if(event->key() == Qt::Key_Escape)
         this->close();
+}
+
+void
+NewCommentsDialog::attachmentClicked(int rowId)
+{
+    QMap<QString, QString> attachment = SqlUtilities::attachmentDetails(rowId);
+    openAttachment = true;
+    QString path = QString("%1%2entomologist-attachment-%3")
+            .arg(QDir::tempPath())
+            .arg(QDir::separator())
+            .arg(attachment["filename"]);
+
+    ui->loadingCommentsLabel->setText("Downloading attachment...");
+    startSpinner();
+    pBackend->downloadAttachment(rowId, path);
+}
+
+void
+NewCommentsDialog::attachmentSaveAsClicked(int rowId)
+{
+    QMap<QString, QString> attachment = SqlUtilities::attachmentDetails(rowId);
+    openAttachment = false;
+    QString path = QString("%1%2%3")
+            .arg(QDesktopServices::storageLocation(QDesktopServices::DocumentsLocation))
+            .arg(QDir::separator())
+            .arg(attachment["filename"]);
+
+    QString fileName = QFileDialog::getSaveFileName(0, tr("Save File As"),
+                               path);
+    if (!fileName.isEmpty())
+    {
+        ui->loadingCommentsLabel->setText("Downloading attachment...");
+        startSpinner();
+        pBackend->downloadAttachment(rowId, fileName);
+    }
+}
+
+void
+NewCommentsDialog::attachmentDownloaded(const QString &filePath)
+{
+    stopSpinner();
+    if (filePath.isEmpty())
+    {
+        QMessageBox box(QMessageBox::Critical, "Error", "Could not download attachment", QMessageBox::Ok);
+        box.exec();
+        return;
+    }
+
+    if (openAttachment)
+    {
+        QString file = QString("file://%1").arg(filePath);
+        QDesktopServices::openUrl(file);
+    }
 }
 
 void

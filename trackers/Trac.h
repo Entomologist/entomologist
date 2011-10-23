@@ -49,6 +49,7 @@ public:
     void uploadAll();
     void setUsername(const QString &username);
     void setPassword(const QString &password);
+    void downloadAttachment(int rowId, const QString &path);
 
     QString buildBugUrl(const QString &id);
     QString autoCacheComments() {return "0";}
@@ -67,6 +68,8 @@ public slots:
     void componentRpcResponse(QVariant &arg);
     void milestonesRpcResponse(QVariant &arg);
     void searchRpcResponse(QVariant &arg);
+    void attachmentsRpcResponse(QVariant &arg);
+    void attachmentDownloadedRpcResponse(QVariant &arg);
     void multiInsertSuccess(int operation);
     void statusRpcResponse(QVariant &arg);
     void typeRpcResponse(QVariant &arg);
@@ -78,6 +81,7 @@ public slots:
     void changelogRpcResponse(QVariant &arg);
     void rpcError(int error, const QString &message);
     void versionRpcError(int error, const QString &message);
+    void attachmentRpcError(int error, const QString &message);
     void headFinished();
     void handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
 
@@ -87,11 +91,13 @@ private:
     void checkValidVersions();
     void checkValidResolutions();
     void checkValidMilestones();
+    void getAttachments();
 
     MaiaXmlRpcClient *pClient;
     QMap<QString, QString> mBugMap;
     QStringList mSeverities;
     QString mActiveCommentId;
+    QString mActiveAttachmentPath;
 };
 
 #endif // TRAC_H

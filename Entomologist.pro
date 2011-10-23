@@ -91,7 +91,9 @@ SOURCES += main.cpp \
     TrackerTableView.cpp \
     SqlSearchDelegate.cpp \
     todolistservices/GoogleTasks.cpp \
-    UpdatesAvailableDialog.cpp
+    UpdatesAvailableDialog.cpp \
+    AttachmentLink.cpp \
+    AttachmentWidget.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -166,7 +168,9 @@ HEADERS += MainWindow.h \
     TrackerTableView.h \
     SqlSearchDelegate.h \
     todolistservices/GoogleTasks.h \
-    UpdatesAvailableDialog.h
+    UpdatesAvailableDialog.h \
+    AttachmentLink.h \
+    AttachmentWidget.h
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
@@ -188,7 +192,8 @@ FORMS += MainWindow.ui \
     ToDoListPreferences.ui \
     ToDoListView.ui \
     ToDoListExport.ui \
-    UpdatesAvailableDialog.ui
+    UpdatesAvailableDialog.ui \
+    AttachmentWidget.ui
 RESOURCES += resources.qrc
 QMAKE_EXTRA_TARGETS += distfile
 DISTFILE_MAKEDIR = .tmp/entomologist-$$VERSION

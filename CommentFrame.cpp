@@ -22,7 +22,7 @@
  */
 
 #include <QDateTime>
-
+#include <QDebug>
 #include "CommentFrame.h"
 #include "ui_CommentFrame.h"
 
@@ -84,11 +84,4 @@ CommentFrame::setComment(const QString &comment)
 void CommentFrame::changeEvent(QEvent *e)
 {
     QFrame::changeEvent(e);
-    switch (e->type()) {
-    case QEvent::LanguageChange:
-        ui->retranslateUi(this);
-        break;
-    default:
-        break;
-    }
 }

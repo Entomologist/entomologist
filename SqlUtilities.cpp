@@ -540,6 +540,7 @@ SqlUtilities::migrateTables(int dbVersion)
                                                  "tracker_id INTEGER,"
                                                  "bug_id INTEGER, "
                                                  "attachment_id INTEGER, "
+                                                 "file_size INTEGER,"
                                                  "filename TEXT,"
                                                  "last_modified TEXT,"
                                                  "summary TEXT,"
@@ -1020,6 +1021,80 @@ SqlUtilities::mantisBugDetail(const QString &rowId)
 
     return ret;
 }
+
+QMap<QString, QString>
+SqlUtilities::attachmentDetails(int rowId)
+{
+    QSqlQuery q;
+    QMap<QString, QString> ret;
+    QString sql = QString("SELECT id, attachment_id, file_size,"
+                          "filename, last_modified, summary, content_type, creator, private, bug_id "
+                          "FROM attachments WHERE id = %1").arg(rowId);
+    if (!q.exec(sql))
+    {
+        qDebug() << "Error executing attachmentDetails: " << q.lastError().text();
+    }
+
+    if (q.next())
+    {
+        ret["id"] = q.value(0).toString();
+        ret["attachment_id"] = q.value(1).toString();
+        ret["file_size"] = q.value(2).toString();
+        ret["filename"] = q.value(3).toString();
+        ret["last_modified"] = q.value(4).toString();
+        ret["summary"] = q.value(5).toString();
+        ret["content_type"] = q.value(6).toString();
+        ret["creator"] = q.value(7).toString();
+        ret["private"] = q.value(8).toString();
+        ret["bug_id"] = q.value(9).toString();
+    }
+
+    return ret;
+}
+
+
+QList< QMap<QString, QString> >
+SqlUtilities::loadAttachments(const QString &trackerId,
+                              const QString &bugId)
+{
+    QSqlQuery q;
+    QList< QMap<QString, QString> > ret;
+
+    QString sql = QString("SELECT id, attachment_id, file_size,"
+                          "filename, last_modified, summary, content_type, creator, private "
+                          "FROM attachments WHERE tracker_id = %1 AND bug_id = %2").arg(trackerId, bugId);
+    if (!q.exec(sql))
+    {
+        qDebug() << "Error preparing loadComments: " << q.lastError().text();
+    }
+
+    while (q.next())
+    {
+        QMap<QString, QString> newAttachment;
+        newAttachment["id"] = q.value(0).toString();
+        newAttachment["attachment_id"] = q.value(1).toString();
+        newAttachment["file_size"] = q.value(2).toString();
+        newAttachment["filename"] = q.value(3).toString();
+        newAttachment["last_modified"] = q.value(4).toString();
+        newAttachment["summary"] = q.value(5).toString();
+        newAttachment["content_type"] = q.value(6).toString();
+        newAttachment["creator"] = q.value(7).toString();
+        newAttachment["private"] = q.value(8).toString();
+        ret << newAttachment;
+    }
+
+    return ret;
+}
+
+void
+SqlUtilities::clearAttachments(int trackerId, int bugId)
+{
+    QString sql = QString("DELETE FROM attachments WHERE tracker_id=%1 AND bug_id =%2").arg(trackerId).arg(bugId);
+    QSqlQuery q;
+    qDebug() << "Execing " << sql;
+    q.exec(sql);
+}
+
 
 QList< QMap<QString, QString> >
 SqlUtilities::loadComments(const QString &trackerId,

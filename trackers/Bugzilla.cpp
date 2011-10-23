@@ -523,6 +523,19 @@ void Bugzilla::addCommentResponse(QVariant &arg)
 }
 
 void
+Bugzilla::downloadAttachment(int rowId,
+                             const QString &path)
+{
+    QMap<QString, QString> attachment = SqlUtilities::attachmentDetails(rowId);
+    QString url = mUrl + "/attachment.cgi?id=" + attachment["attachment_id"];
+    QNetworkRequest req = QNetworkRequest(QUrl(url));
+    req.setAttribute(QNetworkRequest::User, QVariant(path));
+    QNetworkReply *rep = pManager->get(req);
+    connect(rep, SIGNAL(finished()),
+            this, SLOT(attachmentDownloadFinished()));
+}
+
+void
 Bugzilla::getComments(const QString &bugId)
 {
     if (mVersion == "3.2")
@@ -541,6 +554,7 @@ Bugzilla::getComments(const QString &bugId)
         qDebug() << "Get comments";
         QVariantList args;
         QStringList ids;
+        mCurrentCommentBug = bugId;
         ids << bugId;
         QVariantMap params;
         QVariant v(ids);
@@ -878,6 +892,50 @@ void Bugzilla::bugRpcResponse(QVariant &arg)
     pSqlWriter->insertBugs("bugzilla", insertList);
 }
 
+void
+Bugzilla::attachmentRpcError(int error, const QString &message)
+{
+    qDebug() << "Bugzilla::attachmentRpcError: " << message;
+    emit commentsCached();
+}
+
+void
+Bugzilla::attachmentRpcResponse(QVariant &arg)
+{
+    QList< QMap<QString, QString> > insertList;
+    QVariantMap top = arg.toMap();
+    if (top.size() == 0)
+    {
+        emit commentsCached();
+        return;
+    }
+
+    QVariantMap bugs = top.value("bugs").toMap();
+    if (bugs.size() == 0)
+    {
+        emit commentsCached();
+        return;
+    }
+
+    QVariantList attachments = bugs.value(mCurrentCommentBug).toList();
+    for (int i = 0; i < attachments.size(); ++i)
+    {
+        QVariantMap val = attachments.at(i).toMap();
+        QMap<QString, QString> insertMap;
+        insertMap["tracker_id"] = mId;
+        insertMap["bug_id"] = mCurrentCommentBug;
+        insertMap["attachment_id"] = val.value("id").toString();
+        insertMap["filename"] = val.value("file_name").toString();
+        insertMap["summary"] = val.value("description").toString();
+        insertMap["file_size"] = "0";
+        insertMap["last_modified"] = val.value("last_change_time").toString();
+        insertMap["creator"] = val.value("attacher").toString();
+        insertList << insertMap;
+    }
+    SqlUtilities::clearAttachments(mId.toInt(), mCurrentCommentBug.toInt());
+    pSqlWriter->multiInsert("attachments", insertList, SqlUtilities::MULTI_INSERT_ATTACHMENTS);
+}
+
 void Bugzilla::commentRpcResponse(QVariant &arg)
 {
     qDebug() << "USER_COMMENTS";
@@ -1193,6 +1251,8 @@ Bugzilla::multiInsertSuccess(int operation)
         emit searchFinished();
     else if (operation == SqlUtilities::MULTI_INSERT_COMPONENTS)
         emit fieldsFound();
+    else if (operation == SqlUtilities::MULTI_INSERT_ATTACHMENTS)
+        emit commentsCached();
 }
 
 void
@@ -1416,6 +1476,36 @@ Bugzilla::itemPostFinished()
 
     postItem();
     reply->close();
+}
+
+void
+Bugzilla::attachmentDownloadFinished()
+{
+    QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
+    if (reply->error())
+    {
+        qDebug() << "Bugzilla::attachmentDownloadFinished error: " << reply->errorString();
+        emit attachmentDownloaded("");
+        reply->close();
+        reply->deleteLater();
+        return;
+    }
+
+    QString filepath = reply->request().attribute(QNetworkRequest::User).toString();
+    QByteArray data = reply->readAll();
+    reply->close();
+    reply->deleteLater();
+
+    QFile file(filepath);
+    if (!file.open(QFile::WriteOnly|QFile::Truncate))
+    {
+        qDebug() << "Bugzilla::attachmentDownloadFinished error: " << file.errorString();
+        emit attachmentDownloaded("");
+    }
+
+    file.write(data);
+    file.close();
+    emit attachmentDownloaded(filepath);
 }
 
 void
@@ -1666,7 +1756,23 @@ Bugzilla::individualBugFinished()
 void
 Bugzilla::commentInsertionFinished()
 {
-    emit commentsCached();
+    if (mVersion.toDouble() >= 3.6)
+    {
+        QVariantList args;
+        QStringList ids;
+        ids << mCurrentCommentBug;
+        QVariantMap params;
+        QVariant v(ids);
+        params["ids"] = v.toList();
+        args << params;
+        pClient->call("Bug.attachments", args, this,
+                      SLOT(attachmentRpcResponse(QVariant&)),
+                      this, SLOT(attachmentRpcError(int,QString)));
+    }
+    else
+    {
+        emit commentsCached();
+    }
 }
 
 QString

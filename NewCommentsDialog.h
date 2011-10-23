@@ -30,6 +30,9 @@ public:
     void loadComments();
 
 public slots:
+    void attachmentClicked(int rowId);
+    void attachmentSaveAsClicked(int rowId);
+    void attachmentDownloaded(const QString &filePath);
     void commentsCached();
     void textClicked(const QString &text);
     void save();
@@ -44,12 +47,14 @@ protected:
 private:
     void styleSplitter(QSplitterHandle *handle);
     void frameToggle(QWidget *frame, QLabel *arrow);
+    void startSpinner();
+    void stopSpinner();
     Ui::NewCommentsDialog *ui;
     QString mCurrentBugId, mTrackerId;
     Backend *pBackend;
     BackendDetails *pDetails;
     QMovie *pSpinnerMovie;
-
+    bool openAttachment;
 };
 
 

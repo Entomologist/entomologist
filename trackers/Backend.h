@@ -84,7 +84,7 @@ public:
 
     virtual void getComments(const QString &bugId) { Q_UNUSED(bugId); }
     virtual void getSearchedBug(const QString &bugId) { Q_UNUSED(bugId); }
-
+    virtual void downloadAttachment(int rowId, const QString &path) { Q_UNUSED(rowId); Q_UNUSED(path); }
     // This is used to override login methods (like in Novell Bugzilla)
     virtual void login() {}
 
@@ -117,6 +117,7 @@ public:
 
 signals:
     void searchFinished();
+    void attachmentDownloaded(const QString &filePath);
     void searchResultFinished(QMap<QString, QString> resultMap);
     void bugsUpdated();
     void commentsCached();

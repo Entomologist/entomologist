@@ -45,8 +45,8 @@ public:
     void login();
     void checkVersion();
     void getComments(const QString &bugId);
+    void downloadAttachment(int rowId, const QString &path);
     void getSearchedBug(const QString &bugId);
-
     void search(const QString &query);
 
     void checkValidPriorities();
@@ -74,6 +74,7 @@ public slots:
     void ccFinished();
     void commentInsertionFinished();
     void bugsInsertionFinished(QStringList idList, int operation);
+    void attachmentDownloadFinished();
     void commentXMLFinished();
     void reportedBugListFinished();
     void userBugListFinished();
@@ -85,6 +86,8 @@ public slots:
     void bugRpcResponse(QVariant &arg);
     void reportedRpcResponse(QVariant &arg);
     void commentRpcResponse(QVariant &arg);
+    void attachmentRpcResponse(QVariant &arg);
+    void attachmentRpcError(int error, const QString &message);
     void rpcError(int error, const QString &message);
     void loginRpcError(int error, const QString &message);
     void versionError(int error, const QString &message);
@@ -112,6 +115,7 @@ protected:
     void parseBuglistCSV(const QString &csv, const QString &bugType);
     QVariantMap mProductMap;
     QString mCurrentProduct;
+    QString mCurrentCommentBug;
     QVariantMap mBugs;
     QString mBugzillaId;
     QList< QMap<QString, QString> > mPostQueue;

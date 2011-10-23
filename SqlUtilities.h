@@ -44,6 +44,7 @@ public:
     enum {
         MULTI_INSERT_COMPONENTS = 1,
         MULTI_INSERT_SEARCH,
+        MULTI_INSERT_ATTACHMENTS,
         BUGS_INSERT_SEARCH
     };
 
@@ -87,6 +88,10 @@ public:
     static QList< QMap<QString, QString> > loadComments(const QString &trackerId,
                                                         const QString &bugId,
                                                         bool shadow);
+    static QList< QMap<QString, QString> > loadAttachments(const QString &trackerId,
+                                                           const QString &bugId);
+    static QMap<QString, QString> attachmentDetails(int rowId);
+
     // A generic insertion function that converts the QMap keys into the column names
     static int simpleInsert(const QString &tableName,
                             QMap<QString, QString> data);
@@ -121,10 +126,12 @@ public:
 
     // Clears the highlight_type when highlight_type is HIGHLIGHT_RECENT
     static void clearRecentBugs(const QString &tableName);
+    static void clearAttachments(int trackerId, int bugId);
     static void removeTracker(const QString &trackerId,
                               const QString &trackerName);
     static void clearBugs(const QString &tableName, const QString &trackerId);
     static QString getMonitoredComponents(const QString &trackerId);
+
     static void removeSearchedBug(const QString &tableName,
                                   const QString &trackerId,
                                   const QString &bugId);

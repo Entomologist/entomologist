@@ -178,6 +178,24 @@ Trac::getComments(const QString &bugId)
 }
 
 void
+Trac::downloadAttachment(int rowId,
+                         const QString &path)
+{
+    mActiveAttachmentPath = path;
+    QMap<QString, QString> details = SqlUtilities::attachmentDetails(rowId);
+    QVariantList args;
+    qDebug() << details;
+    args.append(details["bug_id"].toInt());
+    args.append(details["filename"]);
+    pClient->call("ticket.getAttachment",
+                  args,
+                  this,
+                  SLOT(attachmentDownloadedRpcResponse(QVariant&)),
+                  this,
+                  SLOT(attachmentRpcError(int, const QString &)));
+}
+
+void
 Trac::login()
 {
 }
@@ -571,7 +589,31 @@ Trac::multiInsertSuccess(int operation)
         emit searchFinished();
     else if (operation == SqlUtilities::MULTI_INSERT_COMPONENTS)
         emit fieldsFound();
+    else if (operation == SqlUtilities::MULTI_INSERT_ATTACHMENTS)
+        emit commentsCached();
+}
 
+void
+Trac::attachmentsRpcResponse(QVariant &arg)
+{
+    SqlUtilities::clearAttachments(mId.toInt(), mActiveCommentId.toInt());
+    QVariantList attachments = arg.toList();
+    QList <QMap<QString, QString> > insertList;
+    for (int i = 0; i < attachments.size(); ++i)
+    {
+        QVariantList attachment = attachments.at(i).toList();
+        QMap<QString, QString> insertMap;
+        insertMap["tracker_id"] = mId;
+        insertMap["bug_id"] = mActiveCommentId;
+        insertMap["filename"] = attachment.at(0).toString();
+        insertMap["summary"] = attachment.at(1).toString();
+        insertMap["file_size"] = attachment.at(2).toString();
+        insertMap["last_modified"] = attachment.at(3).toString();
+        insertMap["creator"] = attachment.at(4).toString();
+        insertList << insertMap;
+    }
+
+    pSqlWriter->multiInsert("attachments", insertList, SqlUtilities::MULTI_INSERT_ATTACHMENTS);
 }
 
 void
@@ -797,6 +839,29 @@ Trac::severityRpcResponse(QVariant &arg)
 }
 
 void
+Trac::attachmentDownloadedRpcResponse(QVariant &arg)
+{
+    QByteArray save = arg.toByteArray();
+    QFile file(mActiveAttachmentPath);
+    if (!file.open(QIODevice::WriteOnly|QIODevice::Truncate))
+    {
+        qDebug() << "Could not open " << mActiveAttachmentPath;
+        qDebug() << "Error: " << file.errorString();
+        emit attachmentDownloaded("");
+    }
+    file.write(save);
+    file.close();
+    emit attachmentDownloaded(mActiveAttachmentPath);
+}
+
+void
+Trac::attachmentRpcError(int error, const QString &message)
+{
+    qDebug() << "attachmentRpcError " << error << ": " << message;
+    emit attachmentDownloaded("");
+}
+
+void
 Trac::typeRpcResponse(QVariant &arg)
  {
     QList<QMap<QString, QString> > fieldList;
@@ -861,7 +926,14 @@ Trac::rpcError(int error,
 void
 Trac::commentInsertionFinished()
 {
-    emit commentsCached();
+    QVariantList args;
+    args.append(mActiveCommentId.toInt());
+    pClient->call("ticket.listAttachments",
+                  args,
+                  this,
+                  SLOT(attachmentsRpcResponse(QVariant&)),
+                  this,
+                  SLOT(rpcError(int, const QString &)));
 }
 
 void
