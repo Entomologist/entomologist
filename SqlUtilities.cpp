@@ -411,6 +411,14 @@ SqlUtilities::dbVersion()
     return(ret);
 }
 
+void
+SqlUtilities::updateDbVersion(int version)
+{
+    QSqlQuery q;
+    QString query = QString("UPDATE entomologist SET db_version = %1").arg(version);
+    q.exec(query);
+}
+
 bool
 SqlUtilities::hasPendingChanges()
 {
@@ -524,6 +532,32 @@ SqlUtilities::loadTrackers()
     }
     return trackerList;
 }
+
+void
+SqlUtilities::migrateTables(int dbVersion)
+{
+    QString attachmentsTable = "CREATE TABLE %1 (id INTEGER PRIMARY KEY,"
+                                                 "tracker_id INTEGER,"
+                                                 "bug_id INTEGER, "
+                                                 "attachment_id INTEGER, "
+                                                 "filename TEXT,"
+                                                 "last_modified TEXT,"
+                                                 "summary TEXT,"
+                                                 "content_type TEXT,"
+                                                 "creator TEXT,"
+                                                 "private INT);";
+    QSqlQuery q;
+    switch(dbVersion)
+    {
+        case 1:
+        case 5:
+        q.exec(QString(attachmentsTable).arg("attachments"));
+        q.exec(QString(attachmentsTable).arg("shadow_attachments"));
+        default:
+        break;
+    }
+}
+
 
 void
 SqlUtilities::createTables(int dbVersion)

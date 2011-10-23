@@ -52,6 +52,8 @@ public:
 
     // Returns the version of the schema
     static int dbVersion();
+    static void updateDbVersion(int version);
+
     static void openDb(const QString &dbPath);
     static void closeDb();
 
@@ -76,6 +78,7 @@ public:
                                     const QString &trackerId);
     // Create the tables
     static void createTables(int dbVersion);
+    static void migrateTables(int dbVersion);
 
     // Return a list of the tracker details
     static QList< QMap<QString, QString> > loadTrackers();

@@ -64,19 +64,15 @@
 #include "ToDoListView.h"
 #include "UpdatesAvailableDialog.h"
 
-#define DB_VERSION 5
+#define DB_VERSION 6
 
 bool mLogAllXmlRpcOutput;
 
 // TODOs:
 // - URL handing needs to be improved
-// - Pressing cancel during tracker detection should actually cancel
-// - Bug resolution - hardcode for bugzilla 3.4. 3.6 should be listable with the Bug.fields call
-// - Highlight new bugs
 // - QtDBUS on linux for network insertion integration
 // - Consider orphaned bug changes - when a bug is closed, but there is
 //   something in the shadow tables.
-//   Check other platforms.
 // - Bugzilla 3.2/3.4 component fetching could really be refactored
 
 MainWindow::MainWindow(QWidget *parent) :
@@ -235,6 +231,7 @@ MainWindow::setupDB()
         qDebug() << "Creating " << mDbPath;
         SqlUtilities::openDb(mDbPath);
         SqlUtilities::createTables(DB_VERSION);
+        SqlUtilities::migrateTables(1);
     }
     else
     {
@@ -246,9 +243,13 @@ MainWindow::setupDB()
 void
 MainWindow::checkDatabaseVersion()
 {
-    if (SqlUtilities::dbVersion() == DB_VERSION)
+    int oldversion = SqlUtilities::dbVersion();
+    if (oldversion == DB_VERSION)
         return;
 
+    SqlUtilities::migrateTables(oldversion);
+    SqlUtilities::updateDbVersion(DB_VERSION);
+#if 0
     qDebug() << "Version mismatch";
     QList< QMap<QString, QString> > trackerList;
     trackerList = SqlUtilities::loadTrackers();
@@ -266,6 +267,8 @@ MainWindow::checkDatabaseVersion()
         SqlUtilities::simpleInsert("trackers", t);
     }
     mDbUpdated = true;
+
+#endif
 }
 // Loads cached trackers from the database
 void
