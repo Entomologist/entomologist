@@ -282,25 +282,12 @@ MainWindow::checkDatabaseVersion()
     }
     else
     {
-        qDebug() << "Version mismatch";
-        QList< QMap<QString, QString> > trackerList;
-        trackerList = SqlUtilities::loadTrackers();
-        qDebug() << trackerList;
         SqlUtilities::closeDb();
         QFile::remove(mDbPath);
 
         SqlUtilities::openDb(mDbPath);
         SqlUtilities::createTables(DB_VERSION);
         SqlUtilities::migrateTables(5);
-
-        for (int i = 0; i < trackerList.size(); ++i)
-        {
-            QMap<QString, QString> t = trackerList.at(i);
-            t["last_sync"] = "1970-01-01T12:13:14";
-            t["id"] = "-1";
-            addTracker(t);
-        }
-//        mDbUpdated = true;
     }
 }
 // Loads cached trackers from the database
