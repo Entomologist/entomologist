@@ -1545,13 +1545,18 @@ MainWindow::updateCheckResponse()
     QString majorVersion = versionInfo.section("\n", 0,0);
     QString minorVersion = versionInfo.section("\n", 1, 1);
     QString notes = versionInfo.section("\n", 2);
-    if (majorVersion.toDouble() >= QString(APP_MAJOR_VERSION).toDouble())
+    if (majorVersion.toDouble() == QString(APP_MAJOR_VERSION).toDouble())
     {
         if (minorVersion.toInt() > QString(APP_MINOR_VERSION).toInt())
         {
             UpdatesAvailableDialog dlg(QString("%1.%2").arg(majorVersion, minorVersion), notes, this);
             dlg.exec();
         }
+    }
+    else if (majorVersion.toDouble() > QString(APP_MAJOR_VERSION).toDouble())
+    {
+        UpdatesAvailableDialog dlg(QString("%1.%2").arg(majorVersion, minorVersion), notes, this);
+        dlg.exec();
     }
 }
 
