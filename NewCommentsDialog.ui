@@ -231,7 +231,7 @@
         <x>0</x>
         <y>0</y>
         <width>860</width>
-        <height>524</height>
+        <height>522</height>
        </rect>
       </property>
       <layout class="QVBoxLayout" name="verticalLayout_11">
@@ -501,6 +501,9 @@
              <enum>QFrame::Plain</enum>
             </property>
             <layout class="QVBoxLayout" name="verticalLayout_13">
+             <property name="margin">
+              <number>0</number>
+             </property>
              <item>
               <layout class="QVBoxLayout" name="attachmentsLayout"/>
              </item>

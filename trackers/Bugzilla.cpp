@@ -180,14 +180,12 @@ Bugzilla::uploadAll()
         emit bugsUpdated();
         return;
     }
-    qDebug() << "Bugzilla::uploadAll()";
     mState = BUGZILLA_STATE_UPLOADING;
     login();
 }
 
 void Bugzilla::doUploading()
 {
-    qDebug() << "Bugzilla::doUploading...";
     QStringList idList;
     QString ids;
     idList = SqlUtilities::getChangedBugzillaIds(mId);
@@ -617,15 +615,10 @@ Bugzilla::checkValidStatuses()
 void
 Bugzilla::checkValidComponents()
 {
-    // For Bugzilla 3.2 and 3.4, we'll need to
-    // parse the output of query.cgi?format=advanced,
-    // looking for prods[] and cpts[] arrays.
-    // For 3.6+ we can use the fields call with the
-    // "names: component" parameter.
+    // No component monitoring for 3.2 & 3.4
     if ((mVersion == "3.2") || (mVersion == "3.4"))
     {
-        QVariantList args;
-        pClient->call("Product.get_selectable_products", args, this, SLOT(productsResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
+        emit fieldsFound();
     }
     else
     {
@@ -767,7 +760,6 @@ void Bugzilla::loginSyncRpcResponse(QVariant &arg)
 
 void Bugzilla::emailRpcResponse(QVariant &arg)
 {
-    qDebug() << "RPC response USER_EMAIL: " << arg;
     QVariantMap userMap = arg.toMap();
     if (userMap.isEmpty())
     {
@@ -835,7 +827,6 @@ Bugzilla::monitoredBugResponse(QVariant &arg)
 
 void Bugzilla::bugRpcResponse(QVariant &arg)
 {
-    qDebug() << "bugRpcResponse";
     QVariantList bugList = arg.toMap().value("bugs").toList();
     QVariantMap responseMap;
     for (int i = 0; i < bugList.size(); ++i)
@@ -895,7 +886,6 @@ void Bugzilla::bugRpcResponse(QVariant &arg)
 void
 Bugzilla::attachmentRpcError(int error, const QString &message)
 {
-    qDebug() << "Bugzilla::attachmentRpcError: " << message;
     emit commentsCached();
 }
 
@@ -1059,6 +1049,7 @@ Bugzilla::severityResponse(QVariant &arg)
 void
 Bugzilla::timezoneResponse(QVariant &arg)
 {
+
     int offset = 0;
     bool ok[4];
     bool negOffset = false;
@@ -1140,36 +1131,12 @@ Bugzilla::componentsResponse(QVariant &arg)
     pSqlWriter->multiInsert("fields", fieldList, SqlUtilities::MULTI_INSERT_COMPONENTS);
 }
 
-void
-Bugzilla::productsResponse(QVariant &arg)
-{
-    QVariantList idList = arg.toMap().value("ids").toList();
-    QVariantList args;
-    QVariantMap params;
-    params["ids"] = idList;
-    args << params;
-    pClient->call("Product.get", args, this, SLOT(productNamesResponse(QVariant&)), this, SLOT(rpcError(int,QString)));
-}
-
-void
-Bugzilla::productNamesResponse(QVariant &arg)
-{
-    QStringList response;
-    QVariantList productList = arg.toMap().value("products").toList();
-    for (int i = 0; i < productList.size(); ++i)
-    {
-        QVariantMap m = productList.at(i).toMap();
-        QString name = m.value("name").toString();
-        mProductMap[name] = m.value("id").toString();
-        response << QString("%1:No data cached").arg(name);
-    }
-    emit componentsFound(response);
-    emit fieldsFound();
-}
 
 void
 Bugzilla::productComponentResponse(QVariant &arg)
 {
+    qDebug() << "productComponentResponse";
+
     QVariantList vals = arg.toMap().value("values").toList();
     QStringList response;
     for (int i = 0; i < vals.size(); ++i)

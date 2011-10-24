@@ -580,6 +580,8 @@ public:
     void setHost(const QString &host, bool useSecureHTTP = false, int port = 0);
     void setHost(const QString &host, int port); //obsolete
     void setAction(const QString &action);
+    void setUserAttribute(const QVariant &value) { userVar = value; }
+    QVariant userAttribute() { return userVar; }
     void submitRequest(QtSoapMessage &request, const QString &path);
     const QtSoapMessage &getResponse() const;
 
@@ -595,6 +597,7 @@ private Q_SLOTS:
     void handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors);
 private:
+    QVariant userVar;
     QNetworkAccessManager networkMgr;
     QPointer<QNetworkReply> networkRep;
     QUrl url;

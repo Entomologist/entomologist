@@ -121,7 +121,6 @@ void
 NewCommentsDialog::commentsCached()
 {
     stopSpinner();
-    qDebug() << "commentsCached";
     setComments();
 }
 
@@ -194,7 +193,6 @@ NewCommentsDialog::loadComments()
     {
         // Fetch comments
         startSpinner();
-        qDebug() << "Loading comments for " << mCurrentBugId;
         pBackend->getComments(mCurrentBugId);
     }
     else
@@ -210,7 +208,6 @@ NewCommentsDialog::setComments()
     int total = 0;
     if (ui->descriptionText->text().isEmpty())
         ui->descriptionText->setText(SqlUtilities::getBugDescription(pBackend->type(), mCurrentBugId));
-    qDebug() << "setComments for: tracker id " << mTrackerId << " bug id " << mCurrentBugId;
     QList < QMap<QString, QString> > mainComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, false);
     QList < QMap<QString, QString> > shadowComments = SqlUtilities::loadComments(mTrackerId, mCurrentBugId, true);
     QList < QMap<QString, QString> > attachmentList = SqlUtilities::loadAttachments(mTrackerId, mCurrentBugId);
@@ -374,7 +371,6 @@ NewCommentsDialog::attachmentDownloaded(const QString &filePath)
 void
 NewCommentsDialog::closeEvent(QCloseEvent *event)
 {
-    qDebug() << "Closing";
     QSettings settings("Entomologist");
 //    settings.setValue("comment-window-splitter", ui->splitter->saveState());
     settings.setValue("comment-window-geometry", saveGeometry());

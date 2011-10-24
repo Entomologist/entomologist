@@ -23,6 +23,7 @@ public:
     void checkVersion();
     void checkFields();
     void search(const QString &query);
+    void downloadAttachment(int rowId, const QString &path);
 
     void checkValidPriorities();
     void checkValidSeverities();
@@ -55,6 +56,7 @@ public slots:
     void handleSslErrors(QNetworkReply *reply, const QList<QSslError> &errors);
     void bugsInsertionFinished(QStringList idList, int operation);
     void commentInsertionFinished();
+    void attachmentDownloadFinished();
 
 private:
     enum viewType {

@@ -791,8 +791,6 @@ SqlUtilities::insertBugComments(QList<QMap<QString, QString> >commentList)
 void
 SqlUtilities::insertComments(QList<QMap<QString, QString> > commentList)
 {
-    qDebug() << "insertComments: Going to write " << commentList.count() << " comments";
-
     QSqlQuery q;
     QString sql = "INSERT INTO comments (tracker_id, bug_id, comment_id, author, comment, timestamp, private)"
                   " VALUES (:tracker_id, :bug_id, :comment_id, :author, :comment, :timestamp, :private)";
@@ -1091,7 +1089,6 @@ SqlUtilities::clearAttachments(int trackerId, int bugId)
 {
     QString sql = QString("DELETE FROM attachments WHERE tracker_id=%1 AND bug_id =%2").arg(trackerId).arg(bugId);
     QSqlQuery q;
-    qDebug() << "Execing " << sql;
     q.exec(sql);
 }
 
@@ -1767,7 +1764,6 @@ SqlUtilities::clearBugs(const QString &tableName,
                         const QString &trackerId)
 {
     QString query = QString("DELETE FROM %1 WHERE tracker_id = %2 AND bug_type != \'Searched\'").arg(tableName).arg(trackerId);
-    qDebug() << "Clear bugs: " << query;
     QSqlQuery q;
     if (!q.exec(query))
         qDebug() << "SqlUtilities::clearBugs: " << q.lastError().text();

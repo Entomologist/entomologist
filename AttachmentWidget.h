@@ -1,13 +1,13 @@
 #ifndef ATTACHMENTWIDGET_H
 #define ATTACHMENTWIDGET_H
 
-#include <QWidget>
+#include <QFrame>
 
 namespace Ui {
     class AttachmentWidget;
 }
 
-class AttachmentWidget : public QWidget
+class AttachmentWidget : public QFrame
 {
     Q_OBJECT
 

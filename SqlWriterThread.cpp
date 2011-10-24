@@ -77,7 +77,6 @@ SqlWriterThread::run()
 void
 SqlWriterThread::multiInsert(const QString &table, QList<QMap<QString, QString> > list, int operation)
 {
-    qDebug() << "Emit: multiInsert";
     emit multiRowInsert(table, list, operation);
 }
 void
@@ -91,7 +90,6 @@ SqlWriterThread::insertComments(QList<QMap<QString, QString> > commentList)
 {
     emit newComments(commentList);
 }
-
 
 void
 SqlWriterThread::insertBugComments(QList<QMap<QString, QString> > commentList)

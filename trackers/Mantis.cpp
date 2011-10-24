@@ -81,6 +81,29 @@ Mantis::deleteData()
 }
 
 void
+Mantis::downloadAttachment(int rowId, const QString &path)
+{
+    QMap<QString, QString> attachment = SqlUtilities::attachmentDetails(rowId);
+    QtSoapHttpTransport *attachmentTransport = new QtSoapHttpTransport(this);
+    attachmentTransport->setUserAttribute(path);
+    bool secure = true;
+    if (QUrl(mUrl).scheme() == "http")
+        secure = false;
+
+    attachmentTransport->setHost(QUrl(mUrl).host(), secure);
+    connect(attachmentTransport, SIGNAL(responseReady()),
+            this, SLOT(attachmentDownloadFinished()));
+    connect(attachmentTransport->networkAccessManager(), SIGNAL(sslErrors(QNetworkReply*,QList<QSslError>)),
+            this, SLOT(handleSslErrors(QNetworkReply*,QList<QSslError>)));
+    QtSoapMessage request;
+    request.setMethod(QtSoapQName("mc_issue_attachment_get", "http://futureware.biz/mantisconnect"));
+    request.addMethodArgument("username", "", mUsername);
+    request.addMethodArgument("password", "", mPassword);
+    request.addMethodArgument("issue_attachment_id", "", attachment["attachment_id"].toInt());
+    attachmentTransport->submitRequest(request, QUrl(mUrl).path() + "/api/soap/mantisconnect.php");
+}
+
+void
 Mantis::sync()
 {
     mBugs.clear();
@@ -711,9 +734,11 @@ Mantis::response()
         }
         else
         {
+            int i;
             QList<QMap<QString, QString> > list;
             QString bugId = resp.returnValue()["id"].toString();
             QtSoapArray &array = (QtSoapArray &) resp.returnValue()["notes"];
+            QtSoapArray &attachmentArray = (QtSoapArray &) resp.returnValue()["attachments"];
 
             // First get the bug description and store it separately
             QMap<QString, QString> val;
@@ -723,7 +748,25 @@ Mantis::response()
             params["bug_id"] = bugId;
             SqlUtilities::simpleUpdate("mantis", val, params);
 
-            for (int i = 0; i < array.count(); ++i)
+            SqlUtilities::clearAttachments(mId.toInt(), bugId.toInt());
+            // Now handle attachments
+            for (i = 0; i < attachmentArray.count(); ++i)
+            {
+                QMap<QString, QString> newInsert;
+                QtSoapType &attachmentItem = attachmentArray.at(i);
+                newInsert["tracker_id"] = mId;
+                newInsert["bug_id"] = bugId;
+                newInsert["attachment_id"] = attachmentItem["id"].toString();
+                newInsert["content_type"] = attachmentItem["content_type"].toString();
+                newInsert["last_modified"] = attachmentItem["date_submitted"].toString();
+                newInsert["creator"] = "unknown";
+                newInsert["file_size"] = attachmentItem["size"].toString();
+                newInsert["filename"] = attachmentItem["filename"].toString();
+                SqlUtilities::simpleInsert("attachments", newInsert);
+            }
+
+            // Finally, the comments
+            for (i = 0; i < array.count(); ++i)
             {
                 QMap<QString, QString> newComment;
                 QtSoapType &note = array.at(i);
@@ -794,6 +837,54 @@ Mantis::response()
         qDebug() << "Invalid response: " << messageName;
         emit backendError("Something went wrong!");
     }
+}
+
+void
+Mantis::attachmentDownloadFinished()
+{
+    QtSoapHttpTransport *transport = qobject_cast<QtSoapHttpTransport*>(sender());
+    QString filePath = transport->userAttribute().toString();
+    if (filePath.isEmpty())
+    {
+        qDebug() << "Mantis::attachmentDownloadFinished: Uh oh, filepath is empty!";
+        transport->deleteLater();
+        emit attachmentDownloaded("");
+        return;
+    }
+
+    const QtSoapMessage &resp = transport->getResponse();
+    if (resp.isFault())
+    {
+        qDebug() << "Mantis::attachmentDownloadFinished: SOAP fault: " << resp.faultString().toString();
+        qDebug() << resp.faultDetail().toString();
+        transport->deleteLater();
+        emit attachmentDownloaded("");
+        return;
+    }
+
+    const QtSoapType &message = resp.method();
+    const QtSoapType &response = resp.returnValue();
+    QString messageName = message.name().name();
+
+    if (messageName == "mc_issue_attachment_getResponse")
+    {
+        QByteArray data = QByteArray::fromBase64(response.toString().toLocal8Bit());
+        QFile file(filePath);
+        if (!file.open(QFile::WriteOnly|QFile::Truncate))
+        {
+            qDebug() << "Mantis::attachmentDownloadFinished error: " << file.errorString();
+            emit attachmentDownloaded("");
+        }
+        file.write(data);
+        file.close();
+        emit attachmentDownloaded(filePath);
+    }
+    else
+    {
+        emit attachmentDownloaded("");
+    }
+
+    transport->deleteLater();
 }
 
 void

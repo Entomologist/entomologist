@@ -94,10 +94,8 @@ public slots:
     void priorityResponse(QVariant &arg);
     void severityResponse(QVariant &arg);
     void componentsResponse(QVariant &arg);
-    void productsResponse(QVariant &arg);
     void timezoneResponse(QVariant &arg);
     void productComponentResponse(QVariant &arg);
-    void productNamesResponse(QVariant &arg);
     void resolutionResponse(QVariant &arg);
     void addCommentResponse(QVariant &arg);
     void monitoredBugResponse(QVariant &arg);
