@@ -28,6 +28,7 @@
 #include <QMainWindow>
 #include <QMap>
 #include <QThread>
+#include <QDockWidget>
 #include <QSystemTrayIcon>
 #include <QSslError>
 #include <QTableView>
@@ -51,7 +52,7 @@ class Backend;
 class Autodetector;
 class SqlBugModel;
 class BackendUI;
-class ToDoListView;
+class ToDoListWidget;
 
 class MainWindow : public QMainWindow {
     Q_OBJECT
@@ -73,6 +74,7 @@ public slots:
     void versionChecked(const QString &version, const QString &message);
     void handleSslErrors(QNetworkReply *reply,
                          const QList<QSslError> &errors);
+    void dockVisibilityChanged(bool visible);
     void trayActivated(QSystemTrayIcon::ActivationReason reason);
     void addTrackerTriggered();
     void toggleButtons();
@@ -125,6 +127,7 @@ private:
     int trackerNameExists(const QString &name);
     void setTimer();
 
+    QAction *refreshButton, *uploadButton, *changelogButton;
     QString getChangelog();
     QString autodetectTracker(const QString &url);
     void syncNextTracker();
@@ -147,8 +150,9 @@ private:
     QTimer *pUpdateTimer;
     QSystemTrayIcon *pTrayIcon;
     QMenu *pTrayIconMenu;
+    QDockWidget *pToDoDock;
     SearchTab *pSearchTab;
-    ToDoListView *pTodoListView;
+    ToDoListWidget *pToDoListWidget;
     Ui::MainWindow *ui;
     QList<BackendUI*> trackerTabsList;
 };

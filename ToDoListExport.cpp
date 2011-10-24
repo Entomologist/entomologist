@@ -69,16 +69,16 @@ ToDoListExport::populateRecipients()
 
 }
 
-QStack<ToDoListView::serviceData_t>
+QStack<ToDoListWidget::serviceData_t>
 ToDoListExport::getData()
 {
    QList<QTreeWidgetItem*> items = ui->exportList->selectedItems();
 
-   QStack<ToDoListView::serviceData_t> itemsList;
+   QStack<ToDoListWidget::serviceData_t> itemsList;
 
    foreach(QTreeWidgetItem* item, items)
    {
-       ToDoListView::serviceData_t newService;
+       ToDoListWidget::serviceData_t newService;
        newService.serviceName = item->text(0);
        newService.serviceType = item->text(1);
        itemsList.append(newService);

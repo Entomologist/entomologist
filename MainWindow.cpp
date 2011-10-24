@@ -40,6 +40,8 @@
 #include <QShortcut>
 #include <QKeySequence>
 #include <QPainter>
+#include <QDockWidget>
+#include <QToolBar>
 
 #include "About.h"
 #include "ChangelogWindow.h"
@@ -61,7 +63,7 @@
 #include "MonitorDialog.h"
 #include "SqlUtilities.h"
 #include "ui_MainWindow.h"
-#include "ToDoListView.h"
+#include "ToDoListWidget.h"
 #include "UpdatesAvailableDialog.h"
 
 #define DB_VERSION 6
@@ -82,7 +84,6 @@ MainWindow::MainWindow(QWidget *parent) :
     pDetectorProgress = NULL;
     mLogAllXmlRpcOutput = false;
     mDbUpdated = false;
-    pTodoListView = NULL;
     // mSyncRequests tracks how many sync requests have been made
     // in order to know when to re-enable the widgets
     mSyncRequests = 0;
@@ -98,9 +99,19 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
 
     ui->setupUi(this);
-    ui->refreshButton->setIcon(style()->standardIcon(QStyle::SP_BrowserReload));
-    ui->uploadButton->setIcon(style()->standardIcon(QStyle::SP_ArrowUp));
-    ui->changelogButton->setIcon(style()->standardIcon(QStyle::SP_FileDialogInfoView));
+
+    QToolBar *toolBar = new QToolBar("Main Toolbar");
+    toolBar->setObjectName("Main ToolBar");
+    toolBar->setIconSize(QSize(32,32));
+    refreshButton = toolBar->addAction(style()->standardIcon(QStyle::SP_BrowserReload), "");
+    refreshButton->setToolTip("Resync all trackers");
+    uploadButton = toolBar->addAction(style()->standardIcon(QStyle::SP_ArrowUp), "");
+    uploadButton->setToolTip("Upload changes");
+    changelogButton = toolBar->addAction(style()->standardIcon(QStyle::SP_FileDialogInfoView), "");
+    changelogButton->setToolTip("Show changelog");
+    toolBar->setMovable(false);
+    addToolBar(Qt::TopToolBarArea, toolBar);
+
 
     setupTrayIcon();
     // Setup the "Show" menu and "Work Offline"
@@ -153,7 +164,7 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(addTrackerTriggered()));
     connect(ui->action_Refresh_Tracker,SIGNAL(triggered()),
             this, SLOT(resync()));
-    connect(ui->action_Todo_Lists, SIGNAL(triggered()),
+    connect(ui->actionShow_ToDo_List, SIGNAL(triggered()),
             this, SLOT(showTodoList()));
     connect(ui->action_About, SIGNAL(triggered()),
             this, SLOT(aboutTriggered()));
@@ -177,7 +188,7 @@ MainWindow::MainWindow(QWidget *parent) :
             this, SLOT(workOfflineTriggered()));
 
     // Set up the search button
-    connect(ui->changelogButton, SIGNAL(clicked()),
+    connect(changelogButton, SIGNAL(triggered()),
             this, SLOT(changelogTriggered()));
 
     connect(ui->trackerTab, SIGNAL(showMenu(int)),
@@ -186,12 +197,11 @@ MainWindow::MainWindow(QWidget *parent) :
     ui->trackerTab->removeTab(0);
 
     // And finally set up the various other widgets
-    connect(ui->refreshButton, SIGNAL(clicked()),
+    connect(refreshButton, SIGNAL(triggered()),
             this, SLOT(resync()));
-    connect(ui->uploadButton, SIGNAL(clicked()),
+    connect(uploadButton, SIGNAL(triggered()),
             this, SLOT(upload()));
     restoreGeometry(settings.value("window-geometry").toByteArray());
-
     // Set the network status bar and check for updates if possible
     if (isOnline())
         if (settings.value("update-check", true).toBool() == true)
@@ -199,9 +209,27 @@ MainWindow::MainWindow(QWidget *parent) :
 
     setupDB();
     toggleButtons();
+
+    // Now we need the todo list widget
+    pToDoDock = new QDockWidget(tr("ToDo List"), this);
+    pToDoDock->setObjectName("ToDoDock");
+    pToDoDock->setAllowedAreas(Qt::LeftDockWidgetArea | Qt::RightDockWidgetArea);
+    pToDoListWidget = new ToDoListWidget(pToDoDock);
+    pToDoDock->setWidget(pToDoListWidget);
+    addDockWidget(Qt::LeftDockWidgetArea, pToDoDock);
+    pToDoDock->hide();
+    restoreState(settings.value("entomologist-state").toByteArray());
+    connect(pToDoDock, SIGNAL(visibilityChanged(bool)),
+            this, SLOT(dockVisibilityChanged(bool)));
+    if (pToDoDock->isVisible())
+        ui->actionShow_ToDo_List->setText("Hide ToDo List");
+    else
+        ui->actionShow_ToDo_List->setText("Show ToDo List");
+
     pSearchTab = new SearchTab(this);
     connect(pSearchTab, SIGNAL(openSearchedBug(QString,QString)),
             this, SLOT(openSearchedBug(QString,QString)));
+
     loadTrackers();
     ui->trackerTab->addTab(pSearchTab, QIcon(":/search"), "Search");
 
@@ -247,28 +275,33 @@ MainWindow::checkDatabaseVersion()
     if (oldversion == DB_VERSION)
         return;
 
-    SqlUtilities::migrateTables(oldversion);
-    SqlUtilities::updateDbVersion(DB_VERSION);
-#if 0
-    qDebug() << "Version mismatch";
-    QList< QMap<QString, QString> > trackerList;
-    trackerList = SqlUtilities::loadTrackers();
-
-    SqlUtilities::closeDb();
-    QFile::remove(mDbPath);
-
-    SqlUtilities::openDb(mDbPath);
-    SqlUtilities::createTables(DB_VERSION);
-
-    for (int i = 0; i < trackerList.size(); ++i)
+    if (oldversion >= 5)
     {
-        QMap<QString, QString> t = trackerList.at(i);
-        t["last_sync"] = "1970-01-01T12:13:14";
-        SqlUtilities::simpleInsert("trackers", t);
+        SqlUtilities::migrateTables(oldversion);
+        SqlUtilities::updateDbVersion(DB_VERSION);
     }
-    mDbUpdated = true;
+    else
+    {
+        qDebug() << "Version mismatch";
+        QList< QMap<QString, QString> > trackerList;
+        trackerList = SqlUtilities::loadTrackers();
+        qDebug() << trackerList;
+        SqlUtilities::closeDb();
+        QFile::remove(mDbPath);
 
-#endif
+        SqlUtilities::openDb(mDbPath);
+        SqlUtilities::createTables(DB_VERSION);
+        SqlUtilities::migrateTables(5);
+
+        for (int i = 0; i < trackerList.size(); ++i)
+        {
+            QMap<QString, QString> t = trackerList.at(i);
+            t["last_sync"] = "1970-01-01T12:13:14";
+            t["id"] = "-1";
+            addTracker(t);
+        }
+//        mDbUpdated = true;
+    }
 }
 // Loads cached trackers from the database
 void
@@ -513,9 +546,9 @@ MainWindow::startAnimation()
     ui->action_Add_Tracker->setEnabled(false);
     ui->action_Preferences->setEnabled(false);
     ui->action_Work_Offline->setEnabled(false);
-    ui->uploadButton->setEnabled(false);
-    ui->changelogButton->setEnabled(false);
-    ui->refreshButton->setEnabled(false);
+    uploadButton->setEnabled(false);
+    changelogButton->setEnabled(false);
+    refreshButton->setEnabled(false);
     ui->splitter_2->setEnabled(false);
 
     for(int i = 0; i < ui->trackerTab->count(); i++)
@@ -529,7 +562,7 @@ void
 MainWindow::stopAnimation()
 {
     pSpinnerMovie->stop();
-    ui->refreshButton->setEnabled(true);
+    refreshButton->setEnabled(true);
     ui->menuShow->setEnabled(true);
     ui->action_Add_Tracker->setEnabled(true);
     ui->action_Preferences->setEnabled(true);
@@ -890,12 +923,31 @@ MainWindow::finishedDetecting(QMap<QString, QString> data)
 }
 
 void
+MainWindow::dockVisibilityChanged(bool visible)
+{
+    if (visible)
+    {
+        ui->actionShow_ToDo_List->setText("Hide ToDo List");
+    }
+    else
+    {
+        ui->actionShow_ToDo_List->setText("Show ToDo List");
+    }
+}
+
+void
 MainWindow::showTodoList()
 {
-    if (pTodoListView == NULL)
-        pTodoListView = new ToDoListView();
-
-    pTodoListView->show();
+    if (pToDoDock->isVisible())
+    {
+        pToDoDock->hide();
+        ui->actionShow_ToDo_List->setText("Show ToDo List");
+    }
+    else
+    {
+        pToDoDock->show();
+        ui->actionShow_ToDo_List->setText("Hide ToDo List");
+    }
 }
 
 // This is called when the user presses the refresh button
@@ -1019,6 +1071,8 @@ MainWindow::quitEvent()
     {
         QSettings settings("Entomologist");
         settings.setValue("window-geometry", saveGeometry());
+        settings.setValue("entomologist-state", saveState());
+
     }
     qApp->quit();
 }
@@ -1035,6 +1089,7 @@ MainWindow::closeEvent(QCloseEvent *event)
         // Save the window geometry and position
         QSettings settings("Entomologist");
         settings.setValue("window-geometry", saveGeometry());
+        settings.setValue("entomologist-state", saveState());
         if (!settings.value("minimize-warning", false).toBool())
         {
             QMessageBox box;
@@ -1130,16 +1185,6 @@ void
 MainWindow::changeEvent(QEvent *e)
 {
     QMainWindow::changeEvent(e);
-    switch (e->type())
-    {
-        case QEvent::LanguageChange:
-        {
-            ui->retranslateUi(this);
-            break;
-        }
-        default:
-            break;
-    }
 }
 
 
@@ -1148,13 +1193,13 @@ MainWindow::toggleButtons()
 {
     if (!SqlUtilities::hasPendingChanges())
     {
-        ui->uploadButton->setEnabled(false);
-        ui->changelogButton->setEnabled(false);
+        uploadButton->setEnabled(false);
+        changelogButton->setEnabled(false);
     }
     else
     {
-        ui->uploadButton->setEnabled(true);
-        ui->changelogButton->setEnabled(true);
+        uploadButton->setEnabled(true);
+        changelogButton->setEnabled(true);
     }
 
 }

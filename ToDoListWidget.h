@@ -21,10 +21,10 @@
  *
  */
 
-#ifndef TODOLISTVIEW_H
-#define TODOLISTVIEW_H
+#ifndef TODOLISTWIDGET_H
+#define TODOLISTWIDGET_H
 
-#include <QDialog>
+#include <QWidget>
 #include <QDate>
 #include <QCheckBox>
 #include <QDateEdit>
@@ -38,12 +38,12 @@
 
 namespace Ui {
 
-    class ToDoListView;
+    class ToDoListWidget;
 
 }
 
 
-class ToDoListView : public QDialog
+class ToDoListWidget : public QWidget
 {
     Q_OBJECT
 
@@ -56,8 +56,8 @@ public:
            QString serviceType;
     } serviceData_t;
 
-    explicit ToDoListView(QWidget *parent = 0);
-    ~ToDoListView();
+    explicit ToDoListWidget(QWidget *parent = 0);
+    ~ToDoListWidget();
     int toDoListAdded(const QString &name,
                        const QString &rtmID,
                        const QString &googleID,
@@ -102,7 +102,7 @@ private:
                  int completed,
                  bool isNew);
     void findItems();
-    Ui::ToDoListView *ui;
+    Ui::ToDoListWidget *ui;
     int checkUniqueBug(int bugID, int trackerID, int listID);
     bool checkUniqueList(QString name);
     QString dateFormat;
@@ -131,4 +131,4 @@ private:
     bool mIgnoreItemSync;
 };
 
-#endif // TODOLISTVIEW_H
+#endif // TODOLISTWIDGET_H

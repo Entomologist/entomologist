@@ -4,7 +4,7 @@
 #include <QDialog>
 #include <QMap>
 #include <QStack>
-#include "ToDoListView.h"
+#include "ToDoListWidget.h"
 
 namespace Ui {
     class ToDoListExport;
@@ -17,7 +17,7 @@ class ToDoListExport : public QDialog
 public:
     explicit ToDoListExport(QWidget *parent = 0);
     ~ToDoListExport();
-    QStack<ToDoListView::serviceData_t> getData();
+    QStack<ToDoListWidget::serviceData_t> getData();
 
 private:
     Ui::ToDoListExport *ui;

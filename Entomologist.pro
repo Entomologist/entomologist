@@ -77,7 +77,7 @@ SOURCES += main.cpp \
     tracker_uis/BackendDetails.cpp \
     SearchTab.cpp \
     SqlSearchModel.cpp \
-    ToDoListView.cpp \
+    ToDoListWidget.cpp \
     ToDoListServiceAdd.cpp \
     ToDoListPreferences.cpp \
     ToDoListExport.cpp \
@@ -154,7 +154,7 @@ HEADERS += MainWindow.h \
     tracker_uis/BackendDetails.h \
     SearchTab.h \
     SqlSearchModel.h \
-    ToDoListView.h \
+    ToDoListWidget.h \
     ToDoListServiceAdd.h \
     ToDoListPreferences.h \
     ToDoListExport.h \
@@ -190,7 +190,7 @@ FORMS += MainWindow.ui \
     SearchTab.ui \
     ToDoListServiceAdd.ui \
     ToDoListPreferences.ui \
-    ToDoListView.ui \
+    ToDoListWidget.ui \
     ToDoListExport.ui \
     UpdatesAvailableDialog.ui \
     AttachmentWidget.ui

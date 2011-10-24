@@ -1,23 +1,20 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>ToDoListView</class>
- <widget class="QDialog" name="ToDoListView">
+ <class>ToDoListWidget</class>
+ <widget class="QWidget" name="ToDoListWidget">
   <property name="geometry">
    <rect>
     <x>0</x>
     <y>0</y>
-    <width>722</width>
-    <height>457</height>
+    <width>734</width>
+    <height>410</height>
    </rect>
   </property>
   <property name="windowTitle">
-   <string>Entomologist ToDo Lists</string>
+   <string>Form</string>
   </property>
-  <property name="sizeGripEnabled">
-   <bool>true</bool>
-  </property>
-  <layout class="QGridLayout" name="gridLayout">
-   <item row="0" column="0">
+  <layout class="QVBoxLayout" name="verticalLayout">
+   <item>
     <widget class="BugTreeWidget" name="bugTreeWidget">
      <property name="dragEnabled">
       <bool>true</bool>
@@ -71,7 +68,7 @@
      </column>
     </widget>
    </item>
-   <item row="1" column="0">
+   <item>
     <layout class="QHBoxLayout" name="horizontalLayout">
      <item>
       <widget class="QPushButton" name="preferencesButton">
