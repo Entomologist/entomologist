@@ -1256,64 +1256,66 @@ MainWindow::backendError(const QString &message)
 // When the user edits tracker information, this is called to save their new
 // data
 void
-MainWindow::updateTracker(const QString &id, QMap<QString, QString> data)
+MainWindow::updateTracker(const QString &id, QMap<QString, QString> data, bool updateName)
 {
     Backend *b = mBackendMap[id];
-    for (int i = 0; i < mBackendList.size(); ++i)
+    if (updateName)
     {
-        if (data["name"] == mBackendList.at(i)->name())
+        for (int i = 0; i < mBackendList.size(); ++i)
         {
-            QMessageBox box;
-            box.setText(QString("A tracker named <b>%1</b> already exists.").arg(data["name"]));
-            box.exec();
-            return;
+            if (data["name"] == mBackendList.at(i)->name())
+            {
+                QMessageBox box;
+                box.setText(QString("A tracker named <b>%1</b> already exists.").arg(data["name"]));
+                box.exec();
+                return;
+            }
         }
+
+        QString iconDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
+        iconDir.append(QDir::separator()).append("entomologist");
+
+        // Rename the icon, if necessary
+        QString oldPath = QString ("%1%2%3.png")
+                                    .arg(iconDir)
+                                    .arg(QDir::separator())
+                                    .arg(b->name());
+        QString newPath = QString ("%1%2%3.png")
+                                    .arg(iconDir)
+                                    .arg(QDir::separator())
+                                    .arg(data["name"]);
+
+        if (QFile::exists(oldPath) && !QFile::exists(newPath))
+            QFile::rename(oldPath, newPath);
+
+        QString oldName, newName;
+        oldName = b->name();
+        newName = data["name"];
+        ui->trackerTab->setTabText(ui->trackerTab->currentIndex(), newName);
+        pSearchTab->renameTracker(oldName, newName);
+        b->setName(newName);
+        QSettings settings("Entomologist");
+
+        QVariant oldSortCol = settings.value(QString("%1-sort-column").arg(oldName));
+        settings.remove(QString("%1-sort-column").arg(oldName));
+        settings.setValue(QString("%1-sort-column").arg(newName), oldSortCol);
+
+        QVariant oldSortOrd = settings.value(QString("%1-sort-order").arg(oldName));
+        settings.remove(QString("%1-sort-order").arg(oldName));
+        settings.setValue(QString("%1-sort-order").arg(newName), oldSortOrd);
+
+        QVariant oldGeom = settings.value(QString("%1-header-geometry").arg(oldName));
+        settings.remove(QString("%1-header-geometry").arg(oldName));
+        settings.setValue(QString("%1-header-geometry").arg(newName), oldGeom);
     }
 
-    if (!SqlUtilities::renameTracker(id, data["name"], data["username"], data["password"]))
-    {
-        backendError("An error occurred renaming the tracker");
-        return;
-    }
-
-    QString iconDir = QDesktopServices::storageLocation(QDesktopServices::DataLocation);
-    iconDir.append(QDir::separator()).append("entomologist");
-
-    // Rename the icon, if necessary
-    QString oldPath = QString ("%1%2%3.png")
-                                .arg(iconDir)
-                                .arg(QDir::separator())
-                                .arg(b->name());
-    QString newPath = QString ("%1%2%3.png")
-                                .arg(iconDir)
-                                .arg(QDir::separator())
-                                .arg(data["name"]);
-
-    if (QFile::exists(oldPath) && !QFile::exists(newPath))
-        QFile::rename(oldPath, newPath);
-
-    QString oldName, newName;
-    oldName = b->name();
-    newName = data["name"];
-    ui->trackerTab->setTabText(ui->trackerTab->currentIndex(), newName);
-    pSearchTab->renameTracker(oldName, newName);
-    b->setName(newName);
     b->setUsername(data["username"]);
     b->setPassword(data["password"]);
-    QSettings settings("Entomologist");
-
-    QVariant oldSortCol = settings.value(QString("%1-sort-column").arg(oldName));
-    settings.remove(QString("%1-sort-column").arg(oldName));
-    settings.setValue(QString("%1-sort-column").arg(newName), oldSortCol);
-
-    QVariant oldSortOrd = settings.value(QString("%1-sort-order").arg(oldName));
-    settings.remove(QString("%1-sort-order").arg(oldName));
-    settings.setValue(QString("%1-sort-order").arg(newName), oldSortOrd);
-
-    QVariant oldGeom = settings.value(QString("%1-header-geometry").arg(oldName));
-    settings.remove(QString("%1-header-geometry").arg(oldName));
-    settings.setValue(QString("%1-header-geometry").arg(newName), oldGeom);
-
+    if (!SqlUtilities::renameTracker(id, data["name"], data["username"], data["password"]))
+    {
+        backendError("An error occurred updating the tracker");
+        return;
+    }
 }
 
 void
@@ -1424,6 +1426,7 @@ MainWindow::showMenu(int tabIndex)
     if (a == editAction)
     {
         NewTracker t(this, true);
+        QString tmpName = b->name();
         t.setName(b->name());
         t.setHost(b->url());
         t.setUsername(b->username());
@@ -1431,8 +1434,10 @@ MainWindow::showMenu(int tabIndex)
         t.setTrackerType(b->type());
         if (t.exec() == QDialog::Accepted)
         {
-
-            updateTracker(id, t.data());
+            bool updateName = false;
+            if (t.data().value("name") != tmpName)
+                updateName = true;
+            updateTracker(id, t.data(), updateName);
         }
     }
     else if (a == deleteAction)

@@ -52,6 +52,7 @@ protected:
     void changeEvent(QEvent *e);
 
 private:
+    bool mEdit;
     QString checkHost();
     Ui::NewTracker *ui;
 };

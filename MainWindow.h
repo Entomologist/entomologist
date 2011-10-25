@@ -110,7 +110,7 @@ private:
     void setupDB();
     void checkDatabaseVersion();
     void deleteTracker(const QString &id);
-    void updateTracker(const QString &id, QMap<QString, QString> data);
+    void updateTracker(const QString &id, QMap<QString, QString> data, bool updateName);
     void setupTracker(Backend *newBug, QMap<QString, QString> info);
     void syncTracker(Backend *tracker);
     void setupTrayIcon();
