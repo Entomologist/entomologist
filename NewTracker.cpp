@@ -33,6 +33,7 @@ NewTracker::NewTracker(QWidget *parent, bool edit) :
     QDialog(parent),
     ui(new Ui::NewTracker)
 {
+    mEdit = edit;
     ui->setupUi(this);
     ui->hintLabel->setText("");
     ui->saveButton->setIcon(style()->standardIcon(QStyle::SP_DialogSaveButton));
@@ -78,7 +79,7 @@ NewTracker::okClicked()
         text = "I need a URL in order to proceed.";
     else if (ui->userEdit->text().isEmpty())
         text = "I need a username in order to proceed.";
-    else if (SqlUtilities::trackerNameExists(ui->nameEdit->text()))
+    else if (!mEdit && SqlUtilities::trackerNameExists(ui->nameEdit->text()))
         text = QString("You already have a tracker named \"%1\"").arg(ui->nameEdit->text());
     else if ((msg = checkHost()) != "")
         text = msg;
