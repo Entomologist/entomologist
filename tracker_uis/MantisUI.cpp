@@ -22,7 +22,7 @@
 
 #include "MantisUI.h"
 #include "MantisDetails.h"
-#include "NewCommentsDialog.h"
+#include "BugDetailsDialog.h"
 #include "SqlUtilities.h"
 #include "ui_mantisui.h"
 #include "trackers/Backend.h"
@@ -150,7 +150,7 @@ MantisUI::loadSearchResult(const QString &id)
 void
 MantisUI::searchResultFinished(QMap<QString, QString> resultMap)
 {
-    NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
+    BugDetailsDialog *dialog = new BugDetailsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(searchCommentsDialogClosing(QMap<QString,QString>,QString)));
     connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
@@ -181,7 +181,7 @@ MantisUI::itemDoubleClicked(const QModelIndex &index)
 {
     QString rowId = index.sibling(index.row(), 0).data().toString();
     QMap<QString, QString> detailMap = SqlUtilities::mantisBugDetail(rowId);
-    NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
+    BugDetailsDialog *dialog = new BugDetailsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
 

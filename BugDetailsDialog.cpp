@@ -10,12 +10,12 @@
 #include "Utilities.hpp"
 #include "SqlUtilities.h"
 #include "AttachmentWidget.h"
-#include "NewCommentsDialog.h"
-#include "ui_NewCommentsDialog.h"
+#include "BugDetailsDialog.h"
+#include "ui_BugDetailsDialog.h"
 
-NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
+BugDetailsDialog::BugDetailsDialog(Backend *backend, QWidget *parent) :
     QDialog(parent),
-    ui(new Ui::NewCommentsDialog)
+    ui(new Ui::BugDetailsDialog)
 {
     setAttribute(Qt::WA_DeleteOnClose);
     pBackend = backend;
@@ -60,13 +60,13 @@ NewCommentsDialog::NewCommentsDialog(Backend *backend, QWidget *parent) :
             this, SLOT(textClicked(QString)));
 }
 
-NewCommentsDialog::~NewCommentsDialog()
+BugDetailsDialog::~BugDetailsDialog()
 {
     delete ui;
 }
 
 void
-NewCommentsDialog::styleSplitter(QSplitterHandle *handle)
+BugDetailsDialog::styleSplitter(QSplitterHandle *handle)
 {
     //QVBoxLayout *layout = new QVBoxLayout(handle);
     //layout->setSpacing(0);
@@ -78,7 +78,7 @@ NewCommentsDialog::styleSplitter(QSplitterHandle *handle)
 }
 
 void
-NewCommentsDialog::frameToggle(QWidget *frame, QLabel *arrow)
+BugDetailsDialog::frameToggle(QWidget *frame, QLabel *arrow)
 {
     if (frame->isVisible())
     {
@@ -93,7 +93,7 @@ NewCommentsDialog::frameToggle(QWidget *frame, QLabel *arrow)
 }
 
 void
-NewCommentsDialog::textClicked(const QString &text)
+BugDetailsDialog::textClicked(const QString &text)
 {
     if (text == tr("Details:"))
     {
@@ -118,14 +118,14 @@ NewCommentsDialog::textClicked(const QString &text)
 }
 
 void
-NewCommentsDialog::commentsCached()
+BugDetailsDialog::commentsCached()
 {
     stopSpinner();
     setComments();
 }
 
 void
-NewCommentsDialog::startSpinner()
+BugDetailsDialog::startSpinner()
 {
     pSpinnerMovie->start();
     ui->loadingFrame->show();
@@ -137,7 +137,7 @@ NewCommentsDialog::startSpinner()
 }
 
 void
-NewCommentsDialog::stopSpinner()
+BugDetailsDialog::stopSpinner()
 {
     pSpinnerMovie->stop();
     ui->loadingFrame->hide();
@@ -150,7 +150,7 @@ NewCommentsDialog::stopSpinner()
 }
 
 void
-NewCommentsDialog::setDetailsWidget(BackendDetails *widget)
+BugDetailsDialog::setDetailsWidget(BackendDetails *widget)
 {
     ui->detailsLayout->addWidget(widget);
     widget->setParent(ui->detailsFrame);
@@ -161,7 +161,7 @@ NewCommentsDialog::setDetailsWidget(BackendDetails *widget)
 // We don't want users to accidentally change the combobox values if
 // they use the scrollwheel to scroll up and down the details view
 bool
-NewCommentsDialog::eventFilter(QObject *obj, QEvent *event)
+BugDetailsDialog::eventFilter(QObject *obj, QEvent *event)
 {
     Q_UNUSED(obj);
     if (event->type() == QEvent::Wheel)
@@ -173,7 +173,7 @@ NewCommentsDialog::eventFilter(QObject *obj, QEvent *event)
 }
 
 void
-NewCommentsDialog::setBugInfo(QMap<QString, QString> details)
+BugDetailsDialog::setBugInfo(QMap<QString, QString> details)
 {
     mCurrentBugId = details["bug_id"];
     mTrackerId = details["tracker_id"];
@@ -186,7 +186,7 @@ NewCommentsDialog::setBugInfo(QMap<QString, QString> details)
 }
 
 void
-NewCommentsDialog::loadComments()
+BugDetailsDialog::loadComments()
 {
     QNetworkAccessManager m(this);
     if (Utilities::isOnline(&m))
@@ -202,7 +202,7 @@ NewCommentsDialog::loadComments()
 }
 
 void
-NewCommentsDialog::setComments()
+BugDetailsDialog::setComments()
 {
     int i = 0;
     int total = 0;
@@ -273,7 +273,7 @@ NewCommentsDialog::setComments()
 }
 
 QStringList
-NewCommentsDialog::getData()
+BugDetailsDialog::getData()
 {
     QStringList list;
     list.append(mCurrentBugId);
@@ -283,7 +283,7 @@ NewCommentsDialog::getData()
 }
 
 void
-NewCommentsDialog::save()
+BugDetailsDialog::save()
 {
     QMap<QString, QString> details = pDetails->fieldDetails();
     QMapIterator<QString, QString> i(details);
@@ -302,21 +302,21 @@ NewCommentsDialog::save()
 }
 
 void
-NewCommentsDialog::cancel()
+BugDetailsDialog::cancel()
 {
     emit commentsDialogCanceled(mTrackerId, mCurrentBugId);
     close();
 }
 
 void
-NewCommentsDialog::keyPressEvent(QKeyEvent *event)
+BugDetailsDialog::keyPressEvent(QKeyEvent *event)
 {
     if(event->key() == Qt::Key_Escape)
         this->close();
 }
 
 void
-NewCommentsDialog::attachmentClicked(int rowId)
+BugDetailsDialog::attachmentClicked(int rowId)
 {
     QMap<QString, QString> attachment = SqlUtilities::attachmentDetails(rowId);
     openAttachment = true;
@@ -331,7 +331,7 @@ NewCommentsDialog::attachmentClicked(int rowId)
 }
 
 void
-NewCommentsDialog::attachmentSaveAsClicked(int rowId)
+BugDetailsDialog::attachmentSaveAsClicked(int rowId)
 {
     QMap<QString, QString> attachment = SqlUtilities::attachmentDetails(rowId);
     openAttachment = false;
@@ -351,7 +351,7 @@ NewCommentsDialog::attachmentSaveAsClicked(int rowId)
 }
 
 void
-NewCommentsDialog::attachmentDownloaded(const QString &filePath)
+BugDetailsDialog::attachmentDownloaded(const QString &filePath)
 {
     stopSpinner();
     if (filePath.isEmpty())
@@ -369,7 +369,7 @@ NewCommentsDialog::attachmentDownloaded(const QString &filePath)
 }
 
 void
-NewCommentsDialog::closeEvent(QCloseEvent *event)
+BugDetailsDialog::closeEvent(QCloseEvent *event)
 {
     QSettings settings("Entomologist");
 //    settings.setValue("comment-window-splitter", ui->splitter->saveState());

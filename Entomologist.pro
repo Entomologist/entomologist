@@ -12,8 +12,8 @@ QMAKE_INFO_PLIST = Entomologist.plist
 TARGET = entomologist
 TEMPLATE = app
 TRANSLATIONS = entomologist_en.ts
-VERSION = 1.1
-MAJOR_VERSION = 1.1
+VERSION = 1.2
+MAJOR_VERSION = 1.2
 MINOR_VERSION = 0
 DEFINES += APP_VERSION=\\\"$$VERSION\\\"
 DEFINES += APP_MAJOR_VERSION=\\\"$$MAJOR_VERSION\\\"
@@ -68,7 +68,7 @@ SOURCES += main.cpp \
     tracker_uis/MantisUI.cpp \
     SqlUtilities.cpp \
     tracker_uis/BackendUI.cpp \
-    NewCommentsDialog.cpp \
+    BugDetailsDialog.cpp \
     tracker_uis/TracDetails.cpp \
     TrackerTabWidget.cpp \
     tracker_uis/MantisDetails.cpp \
@@ -93,7 +93,8 @@ SOURCES += main.cpp \
     todolistservices/GoogleTasks.cpp \
     UpdatesAvailableDialog.cpp \
     AttachmentLink.cpp \
-    AttachmentWidget.cpp
+    AttachmentWidget.cpp \
+    NewBugDialog.cpp
 HEADERS += MainWindow.h \
     libmaia/maiaXmlRpcServerConnection.h \
     libmaia/maiaXmlRpcServer.h \
@@ -145,7 +146,7 @@ HEADERS += MainWindow.h \
     tracker_uis/MantisUI.h \
     SqlUtilities.h \
     tracker_uis/BackendUI.h \
-    NewCommentsDialog.h \
+    BugDetailsDialog.h \
     tracker_uis/TracDetails.h \
     TrackerTabWidget.h \
     tracker_uis/MantisDetails.h \
@@ -170,7 +171,8 @@ HEADERS += MainWindow.h \
     todolistservices/GoogleTasks.h \
     UpdatesAvailableDialog.h \
     AttachmentLink.h \
-    AttachmentWidget.h
+    AttachmentWidget.h \
+    NewBugDialog.hpp
 FORMS += MainWindow.ui \
     NewTracker.ui \
     CommentFrame.ui \
@@ -183,7 +185,7 @@ FORMS += MainWindow.ui \
     tracker_uis/bugzillaui.ui \
     tracker_uis/tracui.ui \
     tracker_uis/mantisui.ui \
-    NewCommentsDialog.ui \
+    BugDetailsDialog.ui \
     tracker_uis/TracDetails.ui \
     tracker_uis/MantisDetails.ui \
     tracker_uis/BugzillaDetails.ui \
@@ -193,7 +195,8 @@ FORMS += MainWindow.ui \
     ToDoListWidget.ui \
     ToDoListExport.ui \
     UpdatesAvailableDialog.ui \
-    AttachmentWidget.ui
+    AttachmentWidget.ui \
+    NewBugDialog.ui
 RESOURCES += resources.qrc
 QMAKE_EXTRA_TARGETS += distfile
 DISTFILE_MAKEDIR = .tmp/entomologist-$$VERSION

@@ -22,7 +22,7 @@
 
 #include "TracUI.h"
 #include "TracDetails.h"
-#include "NewCommentsDialog.h"
+#include "BugDetailsDialog.h"
 #include "ui_tracui.h"
 #include "trackers/Backend.h"
 
@@ -156,7 +156,7 @@ TracUI::loadSearchResult(const QString &id)
 void
 TracUI::searchResultFinished(QMap<QString, QString> resultMap)
 {
-    NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
+    BugDetailsDialog *dialog = new BugDetailsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(searchCommentsDialogClosing(QMap<QString,QString>,QString)));
     connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
@@ -183,7 +183,7 @@ TracUI::itemDoubleClicked(const QModelIndex &index)
 {
     QString rowId = index.sibling(index.row(), 0).data().toString();
     QMap<QString, QString> detailMap = SqlUtilities::tracBugDetail(rowId);
-    NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
+    BugDetailsDialog *dialog = new BugDetailsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
     dialog->setBugInfo(detailMap);

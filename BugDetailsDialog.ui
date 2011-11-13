@@ -1,7 +1,7 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <ui version="4.0">
- <class>NewCommentsDialog</class>
- <widget class="QDialog" name="NewCommentsDialog">
+ <class>BugDetailsDialog</class>
+ <widget class="QDialog" name="BugDetailsDialog">
   <property name="geometry">
    <rect>
     <x>0</x>

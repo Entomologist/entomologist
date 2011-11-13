@@ -25,7 +25,7 @@
 #include "BugzillaUI.h"
 #include "BugzillaDetails.h"
 #include "SqlUtilities.h"
-#include "NewCommentsDialog.h"
+#include "BugDetailsDialog.h"
 #include "ui_bugzillaui.h"
 
 #include <SqlBugDelegate.h>
@@ -132,7 +132,7 @@ BugzillaUI::headerContextMenu(const QPoint &pos)
 void
 BugzillaUI::searchResultFinished(QMap<QString, QString> resultMap)
 {
-    NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
+    BugDetailsDialog *dialog = new BugDetailsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(searchCommentsDialogClosing(QMap<QString,QString>,QString)));
     connect(dialog, SIGNAL(commentsDialogCanceled(QString,QString)),
@@ -160,7 +160,7 @@ BugzillaUI::itemDoubleClicked(const QModelIndex &index)
 {
     QString rowId = index.sibling(index.row(), 0).data().toString();
     QMap<QString, QString> detailMap = SqlUtilities::bugzillaBugDetail(rowId);
-    NewCommentsDialog *dialog = new NewCommentsDialog(pBackend, this);
+    BugDetailsDialog *dialog = new BugDetailsDialog(pBackend, this);
     connect (dialog, SIGNAL(commentsDialogClosing(QMap<QString,QString>,QString)),
              this, SLOT(commentsDialogClosing(QMap<QString,QString>,QString)));
 
