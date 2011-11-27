@@ -1,0 +1,44 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android"
+      package="org.entomologistproject.trac"
+      android:versionCode="1"
+      android:versionName="1.0">
+    <uses-sdk android:minSdkVersion="8" />
+    <uses-permission
+        android:name="android.permission.INTERNET" />
+	<uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
+	<uses-permission android:name="android.permission.VIBRATE" />
+    <application android:icon="@drawable/icon"
+    			 android:label="@string/app_name"
+    			 android:name="greendroid.app.GDApplication"
+    			 android:theme="@style/Theme.GreenDroid">
+        <activity android:name=".BugList"
+		          android:launchMode="singleTop"
+                  android:label="@string/app_name"
+                  android:theme="@style/Theme.GreenDroid.Light.NoTitleBar">
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.LAUNCHER" />
+            </intent-filter>
+        </activity>
+		<activity android:name=".Settings"
+	        	  android:launchMode="singleTop"
+			      android:label="@string/menu_settings"
+			      android:theme="@style/Theme.GreenDroid.Light.NoTitleBar">
+		</activity>
+		<activity android:name=".About"
+		android:launchMode="singleTop"
+				android:theme="@style/Theme.GreenDroid.Light.NoTitleBar">
+		</activity>
+		<activity android:name=".BugDetails"
+				  android:launchMode="singleTop"
+			      android:label="@string/details"
+			      android:configChanges="orientation"
+			      android:theme="@style/Theme.GreenDroid.Light.NoTitleBar">
+		</activity>
+		<activity android:name=".BugDetails$SummaryActivity" />
+	    <activity android:name=".BugDetails$DetailsActivity" />
+	    <activity android:name=".BugDetails$CommentsActivity" />
+	    <receiver android:enabled="true" android:name="UpdateBroadcastReceiver" android:exported="false"></receiver>
+    </application>
+</manifest>

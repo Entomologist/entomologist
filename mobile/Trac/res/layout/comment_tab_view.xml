@@ -1,0 +1,24 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+			  android:orientation="vertical" android:layout_height="fill_parent"
+			  android:id="@+id/linearLayout1" android:layout_width="fill_parent">
+			  
+<LinearLayout android:layout_alignParentBottom="true" android:layout_height="wrap_content" android:layout_width="match_parent" android:id="@+id/newCommentLayout" android:orientation="vertical" android:layout_gravity="bottom" android:gravity="bottom">
+        <TextView android:background="@drawable/detail_header" android:text="New Comment" android:onClick="toggleNewComment" android:clickable="true" android:textSize="20dp" android:textStyle="bold" android:id="@+id/newCommentLabel" android:layout_height="wrap_content" android:layout_width="match_parent"></TextView>
+        <EditText android:minLines="3" android:layout_width="fill_parent" android:text="" android:layout_height="wrap_content" android:id="@+id/newCommentEditText" android:gravity="top"></EditText>
+        <Button android:text="Submit" android:id="@+id/newCommentSave" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="right"></Button>
+</LinearLayout>
+<ListView xmlns:android="http://schemas.android.com/apk/res/android"
+	android:id="@+id/commentList"
+	android:layout_height="wrap_content"
+	android:layout_width="fill_parent"
+	android:listSelector="@android:color/transparent"
+	android:cacheColorHint="@android:color/transparent"
+	android:drawSelectorOnTop="false"
+	android:layout_alignParentTop="true"
+	android:layout_above="@id/newCommentLayout">
+</ListView>
+
+
+
+</RelativeLayout>

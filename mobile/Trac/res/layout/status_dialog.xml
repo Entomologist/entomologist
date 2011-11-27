@@ -1,0 +1,8 @@
+<LinearLayout   android:minWidth="350dip"
+ xmlns:android="http://schemas.android.com/apk/res/android" android:layout_width="fill_parent" android:layout_height="fill_parent" android:orientation="vertical" android:id="@+id/linearLayout1">
+        <TextView android:textSize="20dp" android:layout_width="wrap_content" android:id="@+id/textView1" android:text="Status" android:layout_height="wrap_content"></TextView>
+        <Spinner android:id="@+id/statusSpinner" android:layout_height="wrap_content" android:layout_width="match_parent"></Spinner>
+        <TextView android:textSize="20dp" android:layout_width="wrap_content" android:id="@+id/textView2" android:text="Resolution" android:layout_height="wrap_content"></TextView>
+        <Spinner android:id="@+id/resolutionSpinner" android:layout_height="wrap_content" android:layout_width="match_parent"></Spinner>
+        <Button  android:id="@+id/statusDialogOkButton" android:layout_width="wrap_content" android:layout_gravity="right" android:text="OK" android:layout_height="wrap_content"></Button>
+</LinearLayout>

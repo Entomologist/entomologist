@@ -1,0 +1,17 @@
+<?xml version="1.0" encoding="utf-8"?>
+<TableLayout android:id="@+id/commentRowTableLayout"
+             android:layout_width="fill_parent"
+             android:layout_height="fill_parent"
+             xmlns:android="http://schemas.android.com/apk/res/android"
+             android:stretchColumns="1">
+    <TableRow android:id="@+id/commentRowTableRowTop" android:background="@drawable/comment_header" android:layout_height="match_parent" android:layout_width="match_parent">
+        <TextView android:text="Anonymous" android:id="@+id/commenter" android:textStyle="bold"  android:textSize="20dp" android:layout_width="match_parent" android:layout_height="wrap_content" android:layout_marginLeft="5dp"></TextView>
+    </TableRow>
+    <TableRow android:id="@+id/commentRowTableRowDescription" android:layout_width="wrap_content" android:layout_height="wrap_content">
+            <TextView android:text="A Comment Here" android:layout_span="2" android:textSize="20dp" android:id="@+id/comment" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_marginRight="5dp" android:layout_marginLeft="5dp"></TextView>  
+    </TableRow>
+    <TableRow android:id="@+id/commentRowTableRowBottom" android:layout_width="wrap_content" android:layout_height="wrap_content">
+                     <TextView android:text="1/1/1970 12:43:00" android:layout_span="2" android:id="@+id/commentDate" android:gravity="right" android:layout_height="wrap_content" android:layout_width="match_parent" android:layout_marginRight="5dp" android:textColor="#737D58"></TextView>
+	</TableRow>
+</TableLayout>
+

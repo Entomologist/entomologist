@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<greendroid.widget.ActionBarHost
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@+id/gd_action_bar_host"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical">
+        <greendroid.widget.ActionBar
+                android:id="@+id/gd_action_bar"
+                android:layout_height="@dimen/gd_action_bar_height"
+                android:layout_width="fill_parent"
+                android:background="?attr/gdActionBarBackground" />
+
+        <FrameLayout xmlns:android="http://schemas.android.com/apk/res/android"
+                android:id="@id/gd_action_bar_content_view"
+                android:layout_height="0dp"
+                android:layout_width="fill_parent"
+                android:layout_weight="1">
+    <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android" android:orientation="vertical" android:layout_width="fill_parent" android:layout_height="fill_parent" android:id="@+id/linearLayout1">
+        <TextView android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/settingsUrl" android:text="@string/url"></TextView>
+        <EditText android:layout_height="wrap_content" android:layout_width="match_parent" android:id="@+id/urlEdit"></EditText>
+        <TextView android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/username" android:text="@string/username"></TextView>
+        <EditText android:layout_height="wrap_content" android:layout_width="match_parent" android:id="@+id/usernameEdit"></EditText>
+        <TextView android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/password" android:text="@string/password"></TextView>
+        <EditText android:layout_height="wrap_content" android:layout_width="match_parent" android:password="true" android:id="@+id/passwordEdit"></EditText>
+        <LinearLayout android:layout_height="wrap_content" android:layout_width="match_parent" android:id="@+id/linearLayout2">
+            <CheckBox android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/updateCheckbox" android:text="@string/updateEvery"></CheckBox>
+            <Spinner android:layout_height="wrap_content" android:layout_width="match_parent" android:id="@+id/updateUnit"></Spinner>
+        </LinearLayout>
+        <CheckBox android:layout_height="wrap_content" android:layout_width="wrap_content" android:id="@+id/onlyOverWifiCheckbox" android:text="@string/onlyOverWifi"></CheckBox>
+        
+        <Button android:layout_height="wrap_content" android:layout_gravity="bottom|right" android:layout_width="wrap_content" android:text="@string/save" android:id="@+id/settingsSaveButton"></Button>
+    </LinearLayout>
+    </FrameLayout>
+</greendroid.widget.ActionBarHost>

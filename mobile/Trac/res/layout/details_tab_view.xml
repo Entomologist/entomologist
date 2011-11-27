@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="utf-8"?>
+ <!--    <ScrollView android:id="@+id/detailsTabView" android:layout_width="fill_parent" android:layout_height="fill_parent" xmlns:android="http://schemas.android.com/apk/res/android"> --> 
+ <TableLayout android:layout_width="fill_parent" android:layout_height="fill_parent" android:stretchColumns="1" xmlns:android="http://schemas.android.com/apk/res/android" android:id="@+id/detailsTabView" android:layout_marginTop="5dp" android:layout_marginLeft="5dp" android:layout_marginRight="5dp">
+        <TableRow>
+            </TableRow>
+            <TableRow>
+			</TableRow>
+			<TableRow android:id="@+id/typeRow">
+            	<TextView android:id="@+id/typeLabelId" android:text="@string/type" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center_vertical" android:textSize="20dp"></TextView>
+        	    <Spinner android:layout_width="match_parent" android:id="@+id/typeSpinner" android:prompt="@string/type_prompt" android:layout_height="wrap_content"></Spinner>
+		      </TableRow>
+		      <TableRow android:id="@+id/priorityRow">
+            <TextView android:id="@+id/textView3" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/priority" android:layout_gravity="center_vertical" android:textSize="20dp"></TextView>
+            <Spinner android:layout_width="match_parent" android:id="@+id/prioritySpinner" android:prompt="@string/priority_prompt" android:layout_height="wrap_content"></Spinner>
+			</TableRow>
+			<TableRow android:id="@+id/componentRow">
+            <TextView android:id="@+id/textView4" android:layout_width="wrap_content" android:layout_height="wrap_content" android:layout_gravity="center_vertical" android:textSize="20dp" android:text="@string/component" android:layout_marginRight="5dp"></TextView>
+            <Spinner android:layout_width="match_parent" android:id="@+id/componentSpinner" android:prompt="@string/component_prompt" android:layout_height="wrap_content"></Spinner>
+			</TableRow>
+			<TableRow android:id="@+id/versionRow">
+            <TextView android:id="@+id/textView5" android:layout_width="wrap_content" android:layout_height="wrap_content" android:text="@string/version" android:layout_gravity="center_vertical" android:textSize="20dp"></TextView>
+            <Spinner android:layout_width="match_parent" android:id="@+id/versionSpinner" android:prompt="@string/version_prompt" android:layout_height="wrap_content"></Spinner>
+			</TableRow>    
+			<TableRow android:id="@+id/milestoneRow">
+            	<TextView android:id="@+id/milestoneLabelId" android:text="@string/milestone" android:layout_gravity="center_vertical" android:textSize="20dp" android:layout_width="match_parent" android:layout_height="wrap_content"></TextView>
+        	    <Spinner android:layout_width="match_parent" android:id="@+id/milestoneSpinner" android:prompt="@string/milestone_prompt" android:layout_height="wrap_content"></Spinner>
+		     </TableRow>
+			        
+        </TableLayout>
+  <!--   </ScrollView> -->

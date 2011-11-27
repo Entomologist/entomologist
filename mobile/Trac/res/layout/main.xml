@@ -1,0 +1,23 @@
+<?xml version="1.0" encoding="utf-8"?>
+<greendroid.widget.ActionBarHost
+        xmlns:android="http://schemas.android.com/apk/res/android"
+        android:id="@id/gd_action_bar_host"
+        android:layout_width="fill_parent"
+        android:layout_height="fill_parent"
+        android:orientation="vertical">
+        <greendroid.widget.ActionBar
+                android:id="@id/gd_action_bar"
+                android:layout_height="@dimen/gd_action_bar_height"
+                android:layout_width="fill_parent"
+                android:background="?attr/gdActionBarBackground" />
+
+        <FrameLayout
+                android:id="@id/gd_action_bar_content_view"
+                android:layout_height="0dp"
+                android:layout_width="fill_parent"
+                android:layout_weight="1">
+
+ <ListView android:layout_height="wrap_content" android:id="@id/android:list" android:layout_width="match_parent" android:minHeight="?android:attr/listPreferredItemHeight" >
+ </ListView>
+</FrameLayout>
+</greendroid.widget.ActionBarHost>

@@ -1,0 +1,16 @@
+A portion of this code, found under src/org/xmlrpc/android, is released under 
+the Apache 2.0 license.  I'm not sure who owns the copyright to it - even 
+their code doesn't say.  But you can find the project at:
+
+  https://code.google.com/p/android-xmlrpc/ 
+
+Nearly all icon resources are taken directly from the Android source code.  Those
+are (C) Google and released under the Apache 2.0 license.  The application icon,
+however, is (C) Matt Barringer and released under the GPL v3.
+
+The remainder of the project is released under the GPL v3.
+
+Licenses are found in this directory as GPL-LICENSE.txt and APACHE-LICENSE.txt
+respectively.
+
+The project homepage is http://www.entomologist-project.org
