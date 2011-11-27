@@ -153,6 +153,7 @@ public class TracUploadChanges extends TracBackend {
 		
 		try
 		{
+			checkHost();
 			uploadChanges();
 			b.putBoolean("changes_uploaded", true);
 		}

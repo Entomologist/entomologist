@@ -109,6 +109,7 @@ public class TracUploadComment extends TracBackend {
 		
 		try
 		{
+			checkHost();
 			uploadComment();
 			b.putBoolean("comment_uploaded", true);
 		}

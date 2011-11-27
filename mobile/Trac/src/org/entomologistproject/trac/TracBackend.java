@@ -19,6 +19,7 @@
  */
 package org.entomologistproject.trac;
 
+import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.Socket;
 import java.net.URL;
@@ -59,36 +60,53 @@ public class TracBackend extends AsyncTask<Handler, Void, Void>{
 	
 		//Log.d("Entomologist", service);
 		//Log.d("Entomologist", "Username: " + username + " and " + password);
-
-		this.client = new XMLRPCClient(this.service);
-		this.client.setBasicAuthentication(username, password);
-		this.client.setUserAgent("Entomologist");
 	}
 	
 	@SuppressWarnings("unused")
-	protected boolean checkHost()
+	protected void checkHost() throws EntomologistException
 	{
-		Socket s;
+		Socket s = null;
 		URL serviceUrl;
+
 		try {
 			serviceUrl = new URL(this.service);
 		} catch (MalformedURLException e) {
 			e.printStackTrace();
-			return false;
+			throw new EntomologistException("Malformed URL!");
 		}
-		
+
+		Log.d("Entomologist", "Service: " + this.service);
 		try {
-			if (serviceUrl.getProtocol() == "http")
+			if (serviceUrl.getProtocol().equals("http"))
 				s = new Socket(serviceUrl.getHost(), 80);
 			else
 				s = new Socket(serviceUrl.getHost(), 443);
 		}
 		catch (Exception e)
 		{
-			e.printStackTrace();
-			return false;
+			if (service.toLowerCase().startsWith("http://"))
+				throw new EntomologistException("Could not connect to the server!");
+			service = service.toLowerCase().replace("https://", "http://");
+			try
+			{
+				s = new Socket(serviceUrl.getHost(), 80);
+			}
+			catch (Exception newe)
+			{
+				throw new EntomologistException("Could not connect to the server!");
+			}
 		}
-		return true;
+		
+		try {
+			if (s != null)
+				s.close();
+		} catch (IOException e) {
+			e.printStackTrace();
+		}
+		
+		this.client = new XMLRPCClient(this.service);
+		this.client.setBasicAuthentication(username, password);
+		this.client.setUserAgent("Entomologist");
 	}
 	
 	@Override

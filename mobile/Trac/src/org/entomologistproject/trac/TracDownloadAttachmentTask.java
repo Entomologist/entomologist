@@ -69,6 +69,7 @@ public class TracDownloadAttachmentTask extends TracBackend {
 		
 		try
 		{
+			checkHost();
 			getFile();
 			b.putString("package_name", packageName);
 			b.putString("temp_file", fileName);

@@ -107,6 +107,7 @@ public class TracCommentsTask extends TracBackend {
 		
 		try
 		{
+			checkHost();
 			getComments();
 			b.putBoolean("comments_cached", true);
 		}

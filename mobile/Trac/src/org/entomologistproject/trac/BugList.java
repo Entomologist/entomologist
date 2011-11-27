@@ -220,7 +220,7 @@ public class BugList extends GDListActivity {
         	SimpleDateFormat df = new SimpleDateFormat("yyyy-MM-dd'T'HH:mm:ss+0000");
         	try
         	{
-        		trackerLastSync = df.parse("1970-01-01T12:32:41");
+        		trackerLastSync = df.parse("1970-01-01T12:32:41+0000");
         	}
         	catch (ParseException e)
         	{

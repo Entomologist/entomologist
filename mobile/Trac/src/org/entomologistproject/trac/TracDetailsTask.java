@@ -22,6 +22,8 @@ package org.entomologistproject.trac;
 import java.util.Arrays;
 import java.util.HashSet;
 import java.util.Set;
+
+import org.apache.http.conn.HttpHostConnectException;
 import org.xmlrpc.android.*;
 
 import android.content.Context;
@@ -204,21 +206,8 @@ public class TracDetailsTask extends TracBackend {
 		b.putBoolean("error", false);
 		try
 		{
-			if (!checkHost())
-			{
-				if (service.toLowerCase().startsWith("http://"))
-				{
-					throw new EntomologistException("Could not connect to the server!");
-				}
-				else
-				{
-					service = service.toLowerCase().replace("https://", "http://");
-					if (!checkHost())
-						throw new EntomologistException("Could not connect to the server!");
-				}
-			}
-			
-			String s = this.getVersion();
+			checkHost();
+			String s = this.getVersion();			
 			b.putString("tracker_version", s);
 			if (!versionCheckOnly)
 			{
