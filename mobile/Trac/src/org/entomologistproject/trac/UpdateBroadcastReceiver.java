@@ -54,8 +54,6 @@ public class UpdateBroadcastReceiver extends BroadcastReceiver {
 			if (!b.getBoolean("error"))
 			{
 				int updateCount = b.getInt("bugs_updated");
-				
-				updateCount = 1;
 				if (updateCount > 0)
 				{
 					boolean inForeground = false;
