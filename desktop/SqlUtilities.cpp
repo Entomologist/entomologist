@@ -141,14 +141,18 @@ SqlUtilities::insertBugs(const QString &tableName,
                          const QString &trackerId,
                          int operation)
 {
+    qDebug() << "in insertBugs";
     QStringList idList;
-    if ((list.size() == 0) && trackerId == "-1")
+    if ((list.size() == 0) || trackerId == "-1")
     {
         emit bugsFinished(idList, operation);
         return;
     }
+
     QSqlQuery q(mDatabase), bugQuery(mDatabase), commentQuery(mDatabase);
+    qDebug() << "Getting keys for " << list.size();
     QStringList keys = list.at(0).keys();
+    qDebug() << "Got keys: " << keys;
     QStringList placeholder;
     QStringList rmIdList;
     bool error = false;
@@ -221,6 +225,7 @@ SqlUtilities::insertBugs(const QString &tableName,
     for (int a = 0; a < list.size(); ++a)
     {
         QMap<QString, QString> data = list.at(a);
+        qDebug() << "OK: " << data;
         bugQuery.bindValue(":bug_id", data["bug_id"]);
         bugQuery.bindValue(":tracker_id", data["tracker_id"]);
         commentQuery.bindValue(":bug_id", data["bug_id"]);
