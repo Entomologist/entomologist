@@ -99,16 +99,20 @@ NovellBugzilla::finished()
     {
         case NOVELL_CHECK_VERSION:
         {
+            qDebug() << "NOVELL_CHECK_VERSION";
             Bugzilla::checkVersion();
             break;
         }
         case NOVELL_GET_COMMENTS:
         {
+            qDebug() << "NOVELL_GET_COMMENTS";
             Bugzilla::getComments(mCommentBugId);
+            state = 0;
             break;
         }
         default:
         {
+            qDebug() << "NovellBugzilla Calling Bugzilla::login";
             Bugzilla::login();
             break;
         }
