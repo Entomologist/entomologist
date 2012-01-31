@@ -180,12 +180,14 @@ Bugzilla::uploadAll()
         emit bugsUpdated();
         return;
     }
+    qDebug() << "Bugzilla::uploadAll";
     mState = BUGZILLA_STATE_UPLOADING;
     login();
 }
 
 void Bugzilla::doUploading()
 {
+    qDebug() << "Bugzilla::doUploading";
     QStringList idList;
     QString ids;
     idList = SqlUtilities::getChangedBugzillaIds(mId);
@@ -722,7 +724,7 @@ Bugzilla::versionRpcResponse(QVariant &arg)
 
 void Bugzilla::loginRpcResponse(QVariant &arg)
 {
-    qDebug() << "Login response";
+    qDebug() << "Bugzilla::loginRpcResponse";
     QVariantMap map = arg.toMap();
     if (!map.isEmpty())
     {
@@ -1361,6 +1363,7 @@ Bugzilla::parseBuglistCSV(const QString &csv,
 void
 Bugzilla::idDetailsFinished()
 {
+    qDebug() << "Bugzilla::idDetailsFinished";
     QString id, token, text;
     QMap<QString, QString> tokenMap;
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
