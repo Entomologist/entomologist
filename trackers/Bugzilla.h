@@ -41,6 +41,20 @@ public:
     Bugzilla(const QString &url);
     ~Bugzilla();
     BackendUI *displayWidget();
+    void setUsername(const QString &username)
+    {
+        if (pClient != NULL)
+            pClient->setUserName(username);
+        mUsername = username;
+    }
+    QString username() { return mUsername; }
+
+    void setPassword(const QString &password)
+    {
+        if (pClient != NULL)
+            pClient->setPassword(password);
+        mPassword = password;
+    }
     void sync();
     void login();
     void checkVersion();
