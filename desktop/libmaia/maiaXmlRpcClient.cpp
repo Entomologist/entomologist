@@ -129,6 +129,7 @@ MaiaXmlRpcClient::authenticationRequired(QNetworkReply* reply,
     }
     else
     {
+        qDebug() << "Closing on authentication required";
         reply->close();
     }
 

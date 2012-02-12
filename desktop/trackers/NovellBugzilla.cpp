@@ -31,8 +31,8 @@ NovellBugzilla::NovellBugzilla(const QString &url)
     : Bugzilla(url)
 {
     state = 0;
+    pClient->setUrl(QUrl("https://apibugzilla.novell.com/tr_xmlrpc.cgi"));
 }
-
 NovellBugzilla::~NovellBugzilla()
 {
 }
@@ -40,6 +40,8 @@ NovellBugzilla::~NovellBugzilla()
 void
 NovellBugzilla::checkVersion()
 {
+    Bugzilla::checkVersion();
+    return;
     state = NOVELL_CHECK_VERSION;
     login();
 }
@@ -47,6 +49,8 @@ NovellBugzilla::checkVersion()
 void
 NovellBugzilla::sync()
 {
+    Bugzilla::sync();
+    return;
     state = 0;
     QString ichainLogin = "https://bugzilla.novell.com/ICSLogin/auth-up";
     QByteArray username(QString("username=%1&password=%2").arg(mUsername).arg(mPassword).toLocal8Bit());
@@ -60,6 +64,8 @@ NovellBugzilla::sync()
 void
 NovellBugzilla::getComments(const QString &bugId)
 {
+    Bugzilla::getComments(bugId);
+    return;
     state = NOVELL_GET_COMMENTS;
     mCommentBugId = bugId;
     login();
@@ -73,6 +79,8 @@ NovellBugzilla::getComments(const QString &bugId)
 void
 NovellBugzilla::login()
 {
+    Bugzilla::login();
+    return;
     qDebug() << "NovellBugzilla::login";
     QString ichainLogin = "https://bugzilla.novell.com/ICSLogin/auth-up";
     QByteArray username(QString("username=%1&password=%2").arg(mUsername).arg(mPassword).toLocal8Bit());

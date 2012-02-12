@@ -121,7 +121,7 @@ private:
     void loadTrackers();
     void addTracker(QMap<QString, QString> info);
     void addTrackerToList(Backend *newTracker, bool sync = false);
-    void fetchIcon(const QString &url, const QString &savePath);
+    void fetchIcon(const QString &url, const QString &savePath, const QString &username, const QString &password);
     void fetchHTMLIcon(const QString &url, const QString &savePath);
     bool isOnline();
     int trackerNameExists(const QString &name);

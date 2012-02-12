@@ -322,9 +322,14 @@ MainWindow::addTracker(QMap<QString,QString> info)
 {
     qDebug() << "Add tracker";
     // Create the proper Backend object
+//    if (QUrl(info["url"]).host().toLower() == "bugzilla.novell.com")
+//    {
+//        NovellBugzilla *newBug = new NovellBugzilla("https://apibugzilla.novell.com");
+//        setupTracker(newBug, info);
+//    }
     if (QUrl(info["url"]).host().toLower() == "bugzilla.novell.com")
     {
-        NovellBugzilla *newBug = new NovellBugzilla(info["url"]);
+        Bugzilla *newBug = new Bugzilla("https://apibugzilla.novell.com");
         setupTracker(newBug, info);
     }
     else if (QUrl(info["url"]).host().toLower().endsWith("launchpad.net"))
@@ -420,7 +425,7 @@ MainWindow::addTrackerToList(Backend *newTracker, bool sync)
     mBackendMap[newTracker->id()] = newTracker;
     mBackendList.append(newTracker);
     if(!QFile::exists(iconPath))
-        fetchIcon(newTracker->url(), iconPath);
+        fetchIcon(newTracker->url(), iconPath, newTracker->username(), newTracker->password());
     if (sync)
         syncTracker(newTracker);
 }
@@ -569,16 +574,26 @@ MainWindow::stopAnimation()
 // Grab the favicon.ico for each tracker to make the bug list prettier
 void
 MainWindow::fetchIcon(const QString &url,
-                      const QString &savePath)
+                      const QString &savePath,
+                      const QString &username,
+                      const QString &password)
 {
     QUrl u(url);
     QString fetch = "http://" + u.host() + "/favicon.ico";
     qDebug() << "fetchIcon: " << fetch;
-
-    QNetworkRequest req = QNetworkRequest(QUrl(fetch));
+    QUrl iconUrl(fetch);
+    if (!username.isEmpty())
+    {
+        iconUrl.setUserName(username);
+        iconUrl.setPassword(password);
+    }
+    QNetworkRequest req = QNetworkRequest(iconUrl);
     req.setAttribute(QNetworkRequest::User, QVariant(savePath));
     // We set this to 0 for a first request, and then to 1 if the url is redirected.
     req.setAttribute((QNetworkRequest::Attribute)(QNetworkRequest::User+1), QVariant(0));
+    req.setAttribute((QNetworkRequest::Attribute)(QNetworkRequest::User+2), QVariant(username));
+    req.setAttribute((QNetworkRequest::Attribute)(QNetworkRequest::User+3), QVariant(password));
+
     QNetworkReply *rep = pManager->get(req);
     connect(rep, SIGNAL(finished()),
             this, SLOT(iconDownloaded()));
@@ -591,13 +606,22 @@ MainWindow::iconDownloaded()
     QNetworkReply *reply = qobject_cast<QNetworkReply*>(sender());
     QString savePath = reply->request().attribute(QNetworkRequest::User).toString();
     int wasRedirected = reply->request().attribute((QNetworkRequest::Attribute)(QNetworkRequest::User+1)).toInt();
+    QString username = reply->request().attribute((QNetworkRequest::Attribute)(QNetworkRequest::User+2)).toString();
+    QString password = reply->request().attribute((QNetworkRequest::Attribute)(QNetworkRequest::User+3)).toString();
+
     QVariant redirect = reply->attribute(QNetworkRequest::RedirectionTargetAttribute);
 
     if (!redirect.toUrl().isEmpty() && !wasRedirected)
     {
         qDebug() << "Was redirected to " << redirect.toUrl();
         reply->deleteLater();
-        QNetworkRequest req = QNetworkRequest(redirect.toUrl());
+        QUrl redir = redirect.toUrl();
+        if (!username.isEmpty())
+        {
+            redir.setUserName(username);
+            redir.setPassword(password);
+        }
+        QNetworkRequest req = QNetworkRequest(redir);
         req.setAttribute(QNetworkRequest::User, QVariant(savePath));
         req.setAttribute((QNetworkRequest::Attribute)(QNetworkRequest::User+1), QVariant(1));
         QNetworkReply *rep = pManager->get(req);
@@ -764,10 +788,7 @@ MainWindow::addTrackerTriggered()
         startAnimation();
         if (info["tracker_type"] == "Bugzilla")
         {
-            if (QUrl(cleanUrl).host().toLower() == "bugzilla.novell.com")
-                pNewTracker = new NovellBugzilla(cleanUrl);
-            else
-                pNewTracker = new Bugzilla(cleanUrl);
+            pNewTracker = new Bugzilla(cleanUrl);
         }
         else if (info["tracker_type"] == "Mantis")
         {
