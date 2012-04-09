@@ -5,3 +5,4 @@ The desktop version is written with Qt/C++, and requires Qt >= 4.6 to compile.  
 The mobile version is written in Java using the Android SDK, and should work for any target above API level 8.  You'll find the source code in the mobile/ directory.
 
 Homepage: http://www.entomologist-project.org
+Bugs: http://trac.entomologist-project.org
