@@ -18,6 +18,8 @@
  *  you may find current contact information at www.novell.com
  *
  *  Author: Matt Barringer <mbarringer@suse.de>
+ *
+ *  18.01.2013 Mathias Gebhardt Add support for trac 0.11.7
  */
 
 #include <QVariant>
@@ -46,6 +48,9 @@ Trac::Trac(const QString &url,
     pClient->setSslConfiguration(config);
     //pClient->setCookieJar(pCookieJar);
     //pCookieJar->setParent(0);
+
+    /* set trac 0.11.7 compatbility mode to false */
+    mTrac0117support = false;
 
     connect(pClient, SIGNAL(sslErrors(QNetworkReply *, const QList<QSslError> &)),
             this, SLOT(handleSslErrors(QNetworkReply *, const QList<QSslError> &)));
@@ -130,11 +135,20 @@ Trac::sync()
     {
         monitorString += QString("component=%1&").arg(mMonitorComponents.at(i));
     }
-
-    QString query = QString("%1%2max=0&modified=%3..")
+    QString query;
+    if(!mTrac0117support)
+    {
+        query = QString("%1%2max=0&modified=%3..")
                     .arg(closed)
                     .arg(monitorString)
                     .arg(mLastSync.addSecs(-3600).toString("yyyy-MM-ddThh:mm")); // -1 hour to accommodate for clock drift
+    }
+    else
+    {
+        query = QString("%1%2max=0")
+                    .arg(closed)
+                    .arg(monitorString);
+    }
     args << query;
     pClient->call("ticket.query", args, this, SLOT(monitoredComponentsRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -480,11 +494,20 @@ Trac::monitoredComponentsRpcResponse(QVariant &arg)
         closed = "status!=closed&";
     else
         closed = "status=closed&status=new&status=accepted&status=assigned&status=reopened&";
-
-    QString query = QString("%1cc=%2&max=0&modified=%3..")
+    QString query;
+    if(!mTrac0117support)
+    {
+        query = QString("%1cc=%2&max=0&modified=%3..")
                     .arg(closed)
                     .arg(mUsername)
                     .arg(mLastSync.addSecs(-3600).toString("yyyy-MM-ddThh:mm")); // -1 hour to accommodate for clock drift
+    }
+    else
+    {
+        query = QString("%1cc=%2&max=0")
+                    .arg(closed)
+                    .arg(mUsername);
+    }
     args << query;
     pClient->call("ticket.query", args, this, SLOT(ccRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -503,11 +526,16 @@ Trac::ccRpcResponse(QVariant &arg)
         closed = "status!=closed&";
     else
         closed = "status=closed&status=new&status=accepted&status=assigned&status=reopened&";
-
+#if 0
     QString query = QString("%1reporter=%2&max=0&modified=%3..")
                     .arg(closed)
                     .arg(mUsername)
                     .arg(mLastSync.addSecs(-3600).toString("yyyy-MM-ddThh:mm")); // -1 hour to accommodate for clock drift
+#else
+    QString query = QString("%1reporter=%2&max=0")
+                    .arg(closed)
+                    .arg(mUsername);
+#endif
     args << query;
     pClient->call("ticket.query", args, this, SLOT(reporterRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -526,11 +554,20 @@ Trac::reporterRpcResponse(QVariant &arg)
         closed = "status!=closed&";
     else
         closed = "status=closed&status=new&status=accepted&status=assigned&status=reopened&";
-
-    QString query = QString("%1owner=%2&max=0&modified=%3..")
+    QString query;
+    if(!mTrac0117support)
+    {
+        query = QString("%1owner=%2&max=0&modified=%3..")
                     .arg(closed)
                     .arg(mUsername)
                     .arg(mLastSync.addSecs(-3600).toString("yyyy-MM-ddThh:mm")); // -1 hour to accommodate for clock drift
+    }
+    else
+    {
+        query = QString("%1owner=%2&max=0")
+                    .arg(closed)
+                    .arg(mUsername);
+    }
     args << query;
     pClient->call("ticket.query", args, this, SLOT(ownerRpcResponse(QVariant&)), this, SLOT(rpcError(int, const QString &)));
 }
@@ -918,6 +955,15 @@ void
 Trac::rpcError(int error,
                const QString &message)
 {
+    if(!mTrac0117support && (message ==
+        "'no such column: t.modified' while executing 'ticket.query()'"))
+    {
+        qDebug() << "Try to sync with trac 0.11.7 support";
+        mTrac0117support = true;
+        sync();
+        return;
+    }
+
     qDebug() << "rpcError" << message;
     QString e = QString("Error %1: %2").arg(error).arg(message);
     emit backendError(e);

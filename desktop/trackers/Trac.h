@@ -98,6 +98,7 @@ private:
     QStringList mSeverities;
     QString mActiveCommentId;
     QString mActiveAttachmentPath;
+    bool mTrac0117support;
 };
 
 #endif // TRAC_H
