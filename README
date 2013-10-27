@@ -1,8 +1,6 @@
-The goal of Entomologist is to provide a cross-platform desktop interface to various bug trackers.
+The goal of Entomologist was to provide a cross-platform desktop interface to various bug trackers. It is no longer in development.
 
-The desktop version is written with Qt/C++, and requires Qt >= 4.6 to compile.  You'll find the source code in the desktop/ directory.
+The desktop version was written with Qt/C++, and requires Qt >= 4.6 to compile.  You'll find the source code in the desktop/ directory.
 
-The mobile version is written in Java using the Android SDK, and should work for any target above API level 8.  You'll find the source code in the mobile/ directory.
+The mobile version was written in Java using the Android SDK, and should work for any target above API level 8.  You'll find the source code in the mobile/ directory.
 
-Homepage: http://www.entomologist-project.org
-Bugs: http://trac.entomologist-project.org
